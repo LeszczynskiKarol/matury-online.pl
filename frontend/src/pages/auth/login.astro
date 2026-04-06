@@ -1,0 +1,148 @@
+---
+import Base from '../../layouts/Base.astro';
+import { ThemeToggle } from '../../components/ui/ThemeToggle';
+const siteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY;
+const googleClientId = import.meta.env.PUBLIC_GOOGLE_CLIENT_ID;
+---
+
+<Base title="Zaloguj się — Matury Online">
+  <div class="fixed top-4 right-4 z-50"><ThemeToggle client:load /></div>
+  <div class="min-h-screen flex items-center justify-center px-4 py-12">
+    <div class="absolute inset-0 -z-10">
+      <div class="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-brand-500/5 rounded-full blur-[100px]"></div>
+      <div class="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-navy-500/5 rounded-full blur-[80px]"></div>
+    </div>
+
+    <div class="w-full max-w-md">
+      <div class="text-center mb-8">
+        <a href="/" class="inline-flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
+            <span class="text-white font-display font-bold text-lg">M</span>
+          </div>
+          <span class="font-display font-bold text-xl">Matury Online</span>
+        </a>
+        <h1 class="font-display font-bold text-2xl mb-2">Witaj z powrotem</h1>
+        <p class="text-zinc-500 text-sm">Zaloguj się i kontynuuj naukę</p>
+      </div>
+
+      <div class="glass-card p-8">
+        <div class="flex justify-center mb-6">
+          <div id="g_id_onload" data-client_id={googleClientId} data-callback="handleGoogleCredential" data-auto_prompt="false"></div>
+          <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large" data-locale="pl" data-width="350"></div>
+        </div>
+
+        <div class="flex items-center gap-4 mb-6">
+          <div class="flex-1 h-px bg-zinc-200 dark:bg-zinc-700"></div>
+          <span class="text-xs text-zinc-400">lub email</span>
+          <div class="flex-1 h-px bg-zinc-200 dark:bg-zinc-700"></div>
+        </div>
+
+        <form id="login-form" class="space-y-4">
+          <div>
+            <label for="email" class="block text-sm font-medium mb-1.5">Email</label>
+            <input type="email" id="email" required class="input" placeholder="twoj@email.pl" />
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="password" class="block text-sm font-medium">Hasło</label>
+              <a href="/auth/forgot-password" class="text-xs text-brand-600 dark:text-brand-400 hover:underline">Nie pamiętam hasła</a>
+            </div>
+            <div class="relative">
+              <input type="password" id="password" required minlength="8" class="input pr-11" placeholder="Min. 8 znaków" />
+              <button type="button" id="eye-toggle" class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300">
+                <svg class="eye-open w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <svg class="eye-closed w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div id="error-msg" class="hidden text-sm text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl"></div>
+
+          <button type="submit" id="submit-btn" class="btn-primary w-full py-3.5">Zaloguj się</button>
+        </form>
+
+        <p class="text-[10px] text-zinc-400 text-center mt-4">
+          Strona chroniona przez reCAPTCHA Google —
+          <a href="https://policies.google.com/privacy" class="underline" target="_blank" rel="noopener">Prywatność</a> ·
+          <a href="https://policies.google.com/terms" class="underline" target="_blank" rel="noopener">Warunki</a>
+        </p>
+      </div>
+
+      <p class="text-center text-sm text-zinc-500 mt-6">
+        Nie masz konta? <a href="/auth/register" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline">Zarejestruj się za darmo</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script define:vars={{ siteKey }}>window.__RECAPTCHA_SITE_KEY = siteKey;</script>
+  <script is:inline>
+    (function(){var s=document.createElement('script');s.src='https://www.google.com/recaptcha/api.js?render='+window.__RECAPTCHA_SITE_KEY;s.async=true;document.head.appendChild(s)})();
+    var style=document.createElement('style');style.textContent='.grecaptcha-badge{visibility:hidden!important}';document.head.appendChild(style);
+
+    function handleGoogleCredential(response){
+      fetch('/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({credential:response.credential})})
+        .then(function(r){if(!r.ok)return r.json().then(function(d){throw new Error(d.error)});return r.json()})
+        .then(function(){window.location.href='/dashboard'})
+        .catch(function(e){document.getElementById('error-msg').textContent=e.message;document.getElementById('error-msg').classList.remove('hidden')});
+    }
+  </script>
+
+  <script>
+    // Eye toggle
+    const eyeBtn = document.getElementById('eye-toggle')!;
+    const pwInput = document.getElementById('password') as HTMLInputElement;
+    eyeBtn.addEventListener('click', () => {
+      const show = pwInput.type === 'password';
+      pwInput.type = show ? 'text' : 'password';
+      eyeBtn.querySelector('.eye-open')!.classList.toggle('hidden', !show);
+      eyeBtn.querySelector('.eye-closed')!.classList.toggle('hidden', show);
+    });
+
+    const form = document.getElementById('login-form') as HTMLFormElement;
+    const errorMsg = document.getElementById('error-msg') as HTMLDivElement;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Logowanie...';
+
+      const email = (document.getElementById('email') as HTMLInputElement).value;
+      const password = pwInput.value;
+
+      try {
+        let recaptchaToken = '';
+        if ((window as any).grecaptcha && (window as any).__RECAPTCHA_SITE_KEY) {
+          recaptchaToken = await (window as any).grecaptcha.execute((window as any).__RECAPTCHA_SITE_KEY, { action: 'login' });
+        }
+
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email, password, recaptchaToken }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          // Redirect to verify if email not verified
+          if (data.code === 'EMAIL_NOT_VERIFIED' && data.email) {
+            window.location.href = `/auth/verify?email=${encodeURIComponent(data.email)}`;
+            return;
+          }
+          throw new Error(data.error || 'Błąd logowania');
+        }
+
+        window.location.href = '/dashboard';
+      } catch (err: any) {
+        errorMsg.textContent = err.message;
+        errorMsg.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Zaloguj się';
+      }
+    });
+  </script>
+</Base>

@@ -1,0 +1,16 @@
+---
+import Dashboard from '../../layouts/Dashboard.astro';
+---
+
+<Dashboard title="Nowa sesja">
+  <div id="session-app"></div>
+
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { SessionSetup } from '../../components/quiz/SessionSetup';
+
+    const el = document.getElementById('session-app');
+    if (el) createRoot(el).render(createElement(SessionSetup));
+  </script>
+</Dashboard>

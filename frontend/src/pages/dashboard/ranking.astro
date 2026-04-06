@@ -1,0 +1,14 @@
+---
+import Dashboard from '../../layouts/Dashboard.astro';
+---
+
+<Dashboard title="Ranking">
+  <div id="ranking-app"></div>
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { RankingPage } from '../../components/dashboard/RankingPage';
+    const el = document.getElementById('ranking-app');
+    if (el) createRoot(el).render(createElement(RankingPage));
+  </script>
+</Dashboard>

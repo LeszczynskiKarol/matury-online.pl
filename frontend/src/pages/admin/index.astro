@@ -1,0 +1,14 @@
+---
+import Dashboard from '../../layouts/Dashboard.astro';
+---
+
+<Dashboard title="Admin">
+  <div id="admin-app"></div>
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { AdminPanel } from '../../components/admin/AdminPanel';
+    const el = document.getElementById('admin-app');
+    if (el) createRoot(el).render(createElement(AdminPanel));
+  </script>
+</Dashboard>

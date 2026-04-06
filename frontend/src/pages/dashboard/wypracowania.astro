@@ -1,0 +1,14 @@
+---
+import Dashboard from '../../layouts/Dashboard.astro';
+---
+
+<Dashboard title="Wypracowania">
+  <div id="essay-app"></div>
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { EssayWriter } from '../../components/quiz/EssayWriter';
+    const el = document.getElementById('essay-app');
+    if (el) createRoot(el).render(createElement(EssayWriter));
+  </script>
+</Dashboard>

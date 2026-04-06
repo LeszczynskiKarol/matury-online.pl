@@ -1,0 +1,16 @@
+---
+import DashboardLayout from '../../layouts/Dashboard.astro';
+---
+
+<DashboardLayout title="Subskrypcja — Matury Online">
+  <div id="subscription-root"></div>
+
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { SubscriptionPage } from '../../components/dashboard/SubscriptionPage';
+
+    const root = createRoot(document.getElementById('subscription-root')!);
+    root.render(createElement(SubscriptionPage));
+  </script>
+</DashboardLayout>

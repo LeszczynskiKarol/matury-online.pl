@@ -1,0 +1,14 @@
+# matury-online.pl scheduled jobs
+# Add to crontab: crontab -e
+
+# Reset broken streaks — daily at 00:05
+5 0 * * * cd /var/www/matury-online/backend && /usr/bin/node --loader tsx src/jobs/cron.ts reset-streaks >> /home/ubuntu/logs/cron-streaks.log 2>&1
+
+# Streak reminder emails — daily at 18:00
+0 18 * * * cd /var/www/matury-online/backend && /usr/bin/node --loader tsx src/jobs/cron.ts streak-reminders >> /home/ubuntu/logs/cron-reminders.log 2>&1
+
+# Win-back emails — every Monday at 10:00
+0 10 * * 1 cd /var/www/matury-online/backend && /usr/bin/node --loader tsx src/jobs/cron.ts win-back >> /home/ubuntu/logs/cron-winback.log 2>&1
+
+# Weekly summary — every Sunday at 10:00
+0 10 * * 0 cd /var/www/matury-online/backend && /usr/bin/node --loader tsx src/jobs/cron.ts weekly-summary >> /home/ubuntu/logs/cron-weekly.log 2>&1

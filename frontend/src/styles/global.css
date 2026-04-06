@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+@layer base {
+  html {
+    @apply scroll-smooth antialiased;
+  }
+
+  body {
+    @apply font-body text-zinc-900 bg-white;
+    @apply dark:text-zinc-100 dark:bg-surface-950;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-zinc-300 dark:bg-zinc-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-400 dark:bg-zinc-600;
+  }
+}
+
+@layer components {
+  /* Glass card */
+  .glass-card {
+    @apply bg-white/80 dark:bg-surface-800/60 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-700/30 rounded-3xl;
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-500 to-navy-500;
+  }
+
+  /* XP badge */
+  .xp-badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold
+           bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400;
+  }
+
+  /* Streak badge */
+  .streak-badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold
+           bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400;
+  }
+
+  /* Level indicator */
+  .level-badge {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-xl text-sm font-bold
+           bg-navy-100 text-navy-700 dark:bg-navy-800 dark:text-navy-300;
+  }
+
+  /* Difficulty dots */
+  .diff-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+  .diff-dot.active {
+    @apply bg-brand-500;
+  }
+  .diff-dot.inactive {
+    @apply bg-zinc-200 dark:bg-zinc-700;
+  }
+
+  /* Button variants */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-display font-semibold text-sm
+           bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700
+           shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40
+           transition-all duration-200 ease-out hover:-translate-y-0.5;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-display font-semibold text-sm
+           bg-navy-600 text-white hover:bg-navy-700 active:bg-navy-800
+           shadow-lg shadow-navy-600/25 hover:shadow-navy-600/40
+           transition-all duration-200 ease-out hover:-translate-y-0.5;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-display font-semibold text-sm
+           text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-surface-800
+           transition-all duration-200;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-display font-semibold text-sm
+           border-2 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300
+           hover:border-brand-500 hover:text-brand-600 dark:hover:border-brand-500 dark:hover:text-brand-400
+           transition-all duration-200;
+  }
+
+  /* Input */
+  .input {
+    @apply w-full px-4 py-3 rounded-2xl font-body text-sm
+           bg-zinc-50 dark:bg-surface-800 border border-zinc-200 dark:border-zinc-700
+           text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500
+           focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500
+           transition-all duration-200;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    @apply h-2 rounded-full bg-zinc-100 dark:bg-surface-800 overflow-hidden;
+  }
+  .progress-bar-fill {
+    @apply h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400 transition-all duration-500;
+  }
+
+  /* Card for quiz options */
+  .option-card {
+    @apply relative flex items-start gap-3 p-4 rounded-2xl border-2 cursor-pointer
+           border-zinc-200 dark:border-zinc-700 hover:border-navy-400 dark:hover:border-navy-500
+           transition-all duration-200;
+  }
+  .option-card.selected {
+    @apply border-navy-500 bg-navy-50 dark:bg-navy-900/20;
+  }
+  .option-card.correct {
+    @apply border-brand-500 bg-brand-50 dark:bg-brand-900/20;
+  }
+  .option-card.wrong {
+    @apply border-red-500 bg-red-50 dark:bg-red-900/20;
+  }
+
+  /* Subject card */
+  .subject-card {
+    @apply relative overflow-hidden rounded-3xl p-6 cursor-pointer
+           bg-white dark:bg-surface-800 border border-zinc-200 dark:border-zinc-700
+           shadow-card hover:shadow-card-hover
+           transition-all duration-300 ease-out hover:-translate-y-1;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply rounded-2xl p-5 bg-white dark:bg-surface-800 border border-zinc-200/50 dark:border-zinc-700/30;
+  }
+
+  /* Nav link */
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium
+           text-zinc-600 dark:text-zinc-400
+           hover:text-zinc-900 dark:hover:text-zinc-100
+           hover:bg-zinc-100 dark:hover:bg-surface-800
+           transition-all duration-200;
+  }
+  .nav-link.active {
+    @apply text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20;
+  }
+
+  /* Achievement card */
+  .achievement-card {
+    @apply flex items-center gap-4 p-4 rounded-2xl
+           bg-white dark:bg-surface-800 border border-zinc-200 dark:border-zinc-700;
+  }
+  .achievement-card.locked {
+    @apply opacity-50 grayscale;
+  }
+}
+
+/* Mafs theme override — light/dark adaptive */
+.MafsView,
+.MafsView svg,
+[class*="MafsView"] {
+  --mafs-bg: #ffffff !important;
+  --mafs-fg: #18181b !important;
+  --mafs-line-color: #e4e4e7 !important;
+  --mafs-origin-color: #a1a1aa !important;
+  background: #ffffff !important;
+}
+
+.dark .MafsView,
+.dark .MafsView svg,
+.dark [class*="MafsView"] {
+  --mafs-bg: #0a0a1f !important;
+  --mafs-fg: #e4e4e7 !important;
+  --mafs-line-color: #27272a !important;
+  --mafs-origin-color: #52525b !important;
+  background: #0a0a1f !important;
+}

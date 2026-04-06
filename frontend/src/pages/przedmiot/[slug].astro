@@ -1,0 +1,18 @@
+---
+import Dashboard from '../../layouts/Dashboard.astro';
+
+const { slug } = Astro.params;
+---
+
+<Dashboard title="Przedmiot">
+  <div id="subject-app" data-slug={slug}></div>
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { SubjectDetailPage } from '../../components/dashboard/SubjectDetailPage';
+
+    const el = document.getElementById('subject-app');
+    const slug = el?.dataset.slug || '';
+    if (el) createRoot(el).render(createElement(SubjectDetailPage, { slug }));
+  </script>
+</Dashboard>

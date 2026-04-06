@@ -1,0 +1,16 @@
+---
+import Dashboard from '../../layouts/Dashboard.astro';
+---
+
+<Dashboard title="Dashboard">
+  <div id="dashboard-app"></div>
+
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { DashboardHome } from '../../components/dashboard/DashboardHome';
+
+    const el = document.getElementById('dashboard-app');
+    if (el) createRoot(el).render(createElement(DashboardHome));
+  </script>
+</Dashboard>

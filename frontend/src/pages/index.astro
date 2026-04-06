@@ -1,0 +1,330 @@
+---
+import Base from '../layouts/Base.astro';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
+
+
+const subjects = [
+  { name: 'Język polski', icon: '📚', color: '#6366f1', questions: '3000+' },
+  { name: 'Matematyka', icon: '📐', color: '#f59e0b', questions: '2500+' },
+  { name: 'Język angielski', icon: '🇬🇧', color: '#ef4444', questions: '2000+' },
+  { name: 'Biologia', icon: '🧬', color: '#22c55e', questions: '1500+' },
+  { name: 'Chemia', icon: '⚗️', color: '#a855f7', questions: '1200+' },
+  { name: 'Fizyka', icon: '⚛️', color: '#3b82f6', questions: '1000+' },
+  { name: 'Historia', icon: '🏛️', color: '#78716c', questions: '1800+' },
+  { name: 'Geografia', icon: '🌍', color: '#0ea5e9', questions: '900+' },
+  { name: 'WOS', icon: '⚖️', color: '#dc2626', questions: '800+' },
+  { name: 'Informatyka', icon: '💻', color: '#059669', questions: '600+' },
+];
+
+const features = [
+  { title: 'AI ocenia wypracowania', desc: 'Claude AI sprawdza Twoje prace w 30 sekund — szczegółowy feedback zgodny z kryteriami CKE.', icon: '🤖' },
+  { title: 'Adaptacyjna trudność', desc: 'System automatycznie dopasowuje poziom pytań. Zawsze uczysz się w optymalnej strefie rozwoju.', icon: '🎯' },
+  { title: '10 przedmiotów maturalnych', desc: 'Od polskiego przez matematykę po informatykę. Wybierz do 4 przedmiotów i skup się na nich.', icon: '📖' },
+  { title: 'Spaced Repetition', desc: 'Algorytm SM-2 pilnuje, żebyś powtarzał materiał w idealnych momentach — zapamiętaj na zawsze.', icon: '🧠' },
+  { title: 'Gamifikacja jak Duolingo', desc: 'Punkty XP, poziomy, streaki, osiągnięcia i ranking. Nauka jest wciągająca.', icon: '🏆' },
+  { title: '8 typów zadań', desc: 'Testy, pytania otwarte, uzupełnienia, dopasowania, porządkowanie, prawda/fałsz i wypracowania.', icon: '✏️' },
+];
+
+const faq = [
+  { q: 'Czy platforma jest darmowa?', a: 'Tak! Plan darmowy daje 5 pytań testowych dziennie z losowych tematów. Plan Premium (39,99 zł/mies.) odblokowuje nieograniczone pytania, wybór tematów, pytania otwarte z AI, wypracowania i pełne statystyki.' },
+  { q: 'Jakie przedmioty są dostępne?', a: 'Aktualnie: polski, matematyka, angielski, biologia, chemia, fizyka, historia, geografia, WOS i informatyka. Baza pytań jest ciągle rozwijana.' },
+  { q: 'Jak działa ocena AI?', a: 'Wykorzystujemy Claude AI (Anthropic) do oceny pytań otwartych i wypracowań. AI jest skonfigurowane zgodnie z kryteriami CKE dla każdego przedmiotu — ocenia merytorycznie, wskazuje błędy i daje konkretne wskazówki.' },
+  { q: 'Czy mogę wybrać konkretny temat do nauki?', a: 'W planie Premium — tak. Możesz wybrać konkretną epokę, lekturę, dział matematyki czy temat z biologii. Plan darmowy losuje pytania z całej bazy.' },
+  { q: 'Czy mogę anulować subskrypcję?', a: 'Tak, w dowolnym momencie. Subskrypcja będzie aktywna do końca opłaconego okresu.' },
+  { q: 'Czy jest aplikacja mobilna?', a: 'Platforma działa w pełni w przeglądarce mobilnej — responsywny design, tryb ciemny, pełna synchronizacja.' },
+];
+---
+
+<Base title="Matury Online — Zdaj maturę z AI | Testy, wypracowania, statystyki">
+
+<!-- NAV -->
+<nav class="fixed top-0 w-full z-50 border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-surface-950/80 backdrop-blur-xl">
+  <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+    <a href="/" class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
+        <span class="text-white font-display font-bold text-lg">M</span>
+      </div>
+      <span class="font-display font-bold text-xl hidden sm:block">Matury Online</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#przedmioty" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Przedmioty</a>
+      <a href="#funkcje" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Funkcje</a>
+      <a href="#cennik" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Cennik</a>
+      <a href="#faq" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">FAQ</a>
+    </div>
+    <div class="flex items-center gap-3">
+      <ThemeToggle client:load />
+      <a href="/auth/login" class="btn-ghost text-sm py-2 px-4">Zaloguj się</a>
+      <a href="/auth/register" class="btn-primary text-sm py-2 px-5">Zacznij za darmo</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
+  <!-- Background -->
+  <div class="absolute inset-0 -z-10">
+    <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-brand-500/10 dark:bg-brand-500/5 rounded-full blur-[120px]"></div>
+    <div class="absolute bottom-0 left-0 w-[500px] h-[500px] bg-navy-500/10 dark:bg-navy-500/5 rounded-full blur-[100px]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(99,102,241,0.08),transparent_60%)]"></div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-6 text-center">
+    <div class="animate-fade-in">
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-100 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 text-sm font-semibold mb-8">
+        <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
+        10 przedmiotów · 8 typów zadań · AI ocena
+      </div>
+    </div>
+
+    <h1 class="font-display font-extrabold text-5xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tight mb-6 animate-slide-up">
+      Zdaj maturę<br/>
+      <span class="text-gradient">łatwiej z AI</span>
+    </h1>
+
+    <p class="max-w-2xl mx-auto text-lg md:text-xl text-zinc-600 dark:text-zinc-400 mb-10 animate-slide-up" style="animation-delay: 100ms">
+      Inteligentna platforma do nauki przed maturą. Testy z 10 przedmiotów, wypracowania oceniane przez AI, adaptacyjna trudność i gamifikacja, która sprawia, że nauka wciąga.
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style="animation-delay: 200ms">
+      <a href="/auth/register" class="btn-primary text-base py-4 px-8">
+        Zacznij naukę za darmo
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      </a>
+      <span class="text-sm text-zinc-500">Bez karty kredytowej · 5 pytań dziennie za darmo</span>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="flex flex-wrap justify-center gap-8 md:gap-16 mt-16 animate-fade-in" style="animation-delay: 400ms">
+      <div class="text-center">
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">10</div>
+        <div class="text-sm text-zinc-500 mt-1">przedmiotów</div>
+      </div>
+      <div class="text-center">
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">15000+</div>
+        <div class="text-sm text-zinc-500 mt-1">pytań</div>
+      </div>
+      <div class="text-center">
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">8</div>
+        <div class="text-sm text-zinc-500 mt-1">typów zadań</div>
+      </div>
+      <div class="text-center">
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">30s</div>
+        <div class="text-sm text-zinc-500 mt-1">ocena AI</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SUBJECTS -->
+<section id="przedmioty" class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">10 przedmiotów maturalnych</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg">Wybierz do 4 przedmiotów i skup się na nich. Reszta czeka.</p>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+      {subjects.map((s) => (
+        <div class="subject-card text-center group">
+          <div class="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">{s.icon}</div>
+          <div class="font-display font-semibold text-sm mb-1">{s.name}</div>
+          <div class="text-xs text-zinc-500">{s.questions} pytań</div>
+          <div class="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={`background: linear-gradient(135deg, ${s.color}08, ${s.color}15)`}></div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="funkcje" class="py-20">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Wszystko, czego potrzebujesz</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg">Profesjonalne narzędzia do nauki w jednej platformie</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {features.map((f, i) => (
+        <div class="glass-card p-8 animate-slide-up" style={`animation-delay: ${i * 80}ms`}>
+          <div class="text-4xl mb-4">{f.icon}</div>
+          <h3 class="font-display font-bold text-lg mb-2">{f.title}</h3>
+          <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">{f.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Jak to działa?</h2>
+    </div>
+
+    <div class="space-y-8">
+      {[
+        { step: '1', title: 'Załóż konto za darmo', desc: 'Rejestracja w 30 sekund — email lub Google. Bez karty kredytowej.' },
+        { step: '2', title: 'Wybierz przedmioty', desc: 'Wybierz do 4 przedmiotów maturalnych. System dopasuje się do Twojego poziomu.' },
+        { step: '3', title: 'Rozwiązuj i ucz się', desc: 'Odpowiadaj na pytania, pisz wypracowania, zbieraj XP. AI ocenia natychmiast.' },
+        { step: '4', title: 'Śledź postępy', desc: 'Dashboard, statystyki, poziomy, streaki. Widzisz dokładnie gdzie jesteś.' },
+      ].map((item) => (
+        <div class="flex items-start gap-6">
+          <div class="flex-shrink-0 w-12 h-12 rounded-2xl bg-brand-500 text-white flex items-center justify-center font-display font-bold text-lg shadow-lg shadow-brand-500/25">
+            {item.step}
+          </div>
+          <div>
+            <h3 class="font-display font-bold text-lg mb-1">{item.title}</h3>
+            <p class="text-zinc-600 dark:text-zinc-400">{item.desc}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="cennik" class="py-20">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Prosta cena, pełen dostęp</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg">Mniej niż 1 godzina korepetycji</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      <!-- Free -->
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-lg mb-1">Darmowy</h3>
+        <p class="text-sm text-zinc-500 mb-6">Na start</p>
+        <div class="font-display font-extrabold text-4xl mb-6">0 zł</div>
+        <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> 5 pytań dziennie</li>
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> Losowe tematy</li>
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> Wyjaśnienia odpowiedzi</li>
+          <li class="flex items-center gap-2"><span class="text-zinc-300">✕</span> Wybór tematów</li>
+          <li class="flex items-center gap-2"><span class="text-zinc-300">✕</span> AI ocena wypracowań</li>
+          <li class="flex items-center gap-2"><span class="text-zinc-300">✕</span> Powtórki Spaced Rep.</li>
+        </ul>
+        <a href="/auth/register" class="btn-outline w-full">Zacznij za darmo</a>
+      </div>
+
+      <!-- Premium -->
+      <div class="glass-card p-8 ring-2 ring-brand-500 relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-500 text-white text-xs font-bold px-4 py-1 rounded-full">
+          NAJPOPULARNIEJSZY
+        </div>
+        <h3 class="font-display font-bold text-lg mb-1">Premium</h3>
+        <p class="text-sm text-zinc-500 mb-6">Subskrypcja miesięczna</p>
+        <div class="flex items-baseline gap-1 mb-6">
+          <span class="font-display font-extrabold text-4xl">39,99</span>
+          <span class="text-zinc-500">zł/mies.</span>
+        </div>
+        <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> Nieograniczone pytania</li>
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> Wybór tematów i lektur</li>
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> AI ocena wypracowań</li>
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> Powtórki Spaced Rep.</li>
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> Pełne statystyki</li>
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> Do 4 przedmiotów</li>
+        </ul>
+        <a href="/auth/register?plan=subscription" class="btn-primary w-full">Rozpocznij z Premium</a>
+        <p class="text-xs text-center text-zinc-500 mt-3">Anuluj w dowolnym momencie</p>
+      </div>
+
+      <!-- One-time -->
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-lg mb-1">Jednorazowy</h3>
+        <p class="text-sm text-zinc-500 mb-6">30 dni dostępu</p>
+        <div class="flex items-baseline gap-1 mb-6">
+          <span class="font-display font-extrabold text-4xl">49</span>
+          <span class="text-zinc-500">zł/30 dni</span>
+        </div>
+        <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> Wszystko z Premium</li>
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> Bez subskrypcji</li>
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> Jednorazowa płatność</li>
+          <li class="flex items-center gap-2"><span class="text-brand-500">✓</span> BLIK / karta / P24</li>
+        </ul>
+        <a href="/auth/register?plan=one_time" class="btn-outline w-full">Kup dostęp</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-3xl mx-auto px-6">
+    <h2 class="font-display font-bold text-3xl md:text-4xl text-center mb-14">Najczęstsze pytania</h2>
+    <div class="space-y-4">
+      {faq.map((item) => (
+        <details class="glass-card group" open={false}>
+          <summary class="flex items-center justify-between p-6 cursor-pointer font-display font-semibold select-none">
+            {item.q}
+            <svg class="w-5 h-5 text-zinc-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-6 text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
+            {item.a}
+          </div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="py-20">
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Zacznij się uczyć już teraz</h2>
+    <p class="text-zinc-600 dark:text-zinc-400 text-lg mb-8">Dołącz i przygotuj się do matury skuteczniej niż kiedykolwiek.</p>
+    <a href="/auth/register" class="btn-primary text-base py-4 px-8">
+      Załóż darmowe konto
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-zinc-200 dark:border-zinc-800 py-12 bg-white dark:bg-surface-950">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="grid md:grid-cols-4 gap-8 mb-8">
+      <div>
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center">
+            <span class="text-white font-display font-bold text-sm">M</span>
+          </div>
+          <span class="font-display font-bold">Matury Online</span>
+        </div>
+        <p class="text-sm text-zinc-500">Inteligentna platforma do nauki przed maturą z AI.</p>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-sm mb-4">Przedmioty</h4>
+        <ul class="space-y-2 text-sm text-zinc-500">
+          {subjects.slice(0, 5).map((s) => <li><a href={`/przedmiot/${s.name.toLowerCase().replace(/\s/g, '-')}`} class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">{s.name}</a></li>)}
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-sm mb-4">Platforma</h4>
+        <ul class="space-y-2 text-sm text-zinc-500">
+          <li><a href="#cennik" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Cennik</a></li>
+          <li><a href="#funkcje" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Funkcje</a></li>
+          <li><a href="#faq" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-sm mb-4">Prawne</h4>
+        <ul class="space-y-2 text-sm text-zinc-500">
+          <li><a href="/regulamin" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Regulamin</a></li>
+          <li><a href="/prywatnosc" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polityka prywatności</a></li>
+          <li><a href="/rodo" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">RODO</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-zinc-200 dark:border-zinc-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-sm text-zinc-500">© 2025 matury-online.pl · Realizacja: <a href="https://karol-leszczynski.pl" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">karol-leszczynski.pl</a></p>
+    </div>
+  </div>
+</footer>
+
+</Base>

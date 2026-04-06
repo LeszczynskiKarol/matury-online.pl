@@ -1,0 +1,14 @@
+---
+import Dashboard from '../../layouts/Dashboard.astro';
+---
+
+<Dashboard title="Powtórki">
+  <div id="review-app"></div>
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { ReviewPage } from '../../components/dashboard/ReviewPage';
+    const el = document.getElementById('review-app');
+    if (el) createRoot(el).render(createElement(ReviewPage));
+  </script>
+</Dashboard>

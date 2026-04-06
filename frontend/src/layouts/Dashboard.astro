@@ -1,0 +1,168 @@
+---
+import Base from './Base.astro';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<Base title={`${title} — Matury Online`}>
+  <div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="hidden lg:flex lg:flex-col lg:w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-surface-900">
+      <!-- Logo -->
+      <div class="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center">
+            <span class="text-white font-display font-bold text-sm">M</span>
+          </div>
+          <span class="font-display font-bold text-lg">Matury Online</span>
+        </div>
+        <ThemeToggle client:load />
+      </div>
+
+      <!-- Nav -->
+      <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <a href="/dashboard" class:list={["nav-link", { active: currentPath === '/dashboard' }]}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          Dashboard
+        </a>
+
+        <div class="pt-4 pb-2 px-4">
+          <span class="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Nauka</span>
+        </div>
+
+        <a href="/dashboard/sesja" class:list={["nav-link", { active: currentPath.startsWith('/dashboard/sesja') }]}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          Nowa sesja
+        </a>
+        <a href="/dashboard/powtorki" class:list={["nav-link", { active: currentPath.startsWith('/dashboard/powtorki') }]}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Powtórki
+        </a>
+        <a href="/dashboard/wypracowania" class:list={["nav-link", { active: currentPath.startsWith('/dashboard/wypracowania') }]}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          Wypracowania
+        </a>
+
+        <div class="pt-4 pb-2 px-4">
+          <span class="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Przedmioty</span>
+        </div>
+
+        <div id="sidebar-subjects"></div>
+
+        <div class="pt-4 pb-2 px-4">
+          <span class="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Profil</span>
+        </div>
+
+        <a href="/dashboard/osiagniecia" class:list={["nav-link", { active: currentPath.startsWith('/dashboard/osiagniecia') }]}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+          Osiągnięcia
+        </a>
+        <a href="/dashboard/statystyki" class:list={["nav-link", { active: currentPath.startsWith('/dashboard/statystyki') }]}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          Statystyki
+        </a>
+        <a href="/dashboard/ranking" class:list={["nav-link", { active: currentPath.startsWith('/dashboard/ranking') }]}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          Ranking
+        </a>
+        <a href="/dashboard/subskrypcja" class:list={["nav-link", { active: currentPath.startsWith('/dashboard/subskrypcja') }]}>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+          Subskrypcja
+        </a>
+
+        <!-- Admin section — hidden by default, shown via JS for ADMIN role -->
+        <div id="admin-nav-section" class="hidden">
+          <div class="pt-4 pb-2 px-4">
+            <span class="text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Admin</span>
+          </div>
+          <a href="/admin" class:list={["nav-link", { active: currentPath.startsWith('/admin') }]}>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Panel admina
+          </a>
+        </div>
+      </nav>
+
+      <!-- User + Logout -->
+      <div class="border-t border-zinc-200 dark:border-zinc-800 px-4 py-3 space-y-2">
+        <div id="sidebar-user"></div>
+        <button id="logout-btn" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          Wyloguj się
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 min-w-0">
+      <!-- Top bar (mobile) -->
+      <header class="lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-surface-900/80 backdrop-blur-xl">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center">
+            <span class="text-white font-display font-bold text-xs">M</span>
+          </div>
+          <span class="font-display font-bold">Matury Online</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <ThemeToggle client:load />
+          <button id="mobile-menu-btn" class="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-surface-800">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Page content -->
+      <div class="p-4 md:p-8 max-w-7xl mx-auto">
+        <slot />
+      </div>
+    </main>
+  </div>
+
+  <!-- Gamification popups portal -->
+  <div id="gamification-popups"></div>
+
+  <script>
+    // Fetch user, show admin nav if ADMIN, handle logout
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!res.ok) return;
+        const user = await res.json();
+
+        // Show admin section if ADMIN
+        if (user.role === 'ADMIN') {
+          document.getElementById('admin-nav-section')?.classList.remove('hidden');
+        }
+
+        // Populate sidebar user info
+        const userEl = document.getElementById('sidebar-user');
+        if (userEl) {
+          userEl.innerHTML = `
+            <div class="flex items-center gap-3">
+              ${user.avatarUrl
+                ? `<img src="${user.avatarUrl}" alt="" class="w-8 h-8 rounded-full" />`
+                : `<div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 text-sm font-bold">${(user.name || user.email)[0].toUpperCase()}</div>`
+              }
+              <div class="min-w-0">
+                <p class="text-sm font-medium truncate">${user.name || 'Użytkownik'}</p>
+                <p class="text-[11px] text-zinc-500 truncate">${user.email}</p>
+              </div>
+            </div>`;
+        }
+      } catch {}
+
+      // Logout handler
+      document.getElementById('logout-btn')?.addEventListener('click', async () => {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        } catch {}
+        window.location.href = '/auth/login';
+      });
+    })();
+  </script>
+</Base>

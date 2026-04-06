@@ -1,0 +1,14 @@
+---
+import Dashboard from '../../layouts/Dashboard.astro';
+---
+
+<Dashboard title="Osiągnięcia">
+  <div id="ach-app"></div>
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { AchievementsPage } from '../../components/dashboard/AchievementsPage';
+    const el = document.getElementById('ach-app');
+    if (el) createRoot(el).render(createElement(AchievementsPage));
+  </script>
+</Dashboard>
