@@ -45,6 +45,8 @@ Thumbs.db
 *.db
 *.db-journal
 prisma/migrations/dev/
+backend/prisma/*
+!backend/prisma/schema.prisma
 
 # Frontend specific
 frontend/.vite/
