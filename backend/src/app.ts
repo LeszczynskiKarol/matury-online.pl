@@ -51,12 +51,13 @@ app.addContentTypeParser(
 
 // ── Plugins ──────────────────────────────────────────────────────────────────
 
-await app.register(cors, {
-  origin: process.env.CORS_ORIGIN?.split(",") || [
-    "https://www.matury-online.pl",
-  ],
-  credentials: true,
-});
+if (process.env.ENABLE_CORS !== "false") {
+  const cors = await import("@fastify/cors");
+  await app.register(cors.default, {
+    origin: true,
+    credentials: true,
+  });
+}
 
 await app.register(cookie, {
   secret: process.env.COOKIE_SECRET,
