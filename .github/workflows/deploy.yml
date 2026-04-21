@@ -1,0 +1,95 @@
+name: Deploy Matury Online
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get runner IP
+        id: ip
+        run: |
+          PUBLIC_IP=$(curl -s --retry 3 --retry-delay 2 https://api.ipify.org)
+          if [[ ! "$PUBLIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Failed to get valid public IP: '$PUBLIC_IP'"
+            exit 1
+          fi
+          echo "ipv4=$PUBLIC_IP" >> "$GITHUB_OUTPUT"
+          echo "Runner IP: $PUBLIC_IP"
+
+      - name: Open SSH
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.MATURY_SG_ID }} \
+            --protocol tcp --port 22 \
+            --cidr ${{ steps.ip.outputs.ipv4 }}/32
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-central-1
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.MATURY_HOST }}
+          username: ubuntu
+          key: ${{ secrets.MATURY_SSH_KEY }}
+          command_timeout: 300s
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+            echo "=== Using node: $(which node) ($(node --version)) ==="
+
+            cd /var/www/matury-online.pl
+
+            echo "=== Git pull ==="
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== Install dependencies ==="
+            cd /var/www/matury-online.pl/backend
+            npm ci --omit=dev
+
+            cd /var/www/matury-online.pl/frontend
+            npm ci
+
+            echo "=== Backend build ==="
+            cd /var/www/matury-online.pl/backend
+            npx prisma migrate deploy
+            npx prisma generate
+            npm run build || { echo "TSC BUILD FAILED"; exit 1; }
+
+            echo "=== Frontend build ==="
+            cd /var/www/matury-online.pl/frontend
+            npm run build || { echo "FRONTEND BUILD FAILED"; exit 1; }
+
+            echo "=== Restart PM2 ==="
+            cd /var/www/matury-online.pl
+            pm2 delete matury-backend matury-frontend || true
+            pm2 start ecosystem.config.cjs
+            pm2 save
+
+            sleep 3
+            echo "=== Status ==="
+            pm2 list
+            pm2 logs matury-backend --lines 5 --nostream
+            pm2 logs matury-frontend --lines 5 --nostream
+
+      - name: Close SSH
+        if: always()
+        run: |
+          IP="${{ steps.ip.outputs.ipv4 }}"
+          if [[ "$IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            aws ec2 revoke-security-group-ingress \
+              --group-id ${{ secrets.MATURY_SG_ID }} \
+              --protocol tcp --port 22 \
+              --cidr ${IP}/32 || true
+          else
+            echo "No valid IP to revoke, skipping"
+          fi
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-central-1
