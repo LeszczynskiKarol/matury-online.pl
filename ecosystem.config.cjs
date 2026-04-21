@@ -3,7 +3,7 @@ module.exports = {
     {
       name: "matury-backend",
       cwd: "/var/www/matury-online.pl/backend",
-      script: "dist/index.js",
+      script: "dist/app.js",
       interpreter: "node",
       env: {
         NODE_ENV: "production",
