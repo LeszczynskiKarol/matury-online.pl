@@ -1,4 +1,6 @@
 ---
+import ConsentBanner from '../components/ConsentBanner.astro';
+
 interface Props {
   title: string;
   description?: string;
@@ -6,6 +8,8 @@ interface Props {
 }
 
 const { title, description = 'Matury Online — inteligentna platforma do nauki przed maturą z AI. Testy, wypracowania, statystyki i gamifikacja.', ogImage } = Astro.props;
+
+const GA_ID = "G-SQ1CESHFJ0";
 ---
 
 <!doctype html>
@@ -21,7 +25,65 @@ const { title, description = 'Matury Online — inteligentna platforma do nauki 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="canonical" href={Astro.url.href} />
     <title>{title}</title>
-    <!-- Theme: light default, persist choice -->
+
+    {/* ─── GOOGLE CONSENT MODE v2 — MUSI BYĆ PRZED gtag.js ─── */}
+    <script is:inline>
+      // 1) Inicjalizacja dataLayer i gtag
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function () { dataLayer.push(arguments); };
+
+      // 2) Default: wszystko denied (GDPR by default).
+      //    Region EOG + UK + CH — w innych krajach zgoda nie jest wymagana,
+      //    ale dla uproszczenia traktujemy wszystkich jako EOG (bezpieczniej).
+      gtag("consent", "default", {
+        ad_storage: "denied",
+        ad_user_data: "denied",
+        ad_personalization: "denied",
+        analytics_storage: "denied",
+        functionality_storage: "denied",
+        personalization_storage: "denied",
+        security_storage: "granted",
+        wait_for_update: 500,
+      });
+
+      // 3) Redakcja danych reklamowych gdy ad_storage = denied
+      gtag("set", "ads_data_redaction", true);
+
+      // 4) URL passthrough — zachowuje atrybucję kliknięć bez cookies
+      gtag("set", "url_passthrough", true);
+
+      // 5) Jeśli użytkownik już wyraził zgodę wcześniej — zastosuj od razu
+      //    PRZED załadowaniem gtag.js (redukuje lukę pomiarową).
+      try {
+        var raw = localStorage.getItem("mo_consent_v2");
+        if (raw) {
+          var c = JSON.parse(raw);
+          var MAX_AGE = 365 * 24 * 60 * 60 * 1000;
+          if (c && c.version === 1 && (Date.now() - c.timestamp) < MAX_AGE) {
+            gtag("consent", "update", {
+              ad_storage: c.marketing ? "granted" : "denied",
+              ad_user_data: c.marketing ? "granted" : "denied",
+              ad_personalization: c.marketing ? "granted" : "denied",
+              analytics_storage: c.analytics ? "granted" : "denied",
+              functionality_storage: c.functional ? "granted" : "denied",
+              personalization_storage: c.personalization ? "granted" : "denied",
+              security_storage: "granted",
+            });
+          }
+        }
+      } catch (e) {}
+    </script>
+
+    {/* ─── Google tag (gtag.js) — ładuje się PO consent default ─── */}
+    <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
+    <script is:inline define:vars={{ GA_ID }}>
+      gtag("js", new Date());
+      gtag("config", GA_ID, {
+        anonymize_ip: true,  // dodatkowa warstwa prywatności
+      });
+    </script>
+
+    {/* Theme: light default, persist choice */}
     <script is:inline>
       (function(){
         var t = localStorage.getItem('theme');
@@ -33,6 +95,9 @@ const { title, description = 'Matury Online — inteligentna platforma do nauki 
   </head>
   <body class="min-h-screen">
     <slot />
+
+    {/* Banner consent — import komponentu */}
+    <ConsentBanner />
   </body>
 </html>
 

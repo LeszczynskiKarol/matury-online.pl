@@ -1007,7 +1007,15 @@ const productSchema = {
         <ul class="space-y-2 text-sm text-zinc-500">
           <li><a href="/regulamin" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Regulamin</a></li>
           <li><a href="/prywatnosc" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polityka prywatności</a></li>
-          <li><a href="/rodo" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">RODO</a></li>
+          <li>          
+          <button
+            type="button"
+            onclick="window.openConsentSettings && window.openConsentSettings()"
+            class="hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+          >
+            Ustawienia prywatności
+          </button>
+          </li>
           <li><a href="/kontakt" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Kontakt</a></li>
         </ul>
       </div>

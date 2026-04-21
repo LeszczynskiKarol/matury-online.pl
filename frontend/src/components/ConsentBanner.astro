@@ -1,0 +1,353 @@
+---
+// src/components/ConsentBanner.astro
+// Banner zgód RODO + granularne ustawienia
+// Pokazuje się gdy brak zgody w localStorage lub wygasła
+---
+
+<div id="consent-root" class="hidden">
+  {/* ───── BANNER (stan początkowy) ───── */}
+  <div
+    id="consent-banner"
+    role="dialog"
+    aria-labelledby="consent-title"
+    aria-describedby="consent-desc"
+    class="fixed bottom-0 left-0 right-0 z-[9999] bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-2xl"
+  >
+    <div class="max-w-6xl mx-auto p-4 sm:p-6">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:gap-8 gap-4">
+        <div class="flex-1">
+          <h2
+            id="consent-title"
+            class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1"
+          >
+            🍪 Cenimy Twoją prywatność
+          </h2>
+          <p
+            id="consent-desc"
+            class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed"
+          >
+            Używamy plików cookies i podobnych technologii do analizy ruchu,
+            personalizacji treści i marketingu. Niektóre są niezbędne do
+            działania serwisu. Możesz zaakceptować wszystkie, odrzucić
+            opcjonalne lub dostosować zgody.
+            <a
+              href="/polityka-prywatnosci"
+              class="underline hover:text-indigo-600 dark:hover:text-indigo-400"
+            >
+              Polityka prywatności
+            </a>
+            ·
+            <a
+              href="/polityka-cookies"
+              class="underline hover:text-indigo-600 dark:hover:text-indigo-400"
+            >
+              Polityka cookies
+            </a>
+          </p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2 lg:shrink-0">
+          <button
+            type="button"
+            data-consent-action="settings"
+            class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+          >
+            Dostosuj
+          </button>
+          <button
+            type="button"
+            data-consent-action="reject"
+            class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+          >
+            Odrzuć opcjonalne
+          </button>
+          <button
+            type="button"
+            data-consent-action="accept"
+            class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition"
+          >
+            Akceptuję wszystkie
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* ───── MODAL USTAWIEŃ ───── */}
+  <div
+    id="consent-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="consent-modal-title"
+    class="hidden fixed inset-0 z-[10000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+  >
+    <div
+      class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+    >
+      <div class="p-6 border-b border-slate-200 dark:border-slate-700">
+        <h2
+          id="consent-modal-title"
+          class="text-xl font-bold text-slate-900 dark:text-slate-100"
+        >
+          Ustawienia prywatności
+        </h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+          Wybierz, które kategorie plików cookies akceptujesz. Zgodę możesz
+          zmienić w dowolnym momencie.
+        </p>
+      </div>
+
+      <div class="p-6 space-y-4">
+        {/* Niezbędne */}
+        <div
+          class="flex items-start justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg"
+        >
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+                Niezbędne
+              </h3>
+              <span
+                class="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded"
+                >Zawsze aktywne</span
+              >
+            </div>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Sesja, bezpieczeństwo, podstawowa funkcjonalność (logowanie,
+              koszyk subskrypcji, zabezpieczenia reCAPTCHA). Bez nich serwis nie
+              działa.
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked
+            disabled
+            class="mt-1 w-5 h-5 accent-indigo-600 cursor-not-allowed opacity-60"
+          />
+        </div>
+
+        {/* Analityka */}
+        <div
+          class="flex items-start justify-between gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition"
+        >
+          <div class="flex-1">
+            <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+              Analityka
+            </h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Google Analytics 4 — anonimowe statystyki użycia serwisu. Pomaga
+              nam poprawiać aplikację na podstawie tego, które funkcje są
+              faktycznie używane.
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            data-consent-category="analytics"
+            class="mt-1 w-5 h-5 accent-indigo-600 cursor-pointer"
+          />
+        </div>
+
+        {/* Marketing */}
+        <div
+          class="flex items-start justify-between gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition"
+        >
+          <div class="flex-1">
+            <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+              Marketing
+            </h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Google Ads — remarketing i pomiar skuteczności reklam. Dzięki temu
+              możemy pokazywać Ci trafniejsze reklamy i finansować rozwój
+              darmowej wersji.
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            data-consent-category="marketing"
+            class="mt-1 w-5 h-5 accent-indigo-600 cursor-pointer"
+          />
+        </div>
+
+        {/* Funkcjonalne */}
+        <div
+          class="flex items-start justify-between gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition"
+        >
+          <div class="flex-1">
+            <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+              Funkcjonalne
+            </h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Zapamiętywanie preferencji (motyw ciemny/jasny, wybrane
+              przedmioty, ustawienia sesji).
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            data-consent-category="functional"
+            class="mt-1 w-5 h-5 accent-indigo-600 cursor-pointer"
+          />
+        </div>
+
+        {/* Personalizacja */}
+        <div
+          class="flex items-start justify-between gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition"
+        >
+          <div class="flex-1">
+            <h3 class="font-semibold text-slate-900 dark:text-slate-100">
+              Personalizacja
+            </h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Dopasowywanie treści do Twoich zainteresowań (rekomendacje pytań,
+              spersonalizowane powiadomienia o powtórkach).
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            data-consent-category="personalization"
+            class="mt-1 w-5 h-5 accent-indigo-600 cursor-pointer"
+          />
+        </div>
+      </div>
+
+      <div
+        class="p-6 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-2 justify-end"
+      >
+        <button
+          type="button"
+          data-consent-action="reject"
+          class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+        >
+          Odrzuć opcjonalne
+        </button>
+        <button
+          type="button"
+          data-consent-action="save-custom"
+          class="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+        >
+          Zapisz wybrane
+        </button>
+        <button
+          type="button"
+          data-consent-action="accept"
+          class="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition"
+        >
+          Akceptuję wszystkie
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {/* ───── FLOATING BUTTON (po decyzji, do zmiany zgód) ───── */}
+  <button
+    id="consent-reopen"
+    type="button"
+    aria-label="Ustawienia prywatności"
+    title="Ustawienia prywatności"
+    class="hidden "
+  >
+    🍪
+  </button>
+</div>
+
+<script>
+  import {
+    getStoredConsent,
+    saveConsent,
+    ACCEPT_ALL,
+    REJECT_ALL,
+    type ConsentState,
+  } from "../lib/consent";
+
+  const root = document.getElementById("consent-root")!;
+  const banner = document.getElementById("consent-banner")!;
+  const modal = document.getElementById("consent-modal")!;
+  const reopen = document.getElementById("consent-reopen")!;
+
+  function showBanner() {
+    root.classList.remove("hidden");
+    banner.classList.remove("hidden");
+    modal.classList.add("hidden");
+    reopen.classList.add("hidden");
+  }
+
+  function showModal(prefill?: ConsentState | null) {
+    root.classList.remove("hidden");
+    banner.classList.add("hidden");
+    modal.classList.remove("hidden");
+    reopen.classList.add("hidden");
+
+    // Prefill checkboxów bieżącym stanem
+    const state = prefill ?? getStoredConsent();
+    (["analytics", "marketing", "functional", "personalization"] as const).forEach((cat) => {
+      const input = modal.querySelector<HTMLInputElement>(`input[data-consent-category="${cat}"]`);
+      if (input) input.checked = state ? !!state[cat] : false;
+    });
+  }
+
+  function hideAll() {
+    banner.classList.add("hidden");
+    modal.classList.add("hidden");
+    reopen.classList.remove("hidden");
+    root.classList.remove("hidden");
+  }
+
+  function readCustomConsent() {
+    const get = (cat: string) =>
+      modal.querySelector<HTMLInputElement>(`input[data-consent-category="${cat}"]`)?.checked ?? false;
+    return {
+      analytics: get("analytics"),
+      marketing: get("marketing"),
+      functional: get("functional"),
+      personalization: get("personalization"),
+    };
+  }
+
+  // ─── Handlery przycisków ───
+  document.querySelectorAll<HTMLButtonElement>("[data-consent-action]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const action = btn.dataset.consentAction;
+      switch (action) {
+        case "accept":
+          saveConsent(ACCEPT_ALL);
+          hideAll();
+          break;
+        case "reject":
+          saveConsent(REJECT_ALL);
+          hideAll();
+          break;
+        case "settings":
+          showModal();
+          break;
+        case "save-custom":
+          saveConsent(readCustomConsent());
+          hideAll();
+          break;
+      }
+    });
+  });
+
+  reopen.addEventListener("click", () => showModal());
+
+  // Zamykanie modala klawiszem Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+      // Nie zamykaj jeśli user jeszcze nie miał zgody — wymuś decyzję
+      if (getStoredConsent()) {
+        hideAll();
+      }
+    }
+  });
+
+  // Globalne API — do wywołania z innych miejsc (np. link "Ustawienia cookies" w footerze)
+  window.openConsentSettings = () => showModal();
+
+  // ─── INICJALIZACJA ───
+  const existing = getStoredConsent();
+  if (existing) {
+    // Zgoda już jest — pokaż tylko floating button
+    hideAll();
+  } else {
+    // Brak zgody lub wygasła — pokaż banner
+    showBanner();
+  }
+</script>
