@@ -5,9 +5,15 @@ interface Props {
   title: string;
   description?: string;
   ogImage?: string;
+  noindex?: boolean;   // ← NOWE: dla stron prawnych, zapleczowych itp.
 }
 
-const { title, description = 'Matury Online — inteligentna platforma do nauki przed maturą z AI. Testy, wypracowania, statystyki i gamifikacja.', ogImage } = Astro.props;
+const {
+  title,
+  description = 'Matury Online — inteligentna platforma do nauki przed maturą z AI. Testy, wypracowania, statystyki i gamifikacja.',
+  ogImage,
+  noindex = false,     // ← NOWE: domyślnie indeksowane
+} = Astro.props;
 
 const GA_ID = "G-SQ1CESHFJ0";
 ---
@@ -18,6 +24,11 @@ const GA_ID = "G-SQ1CESHFJ0";
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+
+    {/* ← NOWE: robots noindex/nofollow dla stron prawnych */}
+    {noindex && <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />}
+    {noindex && <meta name="googlebot" content="noindex, nofollow" />}
+
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     {ogImage && <meta property="og:image" content={ogImage} />}
@@ -26,15 +37,14 @@ const GA_ID = "G-SQ1CESHFJ0";
     <link rel="canonical" href={Astro.url.href} />
     <title>{title}</title>
 
-    {/* ─── GOOGLE CONSENT MODE v2 — MUSI BYĆ PRZED gtag.js ─── */}
+    {/* ← NOWE: slot na dodatkowe tagi w head (hreflang itp.) */}
+    <slot name="head" />
+
+    {/* ─── GOOGLE CONSENT MODE v2 (bez zmian) ─── */}
     <script is:inline>
-      // 1) Inicjalizacja dataLayer i gtag
       window.dataLayer = window.dataLayer || [];
       window.gtag = function () { dataLayer.push(arguments); };
 
-      // 2) Default: wszystko denied (GDPR by default).
-      //    Region EOG + UK + CH — w innych krajach zgoda nie jest wymagana,
-      //    ale dla uproszczenia traktujemy wszystkich jako EOG (bezpieczniej).
       gtag("consent", "default", {
         ad_storage: "denied",
         ad_user_data: "denied",
@@ -46,14 +56,9 @@ const GA_ID = "G-SQ1CESHFJ0";
         wait_for_update: 500,
       });
 
-      // 3) Redakcja danych reklamowych gdy ad_storage = denied
       gtag("set", "ads_data_redaction", true);
-
-      // 4) URL passthrough — zachowuje atrybucję kliknięć bez cookies
       gtag("set", "url_passthrough", true);
 
-      // 5) Jeśli użytkownik już wyraził zgodę wcześniej — zastosuj od razu
-      //    PRZED załadowaniem gtag.js (redukuje lukę pomiarową).
       try {
         var raw = localStorage.getItem("mo_consent_v2");
         if (raw) {
@@ -74,16 +79,14 @@ const GA_ID = "G-SQ1CESHFJ0";
       } catch (e) {}
     </script>
 
-    {/* ─── Google tag (gtag.js) — ładuje się PO consent default ─── */}
     <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
     <script is:inline define:vars={{ GA_ID }}>
       gtag("js", new Date());
       gtag("config", GA_ID, {
-        anonymize_ip: true,  // dodatkowa warstwa prywatności
+        anonymize_ip: true,
       });
     </script>
 
-    {/* Theme: light default, persist choice */}
     <script is:inline>
       (function(){
         var t = localStorage.getItem('theme');
@@ -96,8 +99,8 @@ const GA_ID = "G-SQ1CESHFJ0";
   <body class="min-h-screen">
     <slot />
 
-    {/* Banner consent — import komponentu */}
-    <ConsentBanner />
+    {/* Banner zgód */}
+   <ConsentBanner />
   </body>
 </html>
 

@@ -1,0 +1,379 @@
+---
+import Layout from '../layouts/Base.astro';
+
+const lastUpdated = 'April 21, 2026';
+---
+
+<Layout
+  title="Terms of Service — Matury Online"
+  description="Terms of electronic services provision for the matury-online.pl service."
+  noindex={true}
+>
+  <link rel="alternate" hreflang="pl" href="https://www.matury-online.pl/regulamin" slot="head" />
+  <link rel="alternate" hreflang="en" href="https://www.matury-online.pl/terms-of-service" slot="head" />
+
+  <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div class="flex items-center justify-between mb-6 text-sm">
+      <a href="/" class="text-indigo-600 dark:text-indigo-400 hover:underline">← Home</a>
+      <a href="/regulamin" class="text-slate-600 dark:text-slate-400 hover:underline">🇵🇱 Wersja polska</a>
+    </div>
+
+    <article class="prose prose-slate dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-h2:mt-10 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-2">
+      <h1 class="!mb-2">Terms of Service — matury-online.pl</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 !mt-0">
+        Terms of electronic services provision<br/>
+        Last updated: {lastUpdated}
+      </p>
+
+      <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-4 rounded-r my-6 not-prose text-sm">
+        <p class="m-0">
+          <strong>Important for consumers:</strong> Starting to use the paid functions of the service (premium
+          content access, AI credits) before the 14-day withdrawal period expires requires your explicit consent
+          and results in the loss of the right to withdraw from the contract. See § 8 for details.
+        </p>
+        <p class="m-0 mt-2">
+          <em>Note: matury-online.pl is a Polish service governed by Polish law. This English version is a translation for convenience. In case of any discrepancy, the Polish version prevails.</em>
+        </p>
+      </div>
+
+      <h2 id="toc">Table of contents</h2>
+      <ol>
+        <li><a href="#general">General provisions and definitions</a></li>
+        <li><a href="#services">Types and scope of services</a></li>
+        <li><a href="#requirements">Technical requirements</a></li>
+        <li><a href="#account">Registration and user account</a></li>
+        <li><a href="#subscriptions">Subscriptions and payments</a></li>
+        <li><a href="#credits">Credits and one-time purchases</a></li>
+        <li><a href="#autorenew">Automatic subscription renewal</a></li>
+        <li><a href="#withdrawal">Right of withdrawal</a></li>
+        <li><a href="#refunds">Refund policy</a></li>
+        <li><a href="#ai">AI-based features</a></li>
+        <li><a href="#obligations">User obligations</a></li>
+        <li><a href="#ip">Intellectual property</a></li>
+        <li><a href="#liability">Provider's liability</a></li>
+        <li><a href="#complaints">Complaints</a></li>
+        <li><a href="#termination">Contract termination and account suspension</a></li>
+        <li><a href="#data">Personal data protection</a></li>
+        <li><a href="#changes">Changes to the Terms</a></li>
+        <li><a href="#disputes">Dispute resolution</a></li>
+        <li><a href="#final">Final provisions</a></li>
+      </ol>
+
+      <h2 id="general">§ 1. General provisions and definitions</h2>
+      <ol>
+        <li>
+          These Terms of Service (hereinafter: <strong>“Terms”</strong>) define the rules for providing electronic
+          services in the internet service available at matury-online.pl (hereinafter: <strong>“Service”</strong>).
+        </li>
+        <li>
+          The service provider is <strong>Ecopywriting.pl Karol Leszczyński</strong>, based in Papowo Biskupie
+          (address: Papowo Biskupie 119/18, 86-221 Papowo Biskupie, Poland), Tax ID (NIP): 9562216468
+          (hereinafter: <strong>“Provider”</strong>).
+        </li>
+        <li>Contact with the Provider: <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a>.</li>
+        <li>Terms used in these Terms mean:
+          <ul>
+            <li><strong>User</strong> — a natural person using the Service who is at least 18 years old, or a person aged 13–17 acting with the consent and under the supervision of a legal representative;</li>
+            <li><strong>Consumer</strong> — a User who is a consumer within the meaning of Art. 22¹ of the Polish Civil Code;</li>
+            <li><strong>Account</strong> — the User's individual profile in the Service;</li>
+            <li><strong>Subscription</strong> — a paid service providing access to Premium features, billed periodically or as a one-time payment;</li>
+            <li><strong>Credits</strong> — billing units enabling use of selected Service features (e.g. AI essay evaluations);</li>
+            <li><strong>Digital content</strong> — data produced and supplied in digital form within the meaning of Art. 2(5) of the Polish Consumer Rights Act;</li>
+            <li><strong>AI</strong> — artificial intelligence models used in the Service, in particular Anthropic Claude language models;</li>
+            <li><strong>GDPR</strong> — Regulation (EU) 2016/679 of the European Parliament and of the Council;</li>
+            <li><strong>Consumer Rights Act</strong> — the Polish Act of 30 May 2014 on consumer rights.</li>
+          </ul>
+        </li>
+        <li>Acceptance of the Terms is voluntary but necessary to use the Service.</li>
+      </ol>
+
+      <h2 id="services">§ 2. Types and scope of services</h2>
+      <ol>
+        <li>
+          The Service is an educational platform for preparing for the Polish high school graduation exam (matura).
+          Within the Service, the Provider offers:
+          <ul>
+            <li>access to educational content (questions, tasks, tests, study materials),</li>
+            <li>AI essay evaluation with feedback,</li>
+            <li>tracking of study progress, statistics, gamification (points, levels, streaks, achievements),</li>
+            <li>generation of personalized practice sessions (adaptive learning),</li>
+            <li>spaced repetition review,</li>
+            <li>mock exam simulations,</li>
+            <li>study reminders (upon consent),</li>
+            <li>technical support.</li>
+          </ul>
+        </li>
+        <li>The Provider reserves the right to modify, add, or remove Service features, subject to Users' acquired rights.</li>
+        <li>
+          Services are offered in two variants:
+          <ul>
+            <li><strong>Free variant</strong> — limited access to content, with a daily question limit;</li>
+            <li><strong>Paid variant (Premium)</strong> — full access to all features, billed via subscription or as a one-time payment.</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h2 id="requirements">§ 3. Technical requirements</h2>
+      <ol>
+        <li>To use the Service, the following are required:
+          <ul>
+            <li>a device with Internet access,</li>
+            <li>an up-to-date web browser (Chrome, Firefox, Safari, Edge in the current or one of the two previous versions),</li>
+            <li>an active e-mail address,</li>
+            <li>JavaScript and cookies enabled (at least necessary cookies).</li>
+          </ul>
+        </li>
+        <li>
+          The Provider does not guarantee correct operation of the Service on outdated browsers or devices
+          not meeting the above requirements.
+        </li>
+      </ol>
+
+      <h2 id="account">§ 4. Registration and user account</h2>
+      <ol>
+        <li>Registration in the Service takes place via a registration form (e-mail + password) or through Google account login.</li>
+        <li>Registration is free and requires acceptance of the Terms and the Privacy Policy.</li>
+        <li>When registering via e-mail, the User receives a 6-digit verification code sent to the provided e-mail address.</li>
+        <li>The User is obliged to provide true and current data and to keep the password confidential.</li>
+        <li>It is prohibited to maintain more than one account per person, resell account access to third parties, or share the account with third parties in order to circumvent Service limits.</li>
+        <li>Persons aged 13–17 may register an Account and use the Service only with prior consent and under the supervision of a legal representative (parent or legal guardian), who accepts the Terms on behalf of the minor User and is responsible for contract conclusion and payments.</li>
+        <li>The User may delete their Account at any time from the settings or by submitting a request to the Provider's e-mail address.</li>
+      </ol>
+
+      <h2 id="subscriptions">§ 5. Subscriptions and payments</h2>
+      <ol>
+        <li>Access to Premium features is paid. Current prices and plans are available on the Service website.</li>
+        <li>
+          The Provider offers the following paid plans:
+          <ul>
+            <li><strong>Monthly subscription (Premium)</strong> — PLN 49 per month, renewed automatically;</li>
+            <li><strong>One-time access (30 days)</strong> — PLN 59, one-time payment, no automatic renewal;</li>
+            <li><strong>Credit packages</strong> — according to the current Service offer (see § 6).</li>
+          </ul>
+        </li>
+        <li>Prices include all taxes (including VAT where applicable).</li>
+        <li>Payments are processed by Stripe Payments Europe, Ltd. Available payment methods: payment card, BLIK, Revolut Pay. Payment data does not reach the Provider's servers.</li>
+        <li>The contract for the Premium service is concluded upon successful processing of payment by the payment operator.</li>
+        <li>A VAT invoice (or receipt) is issued upon the User's request submitted before the end of the month in which the payment was made. To receive a VAT invoice, the User should provide invoice details (including Tax ID, if applicable).</li>
+      </ol>
+
+      <h2 id="credits">§ 6. Credits and one-time purchases</h2>
+      <ol>
+        <li>Credits are billing units enabling the use of selected Service features, in particular AI essay evaluations and other features requiring intensive computational resources.</li>
+        <li>Prices and the number of credits in packages are available in the Service and may change, subject to acquired rights.</li>
+        <li>Credits purchased by the User have a specific validity period, indicated at purchase. <strong>Credits not used within the validity period expire</strong> and are not subject to refund or exchange for money.</li>
+        <li>Credits cannot be exchanged for cash, sold, or transferred to other accounts.</li>
+        <li>If the User terminates the contract (deletes the Account), unused credits are forfeited with no right to refund.</li>
+        <li>In case of a technical failure that prevents the use of credits, the Provider will restore the lost credits in the documented amount of loss or — at the User's choice — extend their validity period.</li>
+      </ol>
+
+      <h2 id="autorenew">§ 7. Automatic subscription renewal</h2>
+      <ol>
+        <li>The monthly subscription renews automatically every month until canceled by the User.</li>
+        <li>The User may cancel the subscription at any time from the Account panel. Cancellation does not result in immediate termination of access — the User retains access to Premium features until the end of the current billing period paid for.</li>
+        <li>The next payment will not be charged after subscription cancellation.</li>
+        <li>The Provider will notify the User of subscription renewal with appropriate advance notice, in accordance with the requirements of the Consumer Rights Act.</li>
+        <li>In case of a failed payment attempt, the Provider may retry charging at intervals. Lack of successful payment results in automatic termination of Premium access.</li>
+      </ol>
+
+      <h2 id="withdrawal">§ 8. Right of withdrawal</h2>
+      <ol>
+        <li>
+          A Consumer has the right to withdraw from a contract concluded at a distance within 14 days of its
+          conclusion, without giving any reason, in accordance with Art. 27 of the Consumer Rights Act.
+        </li>
+        <li>
+          To exercise the right of withdrawal, the Consumer should inform the Provider of their decision via
+          an unambiguous statement, sent to <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a>
+          or in writing to the registered address.
+        </li>
+        <li>
+          <strong>Loss of the right of withdrawal.</strong> Pursuant to Art. 38(13) of the Consumer Rights Act, the right
+          of withdrawal <strong>does not apply</strong> to contracts for the supply of digital content not delivered on a
+          tangible medium, for which the Consumer is obliged to pay a price, if the Provider commenced the performance
+          with the Consumer's express prior consent, the Consumer was informed before the commencement of performance
+          that after the Provider's performance they would lose the right of withdrawal, and the Consumer acknowledged this.
+        </li>
+        <li>
+          Upon activating a Premium subscription or purchasing credits, the Consumer gives explicit consent to the
+          commencement of service provision (digital content delivery) immediately after payment and confirms awareness
+          of the loss of the right of withdrawal. This consent is recorded in the Service system.
+        </li>
+        <li>
+          If the Consumer did not give the consent referred to in para. 4, access to Premium features will be granted
+          only after the 14-day withdrawal period has elapsed.
+        </li>
+        <li>
+          A template withdrawal statement constitutes Annex 2 to the Consumer Rights Act and is available on request.
+        </li>
+      </ol>
+
+      <h2 id="refunds">§ 9. Refund policy</h2>
+      <ol>
+        <li>
+          Due to the nature of the services (digital content delivery) and the Consumer's informed and express consent
+          to immediate commencement of performance (§ 8 para. 4), <strong>the Provider does not issue refunds for:</strong>
+          <ul>
+            <li>unused subscription periods (including subscriptions canceled during the billing period),</li>
+            <li>purchased one-time access (30-day) after Premium account activation,</li>
+            <li>purchased and unused credits, including expired credits,</li>
+            <li>the User's lack of activity in the Service,</li>
+            <li>the User's change of mind after commencement of performance,</li>
+            <li>matura exam results (there is no guarantee that using the Service will result in passing the exam with a specific score).</li>
+          </ul>
+        </li>
+        <li>
+          <strong>The Provider issues refunds in the following cases:</strong>
+          <ul>
+            <li>multiple, repeated charging of the same fee for reasons attributable to the Provider,</li>
+            <li>permanent inability to provide the service for reasons attributable to the Provider, lasting longer than 7 days and not resolvable within a reasonable time after reporting,</li>
+            <li>execution of a complaint resolved in the User's favor (§ 14).</li>
+          </ul>
+        </li>
+        <li>Refunds are processed using the same payment method used for purchase, within 14 business days of acknowledging the request.</li>
+        <li>This section does not exclude or limit the Consumer's rights under mandatory legal provisions, in particular the warranty for defects and non-conformity of digital content with the contract (Chapter 5b of the Consumer Rights Act).</li>
+      </ol>
+
+      <h2 id="ai">§ 10. AI-based features</h2>
+      <ol>
+        <li>
+          The Service uses artificial intelligence models (in particular Anthropic Claude) to evaluate essays,
+          generate explanations, adapt task difficulty, and provide other educational features.
+        </li>
+        <li>
+          <strong>The User acknowledges and accepts that:</strong>
+          <ul>
+            <li>results generated by AI are <strong>auxiliary, educational, and indicative</strong>, and do not constitute official exam grading;</li>
+            <li>AI may generate incomplete, imprecise, or in exceptional cases incorrect answers (so-called hallucinations) — the User should verify received information in source materials;</li>
+            <li>AI evaluations do not replace teacher or examiner assessments, nor the result of the matura exam organized by CKE (Central Examination Board);</li>
+            <li>AI evaluation criteria are based on published CKE criteria and educational guidelines but may differ from a human examiner's assessment;</li>
+            <li>the Service does not guarantee achieving a specific matura or other exam result;</li>
+            <li>the Provider is not liable for educational or life decisions made solely based on AI-generated results.</li>
+          </ul>
+        </li>
+        <li>
+          AI evaluations do not constitute decisions within the meaning of Art. 22 GDPR — they do not produce legal
+          effects or significantly affect the User's legal situation. The User has the right to contest an AI evaluation
+          and obtain an explanation of its basis.
+        </li>
+        <li>
+          It is prohibited to use the AI provided in the Service for purposes inconsistent with its intended use,
+          including generating offensive, illegal content, content infringing copyright, or intended to unethically
+          circumvent CKE criteria.
+        </li>
+      </ol>
+
+      <h2 id="obligations">§ 11. User obligations</h2>
+      <ol>
+        <li>The User is obliged to use the Service in accordance with the Terms, applicable law, good practices, and principles of social coexistence.</li>
+        <li>
+          The following is prohibited:
+          <ul>
+            <li>posting content that is illegal, offensive, discriminatory, or infringing the personal rights of others,</li>
+            <li>actions aimed at disrupting the Service (including DDoS attacks, code injection, scraping content without consent),</li>
+            <li>circumventing free access limits (including creating multiple accounts),</li>
+            <li>sharing the account with third parties or reselling access,</li>
+            <li>automated downloading of the Service's educational content for commercial purposes,</li>
+            <li>using the Service's content to train AI models without the Provider's consent,</li>
+            <li>misleading the Provider (e.g. false complaints, chargebacks).</li>
+          </ul>
+        </li>
+        <li>Violation of the above may result in Account suspension in accordance with § 15.</li>
+      </ol>
+
+      <h2 id="ip">§ 12. Intellectual property</h2>
+      <ol>
+        <li>All content made available in the Service (questions, tasks, educational materials, graphics, logos, source code) is protected by copyright and is the property of the Provider or entities with whom the Provider has concluded appropriate license agreements.</li>
+        <li>The User receives a non-exclusive, non-transferable license to use the Service's content solely for their own learning purposes, during the term of the contract.</li>
+        <li>Copying, distributing, publishing, modifying, or sharing the Service's content with third parties without the Provider's written consent is prohibited.</li>
+        <li>Content created by the User (e.g. essays) remains their property. The User grants the Provider a non-exclusive license to process such content solely to the extent necessary to provide the services (including sending it to AI models for evaluation).</li>
+      </ol>
+
+      <h2 id="liability">§ 13. Provider's liability</h2>
+      <ol>
+        <li>The Provider exercises due diligence to ensure the Service operates continuously and reliably.</li>
+        <li>The Provider is not liable for:
+          <ul>
+            <li>technical breaks resulting from maintenance, failures, or force majeure,</li>
+            <li>incorrect Service operation resulting from the User's failure to meet technical requirements,</li>
+            <li>damages resulting from the actions of third parties (e.g. attacks, phishing),</li>
+            <li>matura or other exam results of the User,</li>
+            <li>educational, professional, or life decisions of the User based on the Service's content or AI evaluations,</li>
+            <li>AI-generated content in terms of its factual accuracy in exceptional cases (AI hallucinations),</li>
+            <li>data loss resulting from the User's actions (e.g. deleting the Account).</li>
+          </ul>
+        </li>
+        <li>The Provider's liability towards a User who is not a Consumer for non-performance or improper performance of the contract is limited to the amount paid by the User in the last 12 months. This limitation does not apply to liability for damages caused intentionally.</li>
+        <li>This section does not limit the Provider's liability towards a Consumer to the extent such limitation would conflict with mandatory legal provisions.</li>
+      </ol>
+
+      <h2 id="complaints">§ 14. Complaints</h2>
+      <ol>
+        <li>Complaints regarding services provided in the Service may be submitted to: <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a>.</li>
+        <li>A complaint should include: the User's first and last name, the e-mail address assigned to the Account, a description of the problem, and the expected manner of resolution.</li>
+        <li>The Provider will consider the complaint within 14 days of receipt. Failure to respond within 14 days means the complaint is considered justified (in the case of Consumers).</li>
+        <li>In case of non-conformity of digital content with the contract, the Consumer has the rights under Chapter 5b of the Consumer Rights Act, including the right to demand that the digital content be brought into conformity with the contract or the price be reduced, and in certain cases — to withdraw from the contract.</li>
+      </ol>
+
+      <h2 id="termination">§ 15. Contract termination and account suspension</h2>
+      <ol>
+        <li>The User may delete their Account at any time from the Service settings.</li>
+        <li>The Provider may suspend the Account or terminate the contract with immediate effect in the event of:
+          <ul>
+            <li>gross violation of the Terms,</li>
+            <li>actions threatening the security of the Service or other Users,</li>
+            <li>initiating a chargeback without prior attempt to resolve the issue,</li>
+            <li>using the Service in a manner contrary to the law.</li>
+          </ul>
+        </li>
+        <li>Before suspending the Account (in non-gross cases), the Provider will call on the User to cease the violations with a deadline of no less than 3 days.</li>
+        <li>Account suspension for reasons attributable to the User does not entitle to a refund for the current billing period or for unused credits.</li>
+      </ol>
+
+      <h2 id="data">§ 16. Personal data protection</h2>
+      <p>
+        The rules for processing Users' personal data are set out in the
+        <a href="/privacy-policy">Privacy Policy</a>, which forms an integral part of these Terms.
+      </p>
+
+      <h2 id="changes">§ 17. Changes to the Terms</h2>
+      <ol>
+        <li>The Provider may amend the Terms for important reasons, such as: changes in law, introduction of new Service features, changes in the manner of providing services, security considerations.</li>
+        <li>The Provider will inform the User of changes to the Terms with at least 14 days' notice, by e-mail or via a Service notice.</li>
+        <li>A User who does not accept the changes has the right to terminate the contract by deleting the Account before the changes take effect.</li>
+        <li>For subscriptions active at the time of change, changes unfavorable to the User take effect from the next billing period, unless the User consents to their earlier application.</li>
+      </ol>
+
+      <h2 id="disputes">§ 18. Dispute resolution</h2>
+      <ol>
+        <li>The law applicable to the Terms and to the contract concluded on their basis is Polish law. The choice of Polish law does not deprive the Consumer of the protection provided by mandatory provisions of the law of their habitual residence.</li>
+        <li>All disputes shall first be settled amicably.</li>
+        <li>A Consumer has the option to use out-of-court dispute resolution methods, including:
+          <ul>
+            <li>mediation at the Provincial Trade Inspection (Wojewódzki Inspektorat Inspekcji Handlowej),</li>
+            <li>the permanent arbitration consumer court at the Provincial Trade Inspection,</li>
+            <li>assistance from a municipal or district consumer ombudsman,</li>
+            <li>the European Commission's Online Dispute Resolution (ODR) platform: <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener">https://ec.europa.eu/consumers/odr</a>.</li>
+          </ul>
+        </li>
+        <li>Use of out-of-court methods is voluntary and requires the consent of both parties.</li>
+        <li>The court competent to resolve disputes is the court competent under the provisions of the Polish Code of Civil Procedure.</li>
+      </ol>
+
+      <h2 id="final">§ 19. Final provisions</h2>
+      <ol>
+        <li>In matters not regulated by the Terms, the generally applicable provisions of Polish law apply, in particular the Civil Code, the Consumer Rights Act, the Act on Providing Services by Electronic Means, and the GDPR.</li>
+        <li>If any provision of the Terms is deemed invalid or ineffective, the remaining provisions remain in force.</li>
+        <li>The Terms enter into force on {lastUpdated}.</li>
+        <li>Previous versions of the Terms are available upon request at <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a>.</li>
+        <li>In case of any discrepancy between the Polish and English versions of the Terms, the Polish version is binding.</li>
+      </ol>
+
+      <hr class="my-10" />
+
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Document version as of: {lastUpdated}.
+      </p>
+    </article>
+  </main>
+</Layout>

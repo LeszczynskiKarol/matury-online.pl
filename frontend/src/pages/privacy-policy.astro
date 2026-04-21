@@ -1,0 +1,300 @@
+---
+import Layout from '../layouts/Base.astro';
+
+const lastUpdated = 'April 21, 2026';
+---
+
+<Layout
+  title="Privacy Policy — Matury Online"
+  description="Privacy policy of matury-online.pl — information on personal data processing in accordance with GDPR."
+  noindex={true}
+>
+  <link rel="alternate" hreflang="pl" href="https://www.matury-online.pl/polityka-prywatnosci" slot="head" />
+  <link rel="alternate" hreflang="en" href="https://www.matury-online.pl/privacy-policy" slot="head" />
+
+  <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div class="flex items-center justify-between mb-6 text-sm">
+      <a href="/" class="text-indigo-600 dark:text-indigo-400 hover:underline">← Home</a>
+      <a href="/polityka-prywatnosci" class="text-slate-600 dark:text-slate-400 hover:underline">🇵🇱 Wersja polska</a>
+    </div>
+
+    <article class="prose prose-slate dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-h2:mt-10 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-2">
+      <h1 class="!mb-2">Privacy Policy</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 !mt-0">
+        <strong>matury-online.pl</strong> website<br/>
+        Last updated: {lastUpdated}
+      </p>
+
+      <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r my-6 not-prose text-sm">
+        <p class="m-0">
+          This document explains how we process your personal data in connection with your use of matury-online.pl.
+          We care about your privacy and process data in accordance with Regulation (EU) 2016/679 of the European
+          Parliament and of the Council (GDPR) and the Polish Personal Data Protection Act of 10 May 2018.
+        </p>
+        <p class="m-0 mt-2">
+          <em>Note: matury-online.pl is a Polish educational service. All processing takes place under Polish
+          and EU law. In case of any discrepancy between the Polish and English versions, the Polish version prevails.</em>
+        </p>
+      </div>
+
+      <h2 id="toc">Table of contents</h2>
+      <ol>
+        <li><a href="#controller">Data controller</a></li>
+        <li><a href="#contact">Contact regarding data protection</a></li>
+        <li><a href="#categories">Categories of processed data</a></li>
+        <li><a href="#purposes">Purposes and legal bases of processing</a></li>
+        <li><a href="#retention">Data retention period</a></li>
+        <li><a href="#recipients">Data recipients</a></li>
+        <li><a href="#eea">Data transfers outside the EEA</a></li>
+        <li><a href="#rights">Your rights</a></li>
+        <li><a href="#minors">Data of minors</a></li>
+        <li><a href="#cookies">Cookies and similar technologies</a></li>
+        <li><a href="#ai">Artificial intelligence and automated decisions</a></li>
+        <li><a href="#security">Data security</a></li>
+        <li><a href="#complaint">Right to lodge a complaint</a></li>
+        <li><a href="#changes">Changes to the privacy policy</a></li>
+      </ol>
+
+      <h2 id="controller">1. Data controller</h2>
+      <p>
+        The controller of your personal data within the meaning of Article 4(7) GDPR is:
+      </p>
+      <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 not-prose text-sm my-4">
+        <p class="m-0"><strong>Ecopywriting.pl Karol Leszczyński</strong></p>
+        <p class="m-0">Papowo Biskupie 119/18, 86-221 Papowo Biskupie, Poland</p>
+        <p class="m-0">Tax ID (NIP): 9562216468</p>
+        <p class="m-0">E-mail: <a href="mailto:kontakt@karol-leszczynski.pl" class="text-indigo-600 dark:text-indigo-400 hover:underline">kontakt@karol-leszczynski.pl</a></p>
+      </div>
+      <p>
+        Hereinafter referred to as the <strong>“Controller”</strong> or <strong>“we”</strong>.
+      </p>
+
+      <h2 id="contact">2. Contact regarding data protection</h2>
+      <p>
+        The Controller has not appointed a Data Protection Officer (DPO), as this is not legally required for
+        the scope of the business. For all matters concerning the processing of your personal data — including
+        to exercise your rights — you may contact the Controller at
+        <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a> or in writing at the
+        address above.
+      </p>
+
+      <h2 id="categories">3. Categories of processed data</h2>
+      <p>In connection with your use of the service, we process the following categories of your personal data:</p>
+      <ul>
+        <li><strong>Identification and contact data</strong> — e-mail address, first name (optional), profile picture (optional, from Google account).</li>
+        <li><strong>Authentication data</strong> — encrypted password (only for e-mail accounts), Google identifier (for OAuth accounts), verification tokens.</li>
+        <li><strong>Subscription and payment data</strong> — subscription status, Stripe customer ID, Stripe subscription ID, subscription end date. <strong>Payment card data is processed exclusively by Stripe</strong> and never reaches our servers.</li>
+        <li><strong>Educational activity data</strong> — selected subjects, answers to questions, essay content, AI evaluations, test results, time spent in the service, XP points, levels, streaks, achievements, progress statistics.</li>
+        <li><strong>Technical data</strong> — IP address, device identifier, browser type, operating system, traffic source, cookie data (after consent).</li>
+        <li><strong>Communication data</strong> — e-mail correspondence, complaints, status of engagement notifications (opens, clicks — after consent).</li>
+        <li><strong>Consent data</strong> — content and date of consents granted (newsletter, cookies, processing of a minor's data).</li>
+      </ul>
+
+      <h2 id="purposes">4. Purposes and legal bases of processing</h2>
+
+      <h3>4.1. Service provision (contract conclusion and performance)</h3>
+      <p>
+        <strong>Legal basis:</strong> Art. 6(1)(b) GDPR — necessity to perform the electronic services contract
+        to which you are a party.
+      </p>
+      <p>
+        <strong>Includes:</strong> account creation and maintenance, access to educational content, subscription
+        and payment handling, saving of learning progress, AI essay evaluation, communication related to contract performance.
+      </p>
+
+      <h3>4.2. Legal obligations</h3>
+      <p>
+        <strong>Legal basis:</strong> Art. 6(1)(c) GDPR — necessity to comply with legal obligations (Polish Accounting Act, VAT Act).
+      </p>
+      <p>
+        <strong>Includes:</strong> issuing accounting documents, archiving invoices (5 years — Polish Accounting Act), handling complaints, official correspondence.
+      </p>
+
+      <h3>4.3. Own marketing and educational communication</h3>
+      <p>
+        <strong>Legal basis:</strong> Art. 6(1)(f) GDPR — legitimate interest of the Controller in maintaining
+        user relationships and promoting its own services. For marketing e-mails — additionally Article 10(2) of
+        the Polish Act on Providing Services by Electronic Means (consent).
+      </p>
+      <p>
+        <strong>Includes:</strong> study reminders, streak notifications, weekly summaries, information about
+        new features. You may withdraw your consent to marketing communication at any time.
+      </p>
+
+      <h3>4.4. Analytics and service development</h3>
+      <p>
+        <strong>Legal basis:</strong> Art. 6(1)(a) GDPR — your consent granted via the cookie banner (for analytics
+        and marketing cookies), and Art. 6(1)(f) GDPR — legitimate interest (for anonymous aggregated statistics).
+      </p>
+      <p>
+        <strong>Includes:</strong> traffic measurement (Google Analytics 4), service performance optimization,
+        error analysis, user experience improvement.
+      </p>
+
+      <h3>4.5. Claim protection</h3>
+      <p>
+        <strong>Legal basis:</strong> Art. 6(1)(f) GDPR — legitimate interest in the ability to pursue claims
+        or defend against claims.
+      </p>
+
+      <h3>4.6. Security</h3>
+      <p>
+        <strong>Legal basis:</strong> Art. 6(1)(f) GDPR — legitimate interest in ensuring the security of the service
+        and preventing abuse (including reCAPTCHA, request limits).
+      </p>
+
+      <h2 id="retention">5. Data retention period</h2>
+      <p>We retain your personal data for the following periods:</p>
+      <ul>
+        <li><strong>Account and activity data</strong> — for the duration of the contract (account existence). After account deletion — up to 30 days (to allow account recovery), then data is permanently deleted or anonymized.</li>
+        <li><strong>Billing data (invoices)</strong> — 5 years from the end of the tax year in which the tax obligation arose (Art. 112 of the Polish VAT Act, Art. 74 of the Polish Accounting Act).</li>
+        <li><strong>Data for claim pursuit</strong> — until the limitation period expires (typically 6 years, 3 years for claims from business activity).</li>
+        <li><strong>Analytics cookie data</strong> — in accordance with cookie policy settings (typically 14 months for GA4).</li>
+        <li><strong>E-mail correspondence</strong> — 3 years from the last exchange.</li>
+        <li><strong>Cookie data</strong> — until deletion or expiry of consent (default 12 months).</li>
+      </ul>
+
+      <h2 id="recipients">6. Data recipients</h2>
+      <p>
+        We may transfer your data to the following categories of recipients, acting as processors based on data
+        processing agreements (Art. 28 GDPR):
+      </p>
+      <ul>
+        <li><strong>Cloud infrastructure providers</strong> — Amazon Web Services EMEA SARL (EC2 servers, databases, S3 file storage, SES e-mail, CloudFront) — eu-central-1 (Frankfurt) and eu-north-1 (Stockholm) regions.</li>
+        <li><strong>Payment processor</strong> — Stripe Payments Europe, Ltd. (Ireland) — card payments, BLIK, Revolut Pay, subscription management.</li>
+        <li><strong>Login providers</strong> — Google Ireland Limited (Google account login, reCAPTCHA v3).</li>
+        <li><strong>Artificial intelligence providers</strong> — Anthropic PBC (USA) — AI models for essay evaluation and explanation generation.</li>
+        <li><strong>Speech synthesis provider</strong> — Google Cloud (Google Ireland Limited / Google LLC) — audio generation for listening comprehension exercises.</li>
+        <li><strong>Analytics providers</strong> — Google Ireland Limited (Google Analytics 4, Google Ads) — <strong>only after you have given consent</strong> via the cookie banner.</li>
+        <li><strong>Domain and DNS providers</strong> — domain registrars, Amazon Route 53.</li>
+        <li><strong>Authorized state authorities</strong> — only when the transfer obligation arises from the law.</li>
+      </ul>
+
+      <h2 id="eea">7. Transfers outside the European Economic Area (EEA)</h2>
+      <p>
+        Some of our providers are based outside the EEA (in particular Anthropic PBC and in some cases Google LLC,
+        Stripe, Inc.). In such cases, data transfer takes place based on:
+      </p>
+      <ul>
+        <li><strong>Standard Contractual Clauses (SCC)</strong> approved by the European Commission (Implementing Decision (EU) 2021/914),</li>
+        <li><strong>Adequacy decisions</strong> — in particular the EU–US Data Privacy Framework for certified providers.</li>
+      </ul>
+      <p>
+        We apply additional technical safeguards (encryption in transit and at rest) and organizational ones
+        (processor agreements, vendor audits). A copy of the safeguards is available upon request.
+      </p>
+
+      <h2 id="rights">8. Your rights</h2>
+      <p>Under GDPR, you have the following rights:</p>
+      <ul>
+        <li><strong>Right of access</strong> (Art. 15 GDPR) — confirmation of whether we process your data and a copy of it.</li>
+        <li><strong>Right to rectification</strong> (Art. 16 GDPR).</li>
+        <li><strong>Right to erasure</strong> (“right to be forgotten”, Art. 17 GDPR).</li>
+        <li><strong>Right to restriction of processing</strong> (Art. 18 GDPR).</li>
+        <li><strong>Right to data portability</strong> (Art. 20 GDPR) — receiving your data in a structured format (e.g. JSON) and transferring it to another controller.</li>
+        <li><strong>Right to object</strong> (Art. 21 GDPR) — to processing based on legitimate interest, including profiling.</li>
+        <li><strong>Right to withdraw consent</strong> (Art. 7(3) GDPR) — at any time, without affecting the lawfulness of processing prior to withdrawal.</li>
+        <li><strong>Right not to be subject to decisions based solely on automated processing</strong> (Art. 22 GDPR) — see below.</li>
+      </ul>
+      <p>
+        To exercise any of the above rights, contact us at
+        <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a>. We respond without
+        undue delay, no later than within one month of receiving the request. This period may be extended
+        by a further two months in complex cases, about which we will inform you.
+      </p>
+
+      <h2 id="minors">9. Data of minors</h2>
+      <p>
+        The service is directed at adults (18 years old or older). Persons who are 13 or older but not yet
+        adults may use the service only with the consent and under the supervision of a legal representative
+        (parent or legal guardian), who is responsible for contract conclusion, payments, and use of the service.
+      </p>
+      <p>
+        In accordance with Art. 8(1) GDPR and Art. 22¹ of the Polish Personal Data Protection Act, information
+        society services (including matury-online.pl) may be offered to a child aged 16 or older based on
+        their own consent. For children under 16, the consent of a legal representative is required.
+      </p>
+      <p>
+        We do not knowingly collect data of children under 13. If we learn that we process such data without
+        parental consent, we will promptly delete it.
+      </p>
+
+      <h2 id="cookies">10. Cookies and similar technologies</h2>
+      <p>
+        The service uses cookies and similar technologies (including localStorage). Detailed information about
+        the cookies used, their purposes and retention periods is available in the
+        <a href="/cookie-policy">Cookie Policy</a>.
+      </p>
+      <p>
+        We use <strong>Google Consent Mode v2</strong>, which by default blocks all analytical and marketing
+        cookies until you give consent. You can change your consents at any time by clicking the 🍪 icon in
+        the lower left corner of the screen.
+      </p>
+
+      <h2 id="ai">11. Artificial intelligence and automated decisions</h2>
+      <p>Within the service, we use artificial intelligence models (Anthropic Claude) for:</p>
+      <ul>
+        <li>evaluating essay content and providing feedback,</li>
+        <li>generating explanations for questions,</li>
+        <li>generating transcripts and educational content,</li>
+        <li>adapting task difficulty (adaptive learning).</li>
+      </ul>
+      <p>
+        <strong>AI evaluations do not constitute a binding decision within the meaning of Art. 22 GDPR</strong> —
+        they are auxiliary educational tools, and do not replace teacher assessment or state exam (matura) results.
+        They do not produce legal effects concerning you or similarly significantly affect you.
+      </p>
+      <p>You always have the right to:</p>
+      <ul>
+        <li>receive an explanation of how AI assessed your work,</li>
+        <li>contest the evaluation and request verification,</li>
+        <li>express your own opinion,</li>
+        <li>request re-evaluation by a human (to the extent technically feasible).</li>
+      </ul>
+      <p>
+        Content sent to AI models is processed in accordance with the privacy policies of the respective providers
+        (Anthropic PBC) and — based on the agreements concluded — <strong>is not used to train models</strong>
+        in the context of commercial API use.
+      </p>
+
+      <h2 id="security">12. Data security</h2>
+      <p>We apply technical and organizational measures adequate to the risk, including:</p>
+      <ul>
+        <li>transmission encryption (TLS/HTTPS),</li>
+        <li>password encryption using cryptographic algorithms (bcrypt/argon2),</li>
+        <li>encryption of data at rest (disk and database encryption),</li>
+        <li>restricting data access to the Controller only,</li>
+        <li>regular backups,</li>
+        <li>access verification (reCAPTCHA v3, e-mail verification),</li>
+        <li>log monitoring and anomaly detection.</li>
+      </ul>
+
+      <h2 id="complaint">13. Right to lodge a complaint</h2>
+      <p>
+        You have the right to lodge a complaint with a supervisory authority if you believe that the processing
+        of your personal data violates GDPR. The competent authority in Poland is:
+      </p>
+      <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 not-prose text-sm my-4">
+        <p class="m-0"><strong>President of the Personal Data Protection Office (UODO)</strong></p>
+        <p class="m-0">ul. Stawki 2, 00-193 Warsaw, Poland</p>
+        <p class="m-0">Tel. +48 22 531 03 00</p>
+        <p class="m-0">Website: <a href="https://uodo.gov.pl/en" target="_blank" rel="noopener" class="text-indigo-600 dark:text-indigo-400 hover:underline">uodo.gov.pl</a></p>
+      </div>
+
+      <h2 id="changes">14. Changes to the privacy policy</h2>
+      <p>
+        This policy may change due to amendments to the law, introduction of new service features, or changes
+        in data processing. We will notify you of material changes at least 7 days in advance via e-mail or
+        a service notice. The current version of the policy along with the date of the last update is always
+        available on this page.
+      </p>
+
+      <hr class="my-10" />
+
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Document version as of: {lastUpdated}. <br/>
+        In case of any discrepancy between the Polish and English versions, the Polish version is binding.
+      </p>
+    </article>
+  </main>
+</Layout>

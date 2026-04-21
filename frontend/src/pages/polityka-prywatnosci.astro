@@ -1,0 +1,312 @@
+---
+import Layout from '../layouts/Base.astro';
+
+const lastUpdated = '21 kwietnia 2026';
+---
+
+<Layout
+  title="Polityka prywatności — Matury Online"
+  description="Polityka prywatności serwisu matury-online.pl — informacje o przetwarzaniu danych osobowych zgodnie z RODO."
+  noindex={true}
+>
+  <link rel="alternate" hreflang="pl" href="https://www.matury-online.pl/polityka-prywatnosci" slot="head" />
+  <link rel="alternate" hreflang="en" href="https://www.matury-online.pl/privacy-policy" slot="head" />
+
+  <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div class="flex items-center justify-between mb-6 text-sm">
+      <a href="/" class="text-indigo-600 dark:text-indigo-400 hover:underline">← Strona główna</a>
+      <a href="/privacy-policy" class="text-slate-600 dark:text-slate-400 hover:underline">🇬🇧 English version</a>
+    </div>
+
+    <article class="prose prose-slate dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-h2:mt-10 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-2">
+      <h1 class="!mb-2">Polityka prywatności</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 !mt-0">
+        Serwis internetowy <strong>matury-online.pl</strong><br/>
+        Ostatnia aktualizacja: {lastUpdated}
+      </p>
+
+      <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 p-4 rounded-r my-6 not-prose text-sm">
+        <p class="m-0">
+          Niniejszy dokument wyjaśnia, w jaki sposób przetwarzamy Twoje dane osobowe w związku z korzystaniem
+          z serwisu matury-online.pl. Dbamy o Twoją prywatność i przetwarzamy dane zgodnie z Rozporządzeniem
+          Parlamentu Europejskiego i Rady (UE) 2016/679 (RODO) oraz ustawą z dnia 10 maja 2018 r. o ochronie
+          danych osobowych.
+        </p>
+      </div>
+
+      <h2 id="spis-tresci">Spis treści</h2>
+      <ol>
+        <li><a href="#administrator">Administrator danych osobowych</a></li>
+        <li><a href="#kontakt">Kontakt w sprawach ochrony danych</a></li>
+        <li><a href="#kategorie">Kategorie przetwarzanych danych</a></li>
+        <li><a href="#cele">Cele i podstawy prawne przetwarzania</a></li>
+        <li><a href="#okres">Okres przechowywania danych</a></li>
+        <li><a href="#odbiorcy">Odbiorcy danych</a></li>
+        <li><a href="#eog">Przekazywanie danych poza EOG</a></li>
+        <li><a href="#prawa">Twoje prawa</a></li>
+        <li><a href="#dzieci">Dane osób niepełnoletnich</a></li>
+        <li><a href="#cookies">Pliki cookies i podobne technologie</a></li>
+        <li><a href="#ai">Sztuczna inteligencja i zautomatyzowane decyzje</a></li>
+        <li><a href="#bezpieczenstwo">Bezpieczeństwo danych</a></li>
+        <li><a href="#skarga">Prawo do wniesienia skargi</a></li>
+        <li><a href="#zmiany">Zmiany polityki prywatności</a></li>
+      </ol>
+
+      <h2 id="administrator">1. Administrator danych osobowych</h2>
+      <p>
+        Administratorem Twoich danych osobowych w rozumieniu art. 4 pkt 7 RODO jest:
+      </p>
+      <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 not-prose text-sm my-4">
+        <p class="m-0"><strong>Ecopywriting.pl Karol Leszczyński</strong></p>
+        <p class="m-0">Papowo Biskupie 119/18, 86-221 Papowo Biskupie</p>
+        <p class="m-0">NIP: 9562216468</p>
+        <p class="m-0">E-mail: <a href="mailto:kontakt@karol-leszczynski.pl" class="text-indigo-600 dark:text-indigo-400 hover:underline">kontakt@karol-leszczynski.pl</a></p>
+      </div>
+      <p>
+        W dalszej części dokumentu Administrator nazywany jest <strong>„Administratorem”</strong> lub <strong>„my”</strong>.
+      </p>
+
+      <h2 id="kontakt">2. Kontakt w sprawach ochrony danych</h2>
+      <p>
+        Administrator nie wyznaczył Inspektora Ochrony Danych (IOD), ponieważ nie jest to prawnie wymagane
+        w zakresie prowadzonej działalności. We wszelkich sprawach dotyczących przetwarzania Twoich danych osobowych
+        — w tym w celu skorzystania z przysługujących Ci praw — możesz kontaktować się z Administratorem pod adresem
+        e-mail: <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a> lub pisemnie na adres
+        siedziby podany powyżej.
+      </p>
+
+      <h2 id="kategorie">3. Kategorie przetwarzanych danych</h2>
+      <p>W ramach korzystania z serwisu przetwarzamy następujące kategorie Twoich danych osobowych:</p>
+      <ul>
+        <li><strong>Dane identyfikacyjne i kontaktowe</strong> — adres e-mail, imię (opcjonalnie), zdjęcie profilowe (opcjonalnie, z konta Google).</li>
+        <li><strong>Dane uwierzytelniające</strong> — zaszyfrowane hasło (tylko dla kont z rejestracją e-mail), identyfikator Google (dla kont OAuth), tokeny weryfikacyjne.</li>
+        <li><strong>Dane dotyczące subskrypcji i płatności</strong> — status subskrypcji, identyfikator klienta Stripe, identyfikator subskrypcji Stripe, data zakończenia subskrypcji. <strong>Dane kart płatniczych są przetwarzane wyłącznie przez Stripe</strong> i nigdy nie trafiają na nasze serwery.</li>
+        <li><strong>Dane dotyczące aktywności edukacyjnej</strong> — wybrane przedmioty, odpowiedzi na pytania, treści wypracowań, oceny AI, wyniki testów, czas spędzony w serwisie, punkty XP, poziomy, serie (streaks), osiągnięcia, statystyki postępu.</li>
+        <li><strong>Dane techniczne</strong> — adres IP, identyfikator urządzenia, typ przeglądarki, system operacyjny, źródło ruchu, dane z plików cookies (po wyrażeniu zgody).</li>
+        <li><strong>Dane komunikacyjne</strong> — treść korespondencji e-mail, reklamacji, zgłoszeń, status powiadomień engagement (otwarcia, kliknięcia — po wyrażeniu zgody).</li>
+        <li><strong>Dane dotyczące zgód</strong> — treść i data wyrażenia zgód (na newsletter, cookies, przetwarzanie danych dziecka).</li>
+      </ul>
+
+      <h2 id="cele">4. Cele i podstawy prawne przetwarzania</h2>
+      <p>Twoje dane osobowe przetwarzamy w następujących celach i na podstawie:</p>
+
+      <h3>4.1. Świadczenie usług (zawarcie i wykonanie umowy)</h3>
+      <p>
+        <strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. b RODO — niezbędność do wykonania umowy o świadczenie
+        usług drogą elektroniczną, której jesteś stroną.
+      </p>
+      <p>
+        <strong>Obejmuje:</strong> założenie i prowadzenie konta, dostęp do treści edukacyjnych, obsługę subskrypcji
+        i płatności, zapisywanie postępów nauki, ocenę wypracowań przez AI, komunikację związaną z realizacją umowy.
+      </p>
+
+      <h3>4.2. Obowiązki prawne</h3>
+      <p>
+        <strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. c RODO — niezbędność do wypełnienia obowiązków prawnych.
+      </p>
+      <p>
+        <strong>Obejmuje:</strong> wystawianie dokumentów księgowych, archiwizację faktur (ustawa o rachunkowości —
+        5 lat), obsługę reklamacji, prowadzenie korespondencji urzędowej.
+      </p>
+
+      <h3>4.3. Marketing własny i komunikacja edukacyjna</h3>
+      <p>
+        <strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. f RODO — prawnie uzasadniony interes Administratora
+        polegający na utrzymywaniu relacji z użytkownikami i promocji własnych usług. W przypadku wysyłki
+        marketingowej pocztą elektroniczną — dodatkowo art. 10 ust. 2 ustawy o świadczeniu usług drogą elektroniczną
+        (zgoda).
+      </p>
+      <p>
+        <strong>Obejmuje:</strong> przypomnienia o nauce, powiadomienia o seriach (streaks), tygodniowe podsumowania,
+        informacje o nowych funkcjach. Zgodę na komunikację marketingową możesz wycofać w dowolnym momencie.
+      </p>
+
+      <h3>4.4. Analityka i rozwój serwisu</h3>
+      <p>
+        <strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. a RODO — Twoja zgoda wyrażona przez banner cookies
+        (w zakresie cookies analitycznych i marketingowych) oraz art. 6 ust. 1 lit. f RODO — prawnie uzasadniony
+        interes Administratora (w zakresie anonimowych statystyk agregowanych).
+      </p>
+      <p>
+        <strong>Obejmuje:</strong> pomiar ruchu (Google Analytics 4), optymalizację działania serwisu, analizę
+        błędów, poprawę doświadczenia użytkownika.
+      </p>
+
+      <h3>4.5. Zabezpieczenie roszczeń</h3>
+      <p>
+        <strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. f RODO — prawnie uzasadniony interes Administratora
+        polegający na możliwości dochodzenia roszczeń lub obrony przed roszczeniami.
+      </p>
+
+      <h3>4.6. Bezpieczeństwo</h3>
+      <p>
+        <strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. f RODO — prawnie uzasadniony interes polegający
+        na zapewnieniu bezpieczeństwa serwisu i przeciwdziałaniu nadużyciom (m.in. reCAPTCHA, limity zapytań).
+      </p>
+
+      <h2 id="okres">5. Okres przechowywania danych</h2>
+      <p>Twoje dane osobowe przechowujemy przez następujące okresy:</p>
+      <ul>
+        <li><strong>Dane konta i aktywności</strong> — przez czas trwania umowy (istnienia konta). Po usunięciu konta — maksymalnie 30 dni (w celu umożliwienia przywrócenia konta), następnie dane są trwale usuwane lub anonimizowane.</li>
+        <li><strong>Dane rozliczeniowe (faktury)</strong> — 5 lat od końca roku podatkowego, w którym powstał obowiązek podatkowy (art. 112 ustawy o VAT, art. 74 ustawy o rachunkowości).</li>
+        <li><strong>Dane na potrzeby dochodzenia roszczeń</strong> — do czasu przedawnienia roszczeń (zazwyczaj 6 lat, dla roszczeń z działalności gospodarczej 3 lata).</li>
+        <li><strong>Dane cookies i analityczne</strong> — zgodnie z ustawieniami wskazanymi w polityce cookies (typowo 14 miesięcy dla GA4).</li>
+        <li><strong>Korespondencja e-mail</strong> — 3 lata od ostatniej wymiany wiadomości.</li>
+        <li><strong>Dane z plików cookies</strong> — do momentu usunięcia lub wygaśnięcia zgody (domyślnie 12 miesięcy).</li>
+      </ul>
+
+      <h2 id="odbiorcy">6. Odbiorcy danych</h2>
+      <p>
+        Twoje dane możemy przekazywać następującym kategoriom odbiorców, działającym jako podmioty przetwarzające
+        (procesorzy) na podstawie zawartych umów powierzenia przetwarzania danych (art. 28 RODO):
+      </p>
+      <ul>
+        <li><strong>Dostawcy infrastruktury chmurowej</strong> — Amazon Web Services EMEA SARL (serwery EC2, bazy danych, przechowywanie plików S3, obsługa poczty SES, CloudFront) — region eu-central-1 (Frankfurt) oraz eu-north-1 (Sztokholm).</li>
+        <li><strong>Operator płatności</strong> — Stripe Payments Europe, Ltd. (Irlandia) — obsługa płatności kartą, BLIK, Revolut Pay, zarządzanie subskrypcjami.</li>
+        <li><strong>Dostawcy usług logowania</strong> — Google Ireland Limited (logowanie przez konto Google, reCAPTCHA v3).</li>
+        <li><strong>Dostawcy sztucznej inteligencji</strong> — Anthropic PBC (USA) — modele AI do oceny wypracowań i generowania wyjaśnień.</li>
+        <li><strong>Dostawca syntezy mowy</strong> — Google Cloud (Google Ireland Limited / Google LLC) — generowanie nagrań audio dla ćwiczeń rozumienia ze słuchu.</li>
+        <li><strong>Dostawcy analityki</strong> — Google Ireland Limited (Google Analytics 4, Google Ads) — <strong>wyłącznie po wyrażeniu przez Ciebie zgody</strong> w bannerze cookies.</li>
+        <li><strong>Dostawca domeny i DNS</strong> — rejestratory domen, Amazon Route 53.</li>
+        <li><strong>Uprawnione organy państwowe</strong> — wyłącznie gdy obowiązek przekazania wynika z przepisów prawa.</li>
+      </ul>
+      <p>
+        Pełna, aktualna lista podprocesorów może być udostępniona na Twoje żądanie.
+      </p>
+
+      <h2 id="eog">7. Przekazywanie danych poza Europejski Obszar Gospodarczy (EOG)</h2>
+      <p>
+        Niektórzy nasi dostawcy mają siedzibę poza EOG (w szczególności Anthropic PBC oraz w niektórych
+        przypadkach Google LLC, Stripe, Inc.). W takich przypadkach przekazywanie danych odbywa się na podstawie:
+      </p>
+      <ul>
+        <li><strong>Standardowych klauzul umownych (SCC)</strong> zatwierdzonych przez Komisję Europejską (decyzja wykonawcza (UE) 2021/914),</li>
+        <li><strong>Decyzji w sprawie odpowiedniego stopnia ochrony</strong> — w szczególności ram prywatności danych UE–USA (EU–US Data Privacy Framework) dla dostawców certyfikowanych.</li>
+      </ul>
+      <p>
+        Stosujemy dodatkowe zabezpieczenia techniczne (szyfrowanie w tranzycie i spoczynku) oraz organizacyjne
+        (umowy powierzenia, audyty dostawców). Kopię zabezpieczeń można otrzymać na żądanie.
+      </p>
+
+      <h2 id="prawa">8. Twoje prawa</h2>
+      <p>Zgodnie z RODO przysługują Ci następujące prawa:</p>
+      <ul>
+        <li><strong>Prawo dostępu do danych</strong> (art. 15 RODO) — potwierdzenie, czy przetwarzamy Twoje dane oraz otrzymanie ich kopii.</li>
+        <li><strong>Prawo do sprostowania</strong> (art. 16 RODO) — poprawienie nieprawidłowych lub uzupełnienie niekompletnych danych.</li>
+        <li><strong>Prawo do usunięcia</strong> („prawo do bycia zapomnianym”, art. 17 RODO) — zażądanie usunięcia Twoich danych w sytuacjach wskazanych w RODO.</li>
+        <li><strong>Prawo do ograniczenia przetwarzania</strong> (art. 18 RODO).</li>
+        <li><strong>Prawo do przenoszenia danych</strong> (art. 20 RODO) — otrzymanie swoich danych w ustrukturyzowanym formacie (np. JSON) i przesłanie ich innemu administratorowi.</li>
+        <li><strong>Prawo do sprzeciwu</strong> (art. 21 RODO) — wobec przetwarzania na podstawie prawnie uzasadnionego interesu, w tym profilowania.</li>
+        <li><strong>Prawo do cofnięcia zgody</strong> (art. 7 ust. 3 RODO) — w dowolnym momencie, bez wpływu na zgodność z prawem przetwarzania dokonanego przed jej cofnięciem.</li>
+        <li><strong>Prawo do niepodlegania decyzjom opartym wyłącznie na zautomatyzowanym przetwarzaniu</strong> (art. 22 RODO) — szczegóły poniżej.</li>
+      </ul>
+      <p>
+        Aby skorzystać z któregokolwiek z powyższych praw, skontaktuj się z nami pod adresem
+        <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a>. Odpowiadamy bez zbędnej
+        zwłoki, nie później niż w terminie miesiąca od otrzymania żądania. Termin ten może zostać przedłużony
+        o kolejne dwa miesiące w przypadku skomplikowanych spraw — o czym Cię poinformujemy.
+      </p>
+
+      <h2 id="dzieci">9. Dane osób niepełnoletnich</h2>
+      <p>
+        Serwis jest kierowany do osób pełnoletnich (ukończone 18 lat). Osoby, które ukończyły 13 lat i nie są
+        pełnoletnie, mogą korzystać z serwisu wyłącznie za zgodą i pod nadzorem przedstawiciela ustawowego
+        (rodzica lub opiekuna prawnego), który ponosi odpowiedzialność za zawarcie umowy, dokonanie płatności
+        oraz korzystanie z serwisu przez osobę niepełnoletnią.
+      </p>
+      <p>
+        Zgodnie z art. 8 ust. 1 RODO oraz art. 22<sup>1</sup> ustawy o ochronie danych osobowych, usługi
+        społeczeństwa informacyjnego (w tym matury-online.pl) mogą być oferowane dziecku, które ukończyło 16 lat,
+        na podstawie jego własnej zgody. Dla dzieci poniżej 16. roku życia wymagana jest zgoda przedstawiciela
+        ustawowego.
+      </p>
+      <p>
+        Nie gromadzimy świadomie danych dzieci poniżej 13. roku życia. Jeżeli dowiemy się, że przetwarzamy dane
+        takiej osoby bez zgody rodzica, niezwłocznie je usuniemy.
+      </p>
+
+      <h2 id="cookies">10. Pliki cookies i podobne technologie</h2>
+      <p>
+        Serwis wykorzystuje pliki cookies oraz podobne technologie (m.in. localStorage). Szczegółowe informacje
+        na temat wykorzystywanych cookies, ich celów oraz okresu przechowywania znajdziesz w
+        <a href="/polityka-cookies">Polityce cookies</a>.
+      </p>
+      <p>
+        Korzystamy z narzędzia <strong>Google Consent Mode v2</strong>, które domyślnie blokuje wszelkie cookies
+        analityczne i marketingowe do momentu wyrażenia przez Ciebie zgody. Swoje zgody możesz w każdej chwili
+        zmienić, klikając ikonę 🍪 w lewym dolnym rogu ekranu.
+      </p>
+
+      <h2 id="ai">11. Sztuczna inteligencja i zautomatyzowane decyzje</h2>
+      <p>
+        W ramach serwisu wykorzystujemy modele sztucznej inteligencji (Anthropic Claude) do:
+      </p>
+      <ul>
+        <li>oceny treści wypracowań wraz z informacją zwrotną (feedback),</li>
+        <li>generowania wyjaśnień do zadań,</li>
+        <li>generowania transkrypcji i materiałów edukacyjnych,</li>
+        <li>dostosowywania poziomu trudności zadań (adaptive learning).</li>
+      </ul>
+      <p>
+        <strong>Oceny AI nie mają charakteru decyzji wiążącej w rozumieniu art. 22 RODO</strong> — są narzędziem
+        edukacyjnym pomocniczym, nie zastępują oceny nauczyciela ani wyniku egzaminu państwowego (matury).
+        Nie wywołują wobec Ciebie skutków prawnych ani w podobny sposób istotnie na Ciebie nie wpływają.
+      </p>
+      <p>
+        Zawsze przysługuje Ci prawo:
+      </p>
+      <ul>
+        <li>otrzymania wyjaśnienia, w jaki sposób AI oceniła Twoją pracę,</li>
+        <li>zakwestionowania oceny i żądania jej weryfikacji,</li>
+        <li>wyrażenia własnego stanowiska,</li>
+        <li>zażądania ponownej oceny przez człowieka (w zakresie, w jakim jest to technicznie możliwe).</li>
+      </ul>
+      <p>
+        Treści przesłane do modeli AI są przetwarzane zgodnie z politykami prywatności odpowiednich dostawców
+        (Anthropic PBC) i — zgodnie z zawartymi umowami — <strong>nie są wykorzystywane do trenowania modeli</strong>
+        w ramach komercyjnego wykorzystania API.
+      </p>
+
+      <h2 id="bezpieczenstwo">12. Bezpieczeństwo danych</h2>
+      <p>
+        Stosujemy środki techniczne i organizacyjne adekwatne do ryzyka, w tym:
+      </p>
+      <ul>
+        <li>szyfrowanie transmisji (TLS/HTTPS),</li>
+        <li>szyfrowanie haseł algorytmami kryptograficznymi (bcrypt/argon2),</li>
+        <li>szyfrowanie danych w spoczynku (szyfrowanie dysków i baz),</li>
+        <li>ograniczenie dostępu do danych wyłącznie dla Administratora,</li>
+        <li>regularne kopie zapasowe,</li>
+        <li>weryfikację dostępu (reCAPTCHA v3, weryfikacja adresu e-mail),</li>
+        <li>monitoring logów i wykrywanie nieprawidłowości.</li>
+      </ul>
+
+      <h2 id="skarga">13. Prawo do wniesienia skargi</h2>
+      <p>
+        Masz prawo wnieść skargę do organu nadzorczego, jeżeli uznasz, że przetwarzanie Twoich danych osobowych
+        narusza przepisy RODO. Organem właściwym w Polsce jest:
+      </p>
+      <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 not-prose text-sm my-4">
+        <p class="m-0"><strong>Prezes Urzędu Ochrony Danych Osobowych</strong></p>
+        <p class="m-0">ul. Stawki 2, 00-193 Warszawa</p>
+        <p class="m-0">tel. 22 531 03 00</p>
+        <p class="m-0">Strona: <a href="https://uodo.gov.pl" target="_blank" rel="noopener" class="text-indigo-600 dark:text-indigo-400 hover:underline">uodo.gov.pl</a></p>
+      </div>
+
+      <h2 id="zmiany">14. Zmiany polityki prywatności</h2>
+      <p>
+        Niniejsza polityka może ulec zmianie w przypadku zmiany przepisów prawa, pojawienia się nowych funkcji
+        serwisu lub zmiany sposobu przetwarzania danych. O istotnych zmianach poinformujemy Cię z co najmniej
+        7-dniowym wyprzedzeniem drogą e-mailową lub komunikatem w serwisie. Aktualna wersja polityki wraz z datą
+        ostatniej aktualizacji jest zawsze dostępna na tej stronie.
+      </p>
+
+      <hr class="my-10" />
+
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Wersja dokumentu z dnia: {lastUpdated}. <br/>
+        W przypadku rozbieżności między wersją polską a angielską, wiążąca jest wersja polska.
+      </p>
+    </article>
+  </main>
+</Layout>

@@ -1,0 +1,369 @@
+---
+import Layout from '../layouts/Base.astro';
+
+const lastUpdated = '21 kwietnia 2026';
+---
+
+<Layout
+  title="Regulamin — Matury Online"
+  description="Regulamin świadczenia usług drogą elektroniczną w serwisie matury-online.pl."
+  noindex={true}
+>
+  <link rel="alternate" hreflang="pl" href="https://www.matury-online.pl/regulamin" slot="head" />
+  <link rel="alternate" hreflang="en" href="https://www.matury-online.pl/terms-of-service" slot="head" />
+
+  <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div class="flex items-center justify-between mb-6 text-sm">
+      <a href="/" class="text-indigo-600 dark:text-indigo-400 hover:underline">← Strona główna</a>
+      <a href="/terms-of-service" class="text-slate-600 dark:text-slate-400 hover:underline">🇬🇧 English version</a>
+    </div>
+
+    <article class="prose prose-slate dark:prose-invert max-w-none prose-headings:scroll-mt-20 prose-h2:mt-10 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-2">
+      <h1 class="!mb-2">Regulamin serwisu matury-online.pl</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 !mt-0">
+        Regulamin świadczenia usług drogą elektroniczną<br/>
+        Ostatnia aktualizacja: {lastUpdated}
+      </p>
+
+      <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-4 rounded-r my-6 not-prose text-sm">
+        <p class="m-0">
+          <strong>Ważne informacje dla konsumentów:</strong> Rozpoczęcie korzystania z płatnych funkcji serwisu
+          (dostępu do treści premium, kredytów AI) przed upływem 14-dniowego terminu na odstąpienie od umowy
+          wymaga Twojej wyraźnej zgody i wiąże się z utratą prawa do odstąpienia od umowy. Szczegóły w § 8.
+        </p>
+      </div>
+
+      <h2 id="spis">Spis treści</h2>
+      <ol>
+        <li><a href="#postanowienia">Postanowienia ogólne i definicje</a></li>
+        <li><a href="#uslugi">Rodzaje i zakres usług</a></li>
+        <li><a href="#wymagania">Wymagania techniczne</a></li>
+        <li><a href="#konto">Rejestracja i konto użytkownika</a></li>
+        <li><a href="#subskrypcje">Subskrypcje i płatności</a></li>
+        <li><a href="#kredyty">Kredyty i zakupy jednorazowe</a></li>
+        <li><a href="#automatyczne-odnawianie">Automatyczne odnawianie subskrypcji</a></li>
+        <li><a href="#odstapienie">Prawo odstąpienia od umowy</a></li>
+        <li><a href="#brak-zwrotow">Polityka zwrotów</a></li>
+        <li><a href="#ai">Funkcje oparte na sztucznej inteligencji</a></li>
+        <li><a href="#obowiazki">Obowiązki użytkownika</a></li>
+        <li><a href="#wlasnosc">Własność intelektualna</a></li>
+        <li><a href="#odpowiedzialnosc">Odpowiedzialność Usługodawcy</a></li>
+        <li><a href="#reklamacje">Reklamacje</a></li>
+        <li><a href="#rozwiazanie">Rozwiązanie umowy i blokada konta</a></li>
+        <li><a href="#dane">Ochrona danych osobowych</a></li>
+        <li><a href="#zmiany">Zmiany regulaminu</a></li>
+        <li><a href="#spory">Rozstrzyganie sporów</a></li>
+        <li><a href="#koncowe">Postanowienia końcowe</a></li>
+      </ol>
+
+      <h2 id="postanowienia">§ 1. Postanowienia ogólne i definicje</h2>
+      <ol>
+        <li>
+          Niniejszy regulamin (dalej: <strong>„Regulamin”</strong>) określa zasady świadczenia usług drogą
+          elektroniczną w serwisie internetowym dostępnym pod adresem matury-online.pl (dalej: <strong>„Serwis”</strong>).
+        </li>
+        <li>
+          Usługodawcą jest <strong>Ecopywriting.pl Karol Leszczyński</strong>, z siedzibą w Papowie Biskupim
+          (adres: Papowo Biskupie 119/18, 86-221 Papowo Biskupie), NIP: 9562216468 (dalej: <strong>„Usługodawca”</strong>).
+        </li>
+        <li>Kontakt z Usługodawcą: <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a>.</li>
+        <li>Użyte w Regulaminie pojęcia oznaczają:
+          <ul>
+            <li><strong>Użytkownik</strong> — osoba fizyczna korzystająca z Serwisu, która ukończyła 18 lat lub osoba w wieku 13–17 lat działająca za zgodą i pod nadzorem przedstawiciela ustawowego;</li>
+            <li><strong>Konsument</strong> — Użytkownik będący konsumentem w rozumieniu art. 22<sup>1</sup> Kodeksu cywilnego;</li>
+            <li><strong>Konto</strong> — indywidualny profil Użytkownika w Serwisie;</li>
+            <li><strong>Subskrypcja</strong> — płatna usługa dostępu do funkcji Premium rozliczana okresowo lub jednorazowo;</li>
+            <li><strong>Kredyty</strong> — jednostki rozliczeniowe umożliwiające korzystanie z wybranych funkcji Serwisu (np. oceny wypracowań przez AI);</li>
+            <li><strong>Treści cyfrowe</strong> — dane wytwarzane i dostarczane w postaci cyfrowej w rozumieniu art. 2 pkt 5 ustawy o prawach konsumenta;</li>
+            <li><strong>AI</strong> — modele sztucznej inteligencji wykorzystywane w Serwisie, w szczególności modele językowe Anthropic Claude;</li>
+            <li><strong>RODO</strong> — Rozporządzenie Parlamentu Europejskiego i Rady (UE) 2016/679;</li>
+            <li><strong>Ustawa o prawach konsumenta</strong> — ustawa z dnia 30 maja 2014 r. o prawach konsumenta.</li>
+          </ul>
+        </li>
+        <li>Akceptacja Regulaminu jest dobrowolna, ale niezbędna do korzystania z Serwisu.</li>
+      </ol>
+
+      <h2 id="uslugi">§ 2. Rodzaje i zakres usług</h2>
+      <ol>
+        <li>
+          Serwis jest platformą edukacyjną przeznaczoną do przygotowania do egzaminu maturalnego. Usługodawca
+          świadczy w Serwisie następujące usługi:
+          <ul>
+            <li>udostępnianie treści edukacyjnych (pytania, zadania, testy, materiały do nauki),</li>
+            <li>ocena wypracowań przez AI z informacją zwrotną,</li>
+            <li>śledzenie postępów nauki, statystyki, gamifikacja (punkty, poziomy, serie, osiągnięcia),</li>
+            <li>generowanie spersonalizowanych sesji ćwiczeniowych (adaptive learning),</li>
+            <li>powtórki w systemie rozproszonym (spaced repetition),</li>
+            <li>symulacje egzaminów próbnych,</li>
+            <li>przypomnienia o nauce (po wyrażeniu zgody),</li>
+            <li>wsparcie techniczne.</li>
+          </ul>
+        </li>
+        <li>Usługodawca zastrzega sobie prawo do modyfikacji, dodawania lub usuwania funkcji Serwisu z zastrzeżeniem praw nabytych Użytkowników.</li>
+        <li>
+          Usługi świadczone są w dwóch wariantach:
+          <ul>
+            <li><strong>Wariant bezpłatny (Free)</strong> — ograniczony dostęp do treści, z dziennym limitem pytań;</li>
+            <li><strong>Wariant płatny (Premium)</strong> — pełny dostęp do wszystkich funkcji, rozliczany subskrypcyjnie lub jednorazowo.</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h2 id="wymagania">§ 3. Wymagania techniczne</h2>
+      <ol>
+        <li>Do korzystania z Serwisu wymagane jest:
+          <ul>
+            <li>urządzenie z dostępem do Internetu,</li>
+            <li>aktualna przeglądarka internetowa (Chrome, Firefox, Safari, Edge w aktualnej lub jednej z dwóch poprzednich wersji),</li>
+            <li>aktywny adres e-mail,</li>
+            <li>włączona obsługa JavaScript i plików cookies (w zakresie cookies niezbędnych).</li>
+          </ul>
+        </li>
+        <li>
+          Usługodawca nie gwarantuje poprawnego działania Serwisu w przeglądarkach nieaktualnych lub na urządzeniach
+          niespełniających powyższych wymagań.
+        </li>
+      </ol>
+
+      <h2 id="konto">§ 4. Rejestracja i konto użytkownika</h2>
+      <ol>
+        <li>Rejestracja w Serwisie odbywa się poprzez formularz rejestracji (e-mail + hasło) lub przez logowanie kontem Google.</li>
+        <li>Rejestracja jest bezpłatna i wymaga akceptacji Regulaminu oraz Polityki prywatności.</li>
+        <li>W przypadku rejestracji przez e-mail, Użytkownik otrzymuje 6-cyfrowy kod weryfikacyjny wysyłany na podany adres e-mail.</li>
+        <li>Użytkownik zobowiązany jest do podania prawdziwych i aktualnych danych oraz do zachowania poufności hasła.</li>
+        <li>Zakazane jest prowadzenie więcej niż jednego konta przez jedną osobę, odsprzedaż dostępu do konta osobom trzecim oraz udostępnianie konta osobom trzecim w celu obejścia limitów Serwisu.</li>
+        <li>Osoby w wieku 13–17 lat mogą zarejestrować Konto i korzystać z Serwisu wyłącznie za uprzednią zgodą i pod nadzorem przedstawiciela ustawowego (rodzica lub opiekuna prawnego), który akceptuje Regulamin w imieniu niepełnoletniego Użytkownika i ponosi odpowiedzialność za zawarcie umowy oraz płatności.</li>
+        <li>Użytkownik może w dowolnym momencie usunąć swoje Konto z poziomu ustawień lub zgłaszając żądanie na adres e-mail Usługodawcy.</li>
+      </ol>
+
+      <h2 id="subskrypcje">§ 5. Subskrypcje i płatności</h2>
+      <ol>
+        <li>Dostęp do funkcji Premium jest odpłatny. Aktualne ceny i plany dostępne są na stronie Serwisu.</li>
+        <li>
+          Usługodawca oferuje następujące plany płatne:
+          <ul>
+            <li><strong>Subskrypcja miesięczna (Premium)</strong> — 49 zł miesięcznie, odnawiana automatycznie;</li>
+            <li><strong>Dostęp jednorazowy (30 dni)</strong> — 59 zł, jednorazowa płatność, bez automatycznego odnawiania;</li>
+            <li><strong>Pakiety kredytów</strong> — zgodnie z ofertą aktualną w Serwisie (szczegóły w § 6).</li>
+          </ul>
+        </li>
+        <li>Ceny zawierają wszystkie podatki (w tym VAT, jeśli dotyczy).</li>
+        <li>Płatności obsługiwane są przez operatora Stripe Payments Europe, Ltd. Dostępne metody płatności: karta płatnicza, BLIK, Revolut Pay. Dane płatnicze nie trafiają na serwery Usługodawcy.</li>
+        <li>
+          Umowa o świadczenie usługi Premium zawierana jest z chwilą pomyślnego przetworzenia płatności przez operatora płatności.
+        </li>
+        <li>Faktura VAT (lub rachunek) zostaje wystawiona na żądanie Użytkownika zgłoszone przed końcem miesiąca, w którym nastąpiła płatność. W celu otrzymania faktury VAT Użytkownik powinien podać dane do faktury (w tym NIP, jeśli dotyczy).</li>
+      </ol>
+
+      <h2 id="kredyty">§ 6. Kredyty i zakupy jednorazowe</h2>
+      <ol>
+        <li>Kredyty to jednostki rozliczeniowe umożliwiające korzystanie z wybranych funkcji Serwisu, w szczególności ocen wypracowań przez AI oraz innych funkcji wymagających intensywnych zasobów obliczeniowych.</li>
+        <li>Ceny i liczba kredytów w pakietach dostępne są w Serwisie i mogą ulec zmianie, z zastrzeżeniem praw nabytych.</li>
+        <li>Kredyty zakupione przez Użytkownika mają określony termin ważności, który jest wskazany przy zakupie. <strong>Kredyty niewykorzystane w terminie ważności wygasają</strong> i nie podlegają zwrotowi ani wymianie na środki pieniężne.</li>
+        <li>Kredyty nie mogą być wymieniane na gotówkę, sprzedawane ani przenoszone na inne konta.</li>
+        <li>W przypadku rozwiązania umowy przez Użytkownika (usunięcia Konta), niewykorzystane kredyty przepadają bez prawa do ich zwrotu.</li>
+        <li>W przypadku awarii technicznej powodującej niemożność wykorzystania kredytów, Usługodawca przywróci utracone kredyty w wysokości udokumentowanej stratą lub — wedle wyboru Użytkownika — przedłuży ich termin ważności.</li>
+      </ol>
+
+      <h2 id="automatyczne-odnawianie">§ 7. Automatyczne odnawianie subskrypcji</h2>
+      <ol>
+        <li>Subskrypcja miesięczna odnawia się automatycznie co miesiąc, do momentu jej anulowania przez Użytkownika.</li>
+        <li>Użytkownik może anulować subskrypcję w dowolnym momencie z poziomu panelu Konta. Anulowanie nie powoduje natychmiastowego zakończenia dostępu — Użytkownik zachowuje dostęp do funkcji Premium do końca bieżącego okresu rozliczeniowego, za który dokonał płatności.</li>
+        <li>Kolejna płatność nie zostanie pobrana po anulowaniu subskrypcji.</li>
+        <li>Usługodawca poinformuje Użytkownika o odnowieniu subskrypcji z odpowiednim wyprzedzeniem, zgodnie z wymogami ustawy o prawach konsumenta.</li>
+        <li>W przypadku nieudanej próby pobrania płatności, Usługodawca może ponowić próbę pobrania środków w odstępach czasowych. Brak skutecznej płatności skutkuje automatycznym zakończeniem dostępu do funkcji Premium.</li>
+      </ol>
+
+      <h2 id="odstapienie">§ 8. Prawo odstąpienia od umowy</h2>
+      <ol>
+        <li>
+          Konsumentowi przysługuje prawo odstąpienia od umowy zawartej na odległość w terminie 14 dni od dnia jej zawarcia, bez podawania przyczyny, zgodnie z art. 27 ustawy o prawach konsumenta.
+        </li>
+        <li>
+          Aby skorzystać z prawa odstąpienia, Konsument powinien poinformować Usługodawcę o swojej decyzji w formie jednoznacznego oświadczenia, wysłanego na adres e-mail
+          <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a> lub pisemnie na adres siedziby.
+        </li>
+        <li>
+          <strong>Utrata prawa odstąpienia.</strong> Zgodnie z art. 38 pkt 13 ustawy o prawach konsumenta, prawo odstąpienia
+          od umowy <strong>nie przysługuje</strong> w odniesieniu do umów o dostarczanie treści cyfrowych niedostarczanych na
+          nośniku materialnym, za które Konsument jest zobowiązany do zapłaty ceny, jeżeli Usługodawca rozpoczął świadczenie
+          za wyraźną i uprzednią zgodą Konsumenta, który został poinformowany przed rozpoczęciem świadczenia, że po spełnieniu
+          świadczenia przez Usługodawcę utraci prawo odstąpienia od umowy, i przyjął to do wiadomości.
+        </li>
+        <li>
+          Przy aktywacji subskrypcji Premium lub zakupie kredytów Konsument wyraża wyraźną zgodę na rozpoczęcie świadczenia
+          usługi (dostarczania treści cyfrowych) natychmiast po dokonaniu płatności i potwierdza, że jest świadomy utraty prawa
+          odstąpienia od umowy. Zgoda ta jest odnotowywana w systemie Serwisu.
+        </li>
+        <li>
+          W przypadku gdy Konsument nie wyraził zgody, o której mowa w ust. 4, dostęp do funkcji Premium zostanie udostępniony dopiero po upływie 14-dniowego terminu odstąpienia.
+        </li>
+        <li>
+          Wzór oświadczenia o odstąpieniu od umowy stanowi Załącznik nr 2 do ustawy o prawach konsumenta i jest dostępny na żądanie.
+        </li>
+      </ol>
+
+      <h2 id="brak-zwrotow">§ 9. Polityka zwrotów</h2>
+      <ol>
+        <li>
+          Z uwagi na charakter świadczonych usług (dostarczanie treści cyfrowych) oraz świadomą i wyraźną zgodę Konsumenta
+          na natychmiastowe rozpoczęcie świadczenia (§ 8 ust. 4), <strong>Usługodawca nie dokonuje zwrotów środków za:</strong>
+          <ul>
+            <li>niewykorzystane okresy subskrypcji (w tym subskrypcji anulowanych w trakcie okresu rozliczeniowego),</li>
+            <li>zakupione dostępy jednorazowe (30-dniowe) po aktywacji konta Premium,</li>
+            <li>zakupione i niewykorzystane kredyty, w tym kredyty wygasłe,</li>
+            <li>brak aktywności Użytkownika w Serwisie,</li>
+            <li>zmianę zdania Użytkownika po rozpoczęciu świadczenia,</li>
+            <li>wyniki egzaminu maturalnego (nie ma gwarancji, że korzystanie z Serwisu zapewni zdanie matury z określonym wynikiem).</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Usługodawca dokonuje zwrotu środków w następujących przypadkach:</strong>
+          <ul>
+            <li>wielokrotne, powtarzające się pobranie tej samej opłaty z przyczyn leżących po stronie Usługodawcy,</li>
+            <li>trwała niemożność świadczenia usługi z przyczyn leżących po stronie Usługodawcy, trwająca dłużej niż 7 dni i nieusuwalna w rozsądnym terminie po zgłoszeniu,</li>
+            <li>wykonanie reklamacji rozstrzygniętej na korzyść Użytkownika (§ 14).</li>
+          </ul>
+        </li>
+        <li>Zwroty realizowane są tą samą metodą płatności, która została użyta przy zakupie, w terminie do 14 dni roboczych od uznania żądania.</li>
+        <li>Niniejszy paragraf nie wyłącza ani nie ogranicza uprawnień Konsumenta wynikających z powszechnie obowiązujących przepisów prawa, w szczególności rękojmi za wady i niezgodność z umową treści cyfrowych (Rozdział 5b ustawy o prawach konsumenta).</li>
+      </ol>
+
+      <h2 id="ai">§ 10. Funkcje oparte na sztucznej inteligencji</h2>
+      <ol>
+        <li>
+          Serwis wykorzystuje modele sztucznej inteligencji (w szczególności Anthropic Claude) do oceny wypracowań, generowania wyjaśnień, dostosowywania poziomu trudności zadań i innych funkcji edukacyjnych.
+        </li>
+        <li>
+          <strong>Użytkownik przyjmuje do wiadomości i akceptuje, że:</strong>
+          <ul>
+            <li>wyniki generowane przez AI mają charakter <strong>pomocniczy, edukacyjny i orientacyjny</strong>, nie stanowią oficjalnej oceny egzaminacyjnej;</li>
+            <li>AI może generować odpowiedzi niepełne, nieprecyzyjne, lub w wyjątkowych przypadkach błędne (tzw. halucynacje) — Użytkownik powinien weryfikować otrzymane informacje w materiałach źródłowych;</li>
+            <li>oceny AI nie zastępują oceny nauczyciela, egzaminatora, ani wyniku egzaminu maturalnego organizowanego przez CKE;</li>
+            <li>kryteria oceny AI są oparte o publikowane kryteria CKE i wytyczne dydaktyczne, ale mogą się różnić od oceny ludzkiego egzaminatora;</li>
+            <li>Serwis nie gwarantuje osiągnięcia określonego wyniku matury ani innego egzaminu;</li>
+            <li>Usługodawca nie ponosi odpowiedzialności za decyzje edukacyjne i życiowe podjęte wyłącznie na podstawie wyników generowanych przez AI.</li>
+          </ul>
+        </li>
+        <li>
+          Oceny AI nie są decyzjami w rozumieniu art. 22 RODO — nie wywołują skutków prawnych i nie wpływają istotnie na sytuację prawną Użytkownika. Użytkownik ma prawo zakwestionować ocenę AI i uzyskać wyjaśnienie jej podstaw.
+        </li>
+        <li>
+          Zabronione jest wykorzystywanie AI udostępnionej w Serwisie do celów niezgodnych z jej przeznaczeniem, w tym do generowania treści obraźliwych, nielegalnych, łamiących prawa autorskie lub mających na celu obejście kryteriów CKE w sposób nieetyczny.
+        </li>
+      </ol>
+
+      <h2 id="obowiazki">§ 11. Obowiązki użytkownika</h2>
+      <ol>
+        <li>Użytkownik zobowiązany jest do korzystania z Serwisu zgodnie z Regulaminem, powszechnie obowiązującymi przepisami prawa, dobrymi obyczajami oraz zasadami współżycia społecznego.</li>
+        <li>
+          Zabronione jest:
+          <ul>
+            <li>zamieszczanie treści niezgodnych z prawem, obraźliwych, dyskryminujących, naruszających dobra osobiste innych osób,</li>
+            <li>podejmowanie działań mających na celu zakłócenie działania Serwisu (w tym ataków DDoS, wstrzykiwania kodu, scrapowania treści bez zgody),</li>
+            <li>obchodzenie limitów darmowego dostępu (w tym tworzenie wielu kont),</li>
+            <li>udostępnianie konta osobom trzecim lub odsprzedaż dostępu,</li>
+            <li>automatyczne pobieranie treści edukacyjnych Serwisu w celach komercyjnych,</li>
+            <li>wykorzystywanie treści Serwisu do trenowania modeli AI bez zgody Usługodawcy,</li>
+            <li>wprowadzanie Usługodawcy w błąd (np. fałszywe reklamacje, chargebacki).</li>
+          </ul>
+        </li>
+        <li>Naruszenie powyższych obowiązków może skutkować blokadą Konta zgodnie z § 15.</li>
+      </ol>
+
+      <h2 id="wlasnosc">§ 12. Własność intelektualna</h2>
+      <ol>
+        <li>Wszelkie treści udostępnione w Serwisie (pytania, zadania, materiały edukacyjne, grafiki, logo, kod źródłowy) są chronione prawem autorskim i stanowią własność Usługodawcy lub podmiotów, z którymi Usługodawca zawarł odpowiednie umowy licencyjne.</li>
+        <li>Użytkownik otrzymuje niewyłączną, niezbywalną licencję na korzystanie z treści Serwisu wyłącznie w celach własnej nauki, w okresie obowiązywania umowy.</li>
+        <li>Zabronione jest kopiowanie, rozpowszechnianie, publikowanie, modyfikowanie lub udostępnianie treści Serwisu osobom trzecim bez pisemnej zgody Usługodawcy.</li>
+        <li>Treści tworzone przez Użytkownika (np. wypracowania) pozostają jego własnością. Użytkownik udziela Usługodawcy niewyłącznej licencji na przetwarzanie tych treści wyłącznie w zakresie niezbędnym do świadczenia usług (w tym przesyłania do modeli AI w celu oceny).</li>
+      </ol>
+
+      <h2 id="odpowiedzialnosc">§ 13. Odpowiedzialność Usługodawcy</h2>
+      <ol>
+        <li>Usługodawca dokłada należytej staranności, aby Serwis działał w sposób ciągły i niezawodny.</li>
+        <li>Usługodawca nie ponosi odpowiedzialności za:
+          <ul>
+            <li>przerwy techniczne wynikające z konserwacji, awarii lub działania siły wyższej,</li>
+            <li>nieprawidłowe działanie Serwisu wynikające z niespełnienia przez Użytkownika wymagań technicznych,</li>
+            <li>szkody wynikające z działania osób trzecich (np. ataków, phishingu),</li>
+            <li>wyniki egzaminu maturalnego lub innych egzaminów Użytkownika,</li>
+            <li>decyzje edukacyjne, zawodowe lub życiowe Użytkownika oparte na treściach Serwisu lub ocenach AI,</li>
+            <li>treści generowane przez AI w zakresie ich poprawności merytorycznej w szczególnych przypadkach (halucynacje AI),</li>
+            <li>utratę danych wynikającą z działań Użytkownika (np. usunięcie Konta).</li>
+          </ul>
+        </li>
+        <li>Odpowiedzialność Usługodawcy wobec Użytkownika niebędącego Konsumentem z tytułu niewykonania lub nienależytego wykonania umowy jest ograniczona do kwoty wpłaconej przez Użytkownika w ciągu ostatnich 12 miesięcy. Ograniczenie nie dotyczy odpowiedzialności za szkody wyrządzone umyślnie.</li>
+        <li>Niniejszy paragraf nie ogranicza odpowiedzialności Usługodawcy wobec Konsumenta w zakresie, w jakim takie ograniczenie byłoby sprzeczne z powszechnie obowiązującymi przepisami prawa.</li>
+      </ol>
+
+      <h2 id="reklamacje">§ 14. Reklamacje</h2>
+      <ol>
+        <li>Reklamacje dotyczące usług świadczonych w Serwisie można zgłaszać na adres e-mail: <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a>.</li>
+        <li>Reklamacja powinna zawierać: imię i nazwisko Użytkownika, adres e-mail przypisany do Konta, opis problemu oraz oczekiwany sposób rozpatrzenia.</li>
+        <li>Usługodawca rozpatrzy reklamację w terminie 14 dni od jej otrzymania. Brak odpowiedzi w terminie 14 dni oznacza uznanie reklamacji za uzasadnioną (w przypadku Konsumentów).</li>
+        <li>W przypadku niezgodności treści cyfrowych z umową, Konsumentowi przysługują uprawnienia wynikające z rozdziału 5b ustawy o prawach konsumenta, w tym prawo żądania doprowadzenia treści cyfrowych do zgodności z umową lub obniżenia ceny, a w określonych przypadkach — odstąpienia od umowy.</li>
+      </ol>
+
+      <h2 id="rozwiazanie">§ 15. Rozwiązanie umowy i blokada konta</h2>
+      <ol>
+        <li>Użytkownik może w dowolnym momencie usunąć swoje Konto z poziomu ustawień Serwisu.</li>
+        <li>Usługodawca może zablokować Konto lub rozwiązać umowę ze skutkiem natychmiastowym w przypadku:
+          <ul>
+            <li>rażącego naruszenia Regulaminu,</li>
+            <li>podejmowania działań zagrażających bezpieczeństwu Serwisu lub innych Użytkowników,</li>
+            <li>dokonania chargebacku bez próby wcześniejszego wyjaśnienia problemu,</li>
+            <li>korzystania z Serwisu w sposób sprzeczny z przepisami prawa.</li>
+          </ul>
+        </li>
+        <li>Przed zablokowaniem Konta (w sprawach nierażących) Usługodawca wezwie Użytkownika do zaprzestania naruszeń z wyznaczeniem terminu nie krótszego niż 3 dni.</li>
+        <li>Blokada Konta z przyczyn leżących po stronie Użytkownika nie uprawnia do zwrotu środków za aktualny okres rozliczeniowy ani za niewykorzystane kredyty.</li>
+      </ol>
+
+      <h2 id="dane">§ 16. Ochrona danych osobowych</h2>
+      <p>
+        Zasady przetwarzania danych osobowych Użytkowników określa
+        <a href="/polityka-prywatnosci">Polityka prywatności</a>, stanowiąca integralną część Regulaminu.
+      </p>
+
+      <h2 id="zmiany">§ 17. Zmiany regulaminu</h2>
+      <ol>
+        <li>Usługodawca może zmienić Regulamin z ważnych przyczyn, takich jak: zmiana przepisów prawa, wprowadzenie nowych funkcji Serwisu, zmiana sposobu świadczenia usług, względy bezpieczeństwa.</li>
+        <li>O zmianie Regulaminu Usługodawca poinformuje Użytkownika z co najmniej 14-dniowym wyprzedzeniem, drogą e-mailową lub poprzez komunikat w Serwisie.</li>
+        <li>Użytkownik, który nie akceptuje zmian, ma prawo rozwiązać umowę poprzez usunięcie Konta przed wejściem zmian w życie.</li>
+        <li>Dla subskrypcji aktywnych w momencie zmiany Regulaminu, zmiany niekorzystne dla Użytkownika wchodzą w życie od kolejnego okresu rozliczeniowego, chyba że Użytkownik wyrazi zgodę na wcześniejsze ich zastosowanie.</li>
+      </ol>
+
+      <h2 id="spory">§ 18. Rozstrzyganie sporów</h2>
+      <ol>
+        <li>Prawem właściwym dla Regulaminu i zawartej na jego podstawie umowy jest prawo polskie. Wybór prawa polskiego nie pozbawia Konsumenta ochrony wynikającej z bezwzględnie obowiązujących przepisów prawa jego miejsca zwykłego pobytu.</li>
+        <li>Wszelkie spory będą rozstrzygane w pierwszej kolejności polubownie.</li>
+        <li>Konsument ma możliwość skorzystania z pozasądowych sposobów rozpatrywania sporów, w tym:
+          <ul>
+            <li>mediacji przy Wojewódzkim Inspektoracie Inspekcji Handlowej,</li>
+            <li>stałego polubownego sądu konsumenckiego przy Wojewódzkim Inspektoracie Inspekcji Handlowej,</li>
+            <li>pomocy miejskiego lub powiatowego rzecznika konsumentów,</li>
+            <li>platformy internetowego rozstrzygania sporów ODR Komisji Europejskiej: <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener">https://ec.europa.eu/consumers/odr</a>.</li>
+          </ul>
+        </li>
+        <li>Skorzystanie z pozasądowych sposobów jest dobrowolne i wymaga zgody obu stron.</li>
+        <li>Sądem właściwym do rozstrzygania sporów jest sąd właściwy zgodnie z przepisami Kodeksu postępowania cywilnego.</li>
+      </ol>
+
+      <h2 id="koncowe">§ 19. Postanowienia końcowe</h2>
+      <ol>
+        <li>W sprawach nieuregulowanych Regulaminem zastosowanie mają powszechnie obowiązujące przepisy prawa polskiego, w szczególności Kodeks cywilny, ustawa o prawach konsumenta, ustawa o świadczeniu usług drogą elektroniczną oraz RODO.</li>
+        <li>Jeśli którekolwiek postanowienie Regulaminu zostanie uznane za nieważne lub nieskuteczne, pozostałe postanowienia pozostają w mocy.</li>
+        <li>Regulamin wchodzi w życie z dniem {lastUpdated}.</li>
+        <li>Poprzednie wersje Regulaminu dostępne są na żądanie pod adresem <a href="mailto:kontakt@karol-leszczynski.pl">kontakt@karol-leszczynski.pl</a>.</li>
+        <li>W przypadku rozbieżności między wersją polską a angielską Regulaminu, wiążąca jest wersja polska.</li>
+      </ol>
+
+      <hr class="my-10" />
+
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Wersja dokumentu z dnia: {lastUpdated}.
+      </p>
+    </article>
+  </main>
+</Layout>

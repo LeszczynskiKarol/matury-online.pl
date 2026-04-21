@@ -10,7 +10,7 @@ const ses = new SESClient({
 });
 const FROM_EMAIL =
   process.env.FROM_EMAIL || "Matury Online <noreply@matury-online.pl>";
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://matury-online.pl";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://www.matury-online.pl";
 
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY;
 const RECAPTCHA_THRESHOLD = 0.5;
@@ -300,11 +300,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           (user.verificationCodeExpiresAt.getTime() -
             VERIFICATION_CODE_TTL_MIN * 60000);
         if (age < RESEND_COOLDOWN_SEC * 1000) {
-          return reply
-            .code(429)
-            .send({
-              error: `Poczekaj ${Math.ceil((RESEND_COOLDOWN_SEC * 1000 - age) / 1000)}s`,
-            });
+          return reply.code(429).send({
+            error: `Poczekaj ${Math.ceil((RESEND_COOLDOWN_SEC * 1000 - age) / 1000)}s`,
+          });
         }
       }
 
@@ -372,13 +370,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           },
         });
         await sendVerificationEmail(email, user.name, code);
-        return reply
-          .code(403)
-          .send({
-            error: "Email nie zweryfikowany. Wysłaliśmy nowy kod.",
-            code: "EMAIL_NOT_VERIFIED",
-            email,
-          });
+        return reply.code(403).send({
+          error: "Email nie zweryfikowany. Wysłaliśmy nowy kod.",
+          code: "EMAIL_NOT_VERIFIED",
+          email,
+        });
       }
 
       const token = app.jwt.sign({ userId: user.id, role: user.role });
