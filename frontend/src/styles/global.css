@@ -1,3 +1,4 @@
+@import "katex/dist/katex.min.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -121,7 +122,8 @@
            transition-all duration-200;
   }
   .option-card.selected {
-    @apply border-navy-500 bg-navy-50 dark:bg-navy-900/20;
+    @apply border-navy-400 bg-navy-50
+         dark:border-navy-400 dark:bg-navy-500/20 dark:shadow-[inset_0_0_0_1px_rgba(99,102,241,0.15),0_0_12px_rgba(99,102,241,0.1)];
   }
   .option-card.correct {
     @apply border-brand-500 bg-brand-50 dark:bg-brand-900/20;
@@ -184,4 +186,39 @@
   --mafs-line-color: #27272a !important;
   --mafs-origin-color: #52525b !important;
   background: #0a0a1f !important;
+}
+
+/* ── Quiz Filter Pills ─────────────────────────────────────────────────── */
+/* ADD THIS to your global.css inside @layer components { } */
+
+.quiz-filter-pill {
+  @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium
+           bg-zinc-100 dark:bg-surface-700
+           text-zinc-600 dark:text-zinc-400
+           border border-transparent
+           hover:bg-zinc-200 dark:hover:bg-surface-700
+           hover:text-zinc-800 dark:hover:text-zinc-200
+           transition-all duration-150 cursor-pointer select-none;
+}
+
+.quiz-filter-pill.active {
+  @apply bg-brand-500/10 dark:bg-brand-500/20
+           text-brand-700 dark:text-brand-300
+           border-brand-500/30 dark:border-brand-500/40
+           hover:bg-brand-500/20 dark:hover:bg-brand-500/30;
+}
+
+/* Fade in animation for collapsed chips */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
 }

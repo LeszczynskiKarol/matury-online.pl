@@ -3,10 +3,7 @@
 // Handles: OPEN questions, ESSAY grading, per-subject prompt strategies
 // ============================================================================
 
-import Anthropic from '@anthropic-ai/sdk';
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const MODEL = 'claude-sonnet-4-6';
+import { claudeCall } from "./claude-monitor.js";
 
 // ── Subject-specific system prompts ────────────────────────────────────────
 
@@ -56,26 +53,82 @@ interface EssayGradeResult {
   improvements: string[];
 }
 
-const ESSAY_CRITERIA: Record<string, { name: string; maxScore: number; description: string }[]> = {
+const ESSAY_CRITERIA: Record<
+  string,
+  { name: string; maxScore: number; description: string }[]
+> = {
   polski: [
-    { name: 'Realizacja tematu', maxScore: 2, description: 'Czy praca odpowiada na postawione pytanie/temat?' },
-    { name: 'Teza i argumentacja', maxScore: 12, description: 'Klarowność tezy, jakość i ilość argumentów, odwołania do tekstów' },
-    { name: 'Kompozycja', maxScore: 8, description: 'Logiczna struktura, spójność, proporcje części' },
-    { name: 'Styl', maxScore: 4, description: 'Stosowność stylu, bogactwo słownictwa, precyzja wyrażeń' },
-    { name: 'Język', maxScore: 8, description: 'Poprawność gramatyczna, ortograficzna, interpunkcyjna' },
-    { name: 'Zapis', maxScore: 2, description: 'Czytelność, estetyka zapisu' },
+    {
+      name: "Realizacja tematu",
+      maxScore: 2,
+      description: "Czy praca odpowiada na postawione pytanie/temat?",
+    },
+    {
+      name: "Teza i argumentacja",
+      maxScore: 12,
+      description:
+        "Klarowność tezy, jakość i ilość argumentów, odwołania do tekstów",
+    },
+    {
+      name: "Kompozycja",
+      maxScore: 8,
+      description: "Logiczna struktura, spójność, proporcje części",
+    },
+    {
+      name: "Styl",
+      maxScore: 4,
+      description: "Stosowność stylu, bogactwo słownictwa, precyzja wyrażeń",
+    },
+    {
+      name: "Język",
+      maxScore: 8,
+      description: "Poprawność gramatyczna, ortograficzna, interpunkcyjna",
+    },
+    { name: "Zapis", maxScore: 2, description: "Czytelność, estetyka zapisu" },
   ],
   matematyka: [
-    { name: 'Strategia rozwiązania', maxScore: 2, description: 'Wybór właściwej metody' },
-    { name: 'Poprawność obliczeń', maxScore: 3, description: 'Bezbłędność rachunków' },
-    { name: 'Uzasadnienie', maxScore: 3, description: 'Logiczne uzasadnienie kroków' },
-    { name: 'Wynik końcowy', maxScore: 2, description: 'Poprawność i forma wyniku' },
+    {
+      name: "Strategia rozwiązania",
+      maxScore: 2,
+      description: "Wybór właściwej metody",
+    },
+    {
+      name: "Poprawność obliczeń",
+      maxScore: 3,
+      description: "Bezbłędność rachunków",
+    },
+    {
+      name: "Uzasadnienie",
+      maxScore: 3,
+      description: "Logiczne uzasadnienie kroków",
+    },
+    {
+      name: "Wynik końcowy",
+      maxScore: 2,
+      description: "Poprawność i forma wyniku",
+    },
   ],
   _default: [
-    { name: 'Merytoryka', maxScore: 10, description: 'Poprawność merytoryczna odpowiedzi' },
-    { name: 'Argumentacja', maxScore: 5, description: 'Jakość argumentów i przykładów' },
-    { name: 'Język i styl', maxScore: 3, description: 'Poprawność językowa i stylistyczna' },
-    { name: 'Kompletność', maxScore: 2, description: 'Wyczerpujące omówienie tematu' },
+    {
+      name: "Merytoryka",
+      maxScore: 10,
+      description: "Poprawność merytoryczna odpowiedzi",
+    },
+    {
+      name: "Argumentacja",
+      maxScore: 5,
+      description: "Jakość argumentów i przykładów",
+    },
+    {
+      name: "Język i styl",
+      maxScore: 3,
+      description: "Poprawność językowa i stylistyczna",
+    },
+    {
+      name: "Kompletność",
+      maxScore: 2,
+      description: "Wyczerpujące omówienie tematu",
+    },
   ],
 };
 
@@ -83,7 +136,7 @@ const ESSAY_CRITERIA: Record<string, { name: string; maxScore: number; descripti
 
 export interface OpenGradeResult {
   isCorrect: boolean;
-  score: number;       // 0.0 - 1.0
+  score: number; // 0.0 - 1.0
   feedback: string;
   correctAnswer?: string;
 }
@@ -96,7 +149,9 @@ export async function gradeOpenQuestion(params: {
   userAnswer: string;
   sampleAnswer?: string;
 }): Promise<OpenGradeResult> {
-  const systemPrompt = SUBJECT_SYSTEM_PROMPTS[params.subjectSlug] || SUBJECT_SYSTEM_PROMPTS._default;
+  const systemPrompt =
+    SUBJECT_SYSTEM_PROMPTS[params.subjectSlug] ||
+    SUBJECT_SYSTEM_PROMPTS._default;
 
   const userPrompt = `## Pytanie
 ${params.question}
@@ -104,7 +159,7 @@ ${params.question}
 ## Kryteria oceny (rubric)
 ${params.rubric}
 
-${params.sampleAnswer ? `## Wzorcowa odpowiedź\n${params.sampleAnswer}\n` : ''}
+${params.sampleAnswer ? `## Wzorcowa odpowiedź\n${params.sampleAnswer}\n` : ""}
 
 ## Maksymalna liczba punktów: ${params.maxPoints}
 
@@ -121,31 +176,28 @@ Oceń odpowiedź ucznia. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
   "correctAnswer": "<krótka wzorcowa odpowiedź jeśli uczeń odpowiedział źle, inaczej null>"
 }`;
 
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 1024,
+  const result = await claudeCall({
+    caller: "ai-grading-open",
+    model: "claude-sonnet-4-6",
     system: systemPrompt,
-    messages: [{ role: 'user', content: userPrompt }],
+    messages: [{ role: "user", content: userPrompt }],
+    metadata: { subjectSlug: params.subjectSlug, maxPoints: params.maxPoints },
   });
-
-  const text = response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-    .map((b) => b.text)
-    .join('');
+  const text = result.text;
 
   try {
     const result = JSON.parse(text);
     return {
       isCorrect: result.isCorrect ?? false,
       score: (result.pointsAwarded ?? 0) / params.maxPoints,
-      feedback: result.feedback ?? 'Brak szczegółowej oceny.',
+      feedback: result.feedback ?? "Brak szczegółowej oceny.",
       correctAnswer: result.correctAnswer ?? undefined,
     };
   } catch {
     return {
       isCorrect: false,
       score: 0,
-      feedback: 'Wystąpił błąd podczas oceny. Spróbuj ponownie.',
+      feedback: "Wystąpił błąd podczas oceny. Spróbuj ponownie.",
     };
   }
 }
@@ -157,13 +209,16 @@ export async function gradeEssay(params: {
   prompt: string;
   content: string;
 }): Promise<EssayGradeResult> {
-  const systemPrompt = SUBJECT_SYSTEM_PROMPTS[params.subjectSlug] || SUBJECT_SYSTEM_PROMPTS._default;
-  const criteria = ESSAY_CRITERIA[params.subjectSlug] || ESSAY_CRITERIA._default;
+  const systemPrompt =
+    SUBJECT_SYSTEM_PROMPTS[params.subjectSlug] ||
+    SUBJECT_SYSTEM_PROMPTS._default;
+  const criteria =
+    ESSAY_CRITERIA[params.subjectSlug] || ESSAY_CRITERIA._default;
   const maxTotal = criteria.reduce((sum, c) => sum + c.maxScore, 0);
 
   const criteriaDesc = criteria
     .map((c) => `- ${c.name} (max ${c.maxScore} pkt): ${c.description}`)
-    .join('\n');
+    .join("\n");
 
   const userPrompt = `## Temat wypracowania
 ${params.prompt}
@@ -181,28 +236,28 @@ ${params.content}
 Oceń wypracowanie. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
 {
   "criteria": [
-    ${criteria.map((c) => `{ "name": "${c.name}", "score": <0-${c.maxScore}>, "maxScore": ${c.maxScore}, "feedback": "<1-2 zdania>" }`).join(',\n    ')}
+    ${criteria.map((c) => `{ "name": "${c.name}", "score": <0-${c.maxScore}>, "maxScore": ${c.maxScore}, "feedback": "<1-2 zdania>" }`).join(",\n    ")}
   ],
   "overallFeedback": "<ogólna ocena, 3-5 zdań>",
   "strengths": ["<mocna strona 1>", "<mocna strona 2>"],
   "improvements": ["<do poprawy 1>", "<do poprawy 2>"]
 }`;
 
-  const response = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 2048,
+  const result = await claudeCall({
+    caller: "ai-grading-essay",
+    model: "claude-sonnet-4-6",
     system: systemPrompt,
-    messages: [{ role: 'user', content: userPrompt }],
+    messages: [{ role: "user", content: userPrompt }],
+    metadata: { subjectSlug: params.subjectSlug },
   });
-
-  const text = response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-    .map((b) => b.text)
-    .join('');
+  const text = result.text;
 
   try {
     const result = JSON.parse(text);
-    const totalScore = (result.criteria as CriterionResult[]).reduce((s, c) => s + c.score, 0);
+    const totalScore = (result.criteria as CriterionResult[]).reduce(
+      (s, c) => s + c.score,
+      0,
+    );
 
     return {
       criteria: result.criteria,
@@ -217,10 +272,11 @@ Oceń wypracowanie. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
         name: c.name,
         score: 0,
         maxScore: c.maxScore,
-        feedback: 'Błąd oceny',
+        feedback: "Błąd oceny",
       })),
       overallScore: 0,
-      overallFeedback: 'Wystąpił błąd podczas oceny wypracowania. Spróbuj ponownie.',
+      overallFeedback:
+        "Wystąpił błąd podczas oceny wypracowania. Spróbuj ponownie.",
       strengths: [],
       improvements: [],
     };

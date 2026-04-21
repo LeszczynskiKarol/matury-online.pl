@@ -7,11 +7,18 @@ import { FastifyPluginAsync } from "fastify";
 import Stripe from "stripe";
 
 const PRICES = {
-  SUBSCRIPTION: process.env.STRIPE_PRICE_SUBSCRIPTION!, // 49 PLN/month recurring
-  ONE_TIME: process.env.STRIPE_PRICE_ONE_TIME!, // 59 PLN one-time (30 days)
+  SUBSCRIPTION: process.env.STRIPE_PRICE_SUBSCRIPTION!,
+  ONE_TIME: process.env.STRIPE_PRICE_ONE_TIME!,
+  CREDITS_200: process.env.STRIPE_PRICE_CREDITS_200!,
+  CREDITS_500: process.env.STRIPE_PRICE_CREDITS_500!,
+  CREDITS_1200: process.env.STRIPE_PRICE_CREDITS_1200!,
 };
 
-const FREE_DAILY_LIMIT = 5;
+const CREDIT_PACKAGES: Record<string, { priceId: string; credits: number }> = {
+  credits_200: { priceId: PRICES.CREDITS_200, credits: 200 },
+  credits_500: { priceId: PRICES.CREDITS_500, credits: 500 },
+  credits_1200: { priceId: PRICES.CREDITS_1200, credits: 1200 },
+};
 
 export const stripeRoutes: FastifyPluginAsync = async (app) => {
   // ── Check if user has premium access ─────────────────────────────────────
@@ -41,26 +48,10 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
           user.subscriptionEnd > now);
 
       // Daily question count for free users
-      let dailyUsed = 0;
-      let dailyLimit = FREE_DAILY_LIMIT;
-      if (!isPremium) {
-        const today = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-        );
-        dailyUsed = await app.prisma.answer.count({
-          where: { userId: req.user.userId, createdAt: { gte: today } },
-        });
-      } else {
-        dailyLimit = -1; // unlimited
-      }
-
       return {
         isPremium,
         subscriptionStatus: user.subscriptionStatus,
         subscriptionEnd: user.subscriptionEnd,
-        // If CANCELLED but still within period, show that info
         willExpire:
           user.subscriptionStatus === "CANCELLED" && user.subscriptionEnd
             ? user.subscriptionEnd.toISOString()
@@ -69,11 +60,14 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
           user.subscriptionStatus === "CANCELLED" &&
           user.subscriptionEnd &&
           user.subscriptionEnd > now,
-        dailyUsed,
-        dailyLimit,
       };
     },
   );
+
+  app.get("/credits", { preHandler: [app.authenticate] }, async (req) => {
+    const { checkAiCredits } = await import("../services/ai-credits.js");
+    return checkAiCredits(app.prisma, req.user.userId);
+  });
 
   // ── Create checkout session ──────────────────────────────────────────────
   app.post(
@@ -239,6 +233,84 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  // ── Buy AI credits ───────────────────────────────────────────────────────
+  app.post(
+    "/buy-credits",
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        body: {
+          type: "object",
+          required: ["package"],
+          properties: {
+            package: {
+              type: "string",
+              enum: ["credits_200", "credits_500", "credits_1200"],
+            },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const userId = req.user.userId;
+      const { package: pkg } = req.body as { package: string };
+
+      const pack = CREDIT_PACKAGES[pkg];
+      if (!pack) return reply.code(400).send({ error: "Invalid package" });
+
+      // Must be premium to buy credits
+      const user = await app.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
+      const now = new Date();
+      const isPremium =
+        user.subscriptionStatus === "ACTIVE" ||
+        (user.subscriptionStatus === "ONE_TIME" &&
+          user.subscriptionEnd &&
+          user.subscriptionEnd > now) ||
+        (user.subscriptionStatus === "CANCELLED" &&
+          user.subscriptionEnd &&
+          user.subscriptionEnd > now);
+
+      if (!isPremium) {
+        return reply.code(403).send({
+          error: "Kredyty AI dostępne tylko dla użytkowników Premium.",
+        });
+      }
+
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await app.stripe.customers.create({
+          email: user.email,
+          metadata: { userId },
+        });
+        customerId = customer.id;
+        await app.prisma.user.update({
+          where: { id: userId },
+          data: { stripeCustomerId: customerId },
+        });
+      }
+
+      const session = await app.stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: "payment",
+        payment_method_types: ["card", "revolut_pay", "blik"],
+        line_items: [{ price: pack.priceId, quantity: 1 }],
+        success_url: `${process.env.FRONTEND_URL}/dashboard/subskrypcja?credits=success&package=${pkg}`,
+        cancel_url: `${process.env.FRONTEND_URL}/dashboard/subskrypcja?credits=cancelled`,
+        metadata: {
+          userId,
+          type: "credits",
+          package: pkg,
+          credits: String(pack.credits),
+        },
+        locale: "pl",
+      });
+
+      return { url: session.url };
+    },
+  );
+
   // ── Customer portal (manage payment methods etc.) ────────────────────────
   app.post(
     "/portal",
@@ -313,6 +385,17 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
               ),
             },
           });
+
+          // Reset AI credits on subscription renewal
+          const users = await app.prisma.user.findMany({
+            where: { stripeCustomerId: customerId },
+            select: { id: true },
+          });
+          const { resetAiCredits } = await import("../services/ai-credits.js");
+          for (const u of users) {
+            await resetAiCredits(app.prisma, u.id);
+          }
+
           break;
         }
 
@@ -336,27 +419,46 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
           const session = event.data.object as Stripe.Checkout.Session;
           if (session.mode === "payment" && session.payment_status === "paid") {
             const userId = session.metadata?.userId;
-            if (userId) {
-              const user = await app.prisma.user.findUnique({
-                where: { id: userId },
-              });
-              // If user already has active time, extend it; otherwise start from now
-              const now = new Date();
-              const currentEnd =
-                user?.subscriptionEnd && user.subscriptionEnd > now
-                  ? user.subscriptionEnd
-                  : now;
-              const endDate = new Date(currentEnd);
-              endDate.setDate(endDate.getDate() + 30);
+            if (!userId) break;
 
-              await app.prisma.user.update({
-                where: { id: userId },
-                data: {
-                  subscriptionStatus: "ONE_TIME",
-                  subscriptionEnd: endDate,
-                },
-              });
+            // Credit package purchase
+            if (session.metadata?.type === "credits") {
+              const credits = parseInt(session.metadata.credits || "0");
+              if (credits > 0) {
+                await app.prisma.user.update({
+                  where: { id: userId },
+                  data: { aiCreditsRemaining: { increment: credits } },
+                });
+                app.log.info(
+                  `💰 Added ${credits} AI credits to user ${userId}`,
+                );
+              }
+              break;
             }
+
+            // One-time subscription purchase (existing logic)
+            const user = await app.prisma.user.findUnique({
+              where: { id: userId },
+            });
+            const now = new Date();
+            const currentEnd =
+              user?.subscriptionEnd && user.subscriptionEnd > now
+                ? user.subscriptionEnd
+                : now;
+            const endDate = new Date(currentEnd);
+            endDate.setDate(endDate.getDate() + 30);
+
+            await app.prisma.user.update({
+              where: { id: userId },
+              data: {
+                subscriptionStatus: "ONE_TIME",
+                subscriptionEnd: endDate,
+              },
+            });
+
+            const { grantInitialCredits } =
+              await import("../services/ai-credits.js");
+            await grantInitialCredits(app.prisma, userId);
           }
           break;
         }

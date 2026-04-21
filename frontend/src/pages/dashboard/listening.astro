@@ -1,0 +1,27 @@
+---
+// frontend/src/pages/dashboard/listening.astro
+import Dashboard from '../../layouts/Dashboard.astro';
+---
+
+<Dashboard title="Listening Practice">
+  <div id="listening-app"></div>
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { ListeningSession } from '../../components/quiz/ListeningSession';
+
+    // Get subject ID for English
+    (async () => {
+      try {
+        const res = await fetch('/api/subjects/angielski', { credentials: 'include' });
+        const subject = await res.json();
+        const el = document.getElementById('listening-app');
+        if (el && subject?.id) {
+          createRoot(el).render(createElement(ListeningSession, { subjectId: subject.id }));
+        }
+      } catch (e) {
+        console.error('Failed to load subject:', e);
+      }
+    })();
+  </script>
+</Dashboard>

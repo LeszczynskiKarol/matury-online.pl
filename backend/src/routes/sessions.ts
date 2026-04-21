@@ -1,8 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
-import {
-  selectAdaptiveQuestions,
-  getRecommendedDifficulty,
-} from "../services/adaptive-difficulty.js";
+import { selectAdaptiveQuestions } from "../services/adaptive-difficulty.js";
 import { getDueCards } from "../services/spaced-repetition.js";
 
 export const sessionRoutes: FastifyPluginAsync = async (app) => {

@@ -1,0 +1,10 @@
+{
+  "name": "matury-online",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n back,front -c blue,green \"cd backend && npm run dev\" \"cd frontend && npm run dev -- --host\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

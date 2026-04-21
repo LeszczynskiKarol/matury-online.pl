@@ -7,8 +7,6 @@ interface SubscriptionStatus {
   subscriptionEnd: string | null;
   willExpire: string | null;
   canResume: boolean;
-  dailyUsed: number;
-  dailyLimit: number;
 }
 
 export function SubscriptionPage() {
@@ -18,6 +16,11 @@ export function SubscriptionPage() {
   const [paymentResult, setPaymentResult] = useState<
     "success" | "cancelled" | null
   >(null);
+  const [credits, setCredits] = useState<{
+    allowed: boolean;
+    remaining: number;
+    total: number;
+  } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -31,6 +34,24 @@ export function SubscriptionPage() {
         .catch(() => {});
 
     fetchStatus().finally(() => setFetching(false));
+
+    stripeApi
+      .credits()
+      .then(setCredits)
+      .catch(() => {});
+
+    if (params.get("credits") === "success") {
+      setPaymentResult("success");
+      // Refresh credits after purchase
+      setTimeout(
+        () =>
+          stripeApi
+            .credits()
+            .then(setCredits)
+            .catch(() => {}),
+        2000,
+      );
+    }
 
     // Po powrocie ze Stripe — polluj co 2s przez 10s żeby złapać webhook
     if (params.get("payment") === "success") {
@@ -164,8 +185,8 @@ export function SubscriptionPage() {
                 </p>
               )}
               {!isPremium && (
-                <p className="text-xs text-zinc-500 mt-0.5">
-                  Dzisiejsze pytania: {status.dailyUsed} / {status.dailyLimit}
+                <p className="text-xs text-red-500 mt-0.5">
+                  Brak aktywnej subskrypcji
                 </p>
               )}
             </div>
@@ -193,32 +214,121 @@ export function SubscriptionPage() {
         </div>
       )}
 
-      {/* Free user daily limit info */}
-      {!isPremium && status && (
-        <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800 border border-zinc-200 dark:border-zinc-700">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">📝</span>
+      {/* AI Credits */}
+      {isPremium && credits && (
+        <div className="glass-card p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-display font-semibold text-sm">Kredyty AI</h2>
+            <span className="text-xs text-zinc-400">Odnowienie co miesiąc</span>
+          </div>
+          <div className="flex items-center gap-4">
             <div className="flex-1">
-              <p className="text-sm font-semibold">
-                Darmowy plan: {status.dailyLimit} pytań dziennie
-              </p>
-              <p className="text-xs text-zinc-500">
-                Przejdź na Premium, żeby mieć nieograniczony dostęp do
-                wszystkich pytań i funkcji.
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-lg font-display font-bold">
-                {status.dailyUsed}/{status.dailyLimit}
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="font-display font-extrabold text-3xl">
+                  {credits.remaining}
+                </span>
+                <span className="text-zinc-400 text-sm">/ {credits.total}</span>
               </div>
-              <div className="mt-1 w-16 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-brand-500 rounded-full transition-all"
+                  className={`h-full rounded-full transition-all ${credits.remaining / credits.total > 0.2 ? "bg-brand-500" : "bg-red-500"}`}
                   style={{
-                    width: `${Math.min(100, (status.dailyUsed / status.dailyLimit) * 100)}%`,
+                    width: `${Math.max(1, (credits.remaining / credits.total) * 100)}%`,
                   }}
                 />
               </div>
+              <p className="text-[10px] text-zinc-400 mt-1.5">
+                1 kredyt ≈ $0.01 · Słuchanie ~2 kr. · Ocena AI ~1 kr.
+              </p>
+            </div>
+            <div className="text-4xl">
+              {credits.remaining > 100
+                ? "🟢"
+                : credits.remaining > 0
+                  ? "🟡"
+                  : "🔴"}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Buy more credits */}
+      {isPremium && (
+        <div className="glass-card p-6">
+          <h2 className="font-display font-semibold text-sm mb-4">
+            Dokup kredyty AI
+          </h2>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              {
+                pkg: "credits_200" as const,
+                credits: 200,
+                price: "19 zł",
+                per: "0.095 zł/kr.",
+              },
+              {
+                pkg: "credits_500" as const,
+                credits: 500,
+                price: "39 zł",
+                per: "0.078 zł/kr.",
+                best: true,
+              },
+              {
+                pkg: "credits_1200" as const,
+                credits: 1200,
+                price: "79 zł",
+                per: "0.066 zł/kr.",
+              },
+            ].map((p) => (
+              <button
+                key={p.pkg}
+                onClick={async () => {
+                  setLoading(p.pkg);
+                  try {
+                    const { url } = await stripeApi.buyCredits(p.pkg);
+                    if (url) window.location.href = url;
+                  } catch {
+                    alert("Błąd płatności");
+                  } finally {
+                    setLoading(null);
+                  }
+                }}
+                disabled={loading !== null}
+                className={`relative p-4 rounded-2xl border-2 text-center transition-all hover:shadow-md ${p.best ? "border-brand-500 bg-brand-50 dark:bg-brand-900/10" : "border-zinc-200 dark:border-zinc-700"}`}
+              >
+                {p.best && (
+                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-brand-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                    NAJLEPSZY
+                  </span>
+                )}
+                <div className="font-display font-extrabold text-2xl">
+                  {p.credits}
+                </div>
+                <div className="text-xs text-zinc-500 mb-2">kredytów</div>
+                <div className="font-display font-bold text-lg">{p.price}</div>
+                <div className="text-[10px] text-zinc-400">{p.per}</div>
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-zinc-400 text-center mt-3">
+            Kredyty nie wygasają i dodają się do obecnej puli.
+          </p>
+        </div>
+      )}
+
+      {/* No subscription warning */}
+      {!isPremium && status && (
+        <div className="p-5 rounded-2xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🔒</span>
+            <div>
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                Brak aktywnej subskrypcji
+              </p>
+              <p className="text-xs text-red-600/70 dark:text-red-400/70">
+                Wykup subskrypcję Premium, aby uzyskać dostęp do wszystkich
+                pytań i funkcji platformy.
+              </p>
             </div>
           </div>
         </div>
@@ -241,13 +351,13 @@ export function SubscriptionPage() {
               <span className="text-zinc-500">zł/mies.</span>
             </div>
             <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+              <li>✓ Dostęp do wszystkich przedmiotów</li>
               <li>✓ Nieograniczone pytania</li>
               <li>✓ Wybór tematów i lektur</li>
               <li>✓ AI ocena wypracowań</li>
               <li>✓ Powtórki Spaced Repetition</li>
               <li>✓ Pełne statystyki</li>
-              <li>✓ Do 4 przedmiotów</li>
-              <li>✓ Anuluj kiedy chcesz</li>
+              <li>✓ Anuluj, kiedy chcesz</li>
             </ul>
             <button
               onClick={() => handleCheckout("subscription")}

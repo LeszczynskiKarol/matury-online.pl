@@ -66,3 +66,5 @@ coverage/
 .nyc_output/
 
 backend/prisma/seed-exercises.ts
+
+backend/tts-key.json

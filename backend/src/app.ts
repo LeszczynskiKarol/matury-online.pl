@@ -15,12 +15,15 @@ import { subjectRoutes } from "./routes/subjects.js";
 import { questionRoutes } from "./routes/questions.js";
 import { sessionRoutes } from "./routes/sessions.js";
 import { answerRoutes } from "./routes/answers.js";
+import { listeningRoutes } from "./routes/listening.js";
 import { essayRoutes } from "./routes/essays.js";
 import { reviewRoutes } from "./routes/review.js";
 import { gamificationRoutes } from "./routes/gamification.js";
 import { stripeRoutes } from "./routes/stripe.js";
 import { adminRoutes } from "./routes/admin.js";
+import { adminListeningRoutes } from "./routes/admin-listening.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
+import { adminClaudeRoutes } from "./routes/admin-claude.js";
 
 const app = Fastify({
   logger: {
@@ -88,6 +91,9 @@ await app.register(gamificationRoutes, { prefix: "/api/gamification" });
 await app.register(stripeRoutes, { prefix: "/api/stripe" });
 await app.register(dashboardRoutes, { prefix: "/api/dashboard" });
 await app.register(adminRoutes, { prefix: "/api/admin" });
+await app.register(adminListeningRoutes, { prefix: "/api/admin" });
+await app.register(adminClaudeRoutes, { prefix: "/api/admin" });
+await app.register(listeningRoutes, { prefix: "/api/listening" });
 
 // ── Health ───────────────────────────────────────────────────────────────────
 

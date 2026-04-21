@@ -1,6 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { MathGraph } from "./MathGraph";
-import { answers as answersApi, sessions as sessionsApi } from "../../lib/api";
+import {
+  answers as answersApi,
+  sessions as sessionsApi,
+  questions as questionsApi,
+} from "../../lib/api";
+import { ListeningQuestion } from "./ListeningQuestion";
+import {
+  DiagramLabelQuestion,
+  ExperimentDesignQuestion,
+  CrossPunnettQuestion,
+  CalculationQuestion,
+} from "./BiologyQuestions";
+import { ChemText } from "./Chem";
 
 interface Question {
   id: string;
@@ -8,6 +20,7 @@ interface Question {
   difficulty: number;
   points: number;
   content: any;
+  source?: string;
   topic: { id: string; name: string; slug: string };
 }
 
@@ -17,9 +30,76 @@ interface QuizPlayerProps {
   topicId?: string;
   questionCount?: number;
   difficulty?: number;
+  questionTypes?: string[];
 }
 
 type Phase = "loading" | "question" | "feedback" | "summary";
+
+interface LiveFilters {
+  topicIds: string[];
+  types: string[];
+  difficulties: number[];
+  sources: string[];
+}
+
+interface FilterOptions {
+  topics: { id: string; name: string; slug: string; questionCount: number }[];
+  types: { type: string; count: number }[];
+  difficulties: { difficulty: number; count: number }[];
+  sources: { source: string; count: number }[];
+  totalQuestions: number;
+}
+
+const EMPTY_FILTERS: LiveFilters = {
+  topicIds: [],
+  types: [],
+  difficulties: [],
+  sources: [],
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  CLOSED: "Zamknięte",
+  MULTI_SELECT: "Wielokrotne",
+  TRUE_FALSE: "Prawda/Fałsz",
+  OPEN: "Otwarte",
+  FILL_IN: "Uzupełnij",
+  MATCHING: "Dopasuj",
+  ORDERING: "Kolejność",
+  WIAZKA: "Praca z tekstem",
+  LISTENING: "Słuchanie",
+  TABLE_DATA: "Tabela",
+  GRAPH_INTERPRET: "Wykres",
+  ERROR_FIND: "Błąd",
+  CLOZE: "Luki",
+  PROOF_ORDER: "Dowód",
+  ESSAY: "Esej",
+  DIAGRAM_LABEL: "Opis schematu",
+  EXPERIMENT_DESIGN: "Projekt doświadczenia",
+  CROSS_PUNNETT: "Krzyżówka",
+  CALCULATION: "Obliczenia",
+};
+
+const TYPE_ICONS: Record<string, string> = {
+  CLOSED: "◉",
+  DIAGRAM_LABEL: "🔬",
+  EXPERIMENT_DESIGN: "🧪",
+  CROSS_PUNNETT: "🧬",
+  CALCULATION: "🧮",
+  MULTI_SELECT: "☑",
+  TRUE_FALSE: "⚖",
+  OPEN: "✎",
+  FILL_IN: "⎵",
+  MATCHING: "⇄",
+  LISTENING: "🎧",
+  ORDERING: "↕",
+  WIAZKA: "◫",
+  TABLE_DATA: "▦",
+  GRAPH_INTERPRET: "📈",
+  ERROR_FIND: "✗",
+  CLOZE: "⎽",
+  PROOF_ORDER: "∴",
+  ESSAY: "📄",
+};
 
 export function QuizPlayer({
   subjectId,
@@ -27,9 +107,10 @@ export function QuizPlayer({
   topicId,
   questionCount = 10,
   difficulty,
+  questionTypes,
 }: QuizPlayerProps) {
   const [phase, setPhase] = useState<Phase>("loading");
-  const [sessionId, setSessionId] = useState<string>("");
+  const [sessionId, setSessionId] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [response, setResponse] = useState<any>(null);
@@ -37,10 +118,110 @@ export function QuizPlayer({
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [totalXp, setTotalXp] = useState(0);
+  const [filters, setFilters] = useState<LiveFilters>(EMPTY_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(
+    null,
+  );
+  const [poolTotal, setPoolTotal] = useState<number | undefined>();
+  const [loadingMore, setLoadingMore] = useState(false);
+  const answeredIds = useRef<Set<string>>(new Set());
   const startTime = useRef(Date.now());
+
+  // Load filter options once
+  useEffect(() => {
+    questionsApi
+      .filterOptions(subjectId)
+      .then(setFilterOptions)
+      .catch(console.error);
+  }, [subjectId]);
 
   // Create session on mount
   useEffect(() => {
+    const init = async () => {
+      // Create session first
+      const data = await sessionsApi.create({
+        subjectId,
+        type: sessionType,
+        topicId,
+        questionCount,
+        difficulty,
+      });
+      setSessionId(data.sessionId);
+
+      // If questionTypes pre-selected, load filtered pool instead of session questions
+      if (questionTypes && questionTypes.length > 0) {
+        const filtered = await questionsApi.pool({
+          subjectId,
+          types: questionTypes,
+          limit: questionCount,
+        });
+        setQuestions(filtered.questions);
+        setPoolTotal(filtered.total);
+        setFilters({ ...EMPTY_FILTERS, types: questionTypes });
+      } else {
+        setQuestions(data.questions);
+      }
+
+      setPhase("question");
+      startTime.current = Date.now();
+    };
+    init().catch(console.error);
+  }, [subjectId, sessionType, topicId, questionCount]);
+
+  // ── Reload questions from backend when filters change ───────────────
+  const loadFilteredQuestions = useCallback(
+    async (newFilters: LiveFilters) => {
+      setLoadingMore(true);
+      try {
+        const allExcluded = [
+          ...answeredIds.current,
+          ...questions.map((q) => q.id), // ← TUTAJ TEŻ
+        ];
+        const data = await questionsApi.pool({
+          subjectId,
+          topicIds: newFilters.topicIds,
+          types: newFilters.types,
+          difficulties: newFilters.difficulties,
+          sources: newFilters.sources,
+          exclude: allExcluded,
+          limit: 30,
+        });
+        setQuestions(data.questions);
+        setPoolTotal(data.total);
+        setCurrentIndex(0);
+        setResponse(null);
+        setFeedbackData(null);
+        if (phase === "feedback") setPhase("question");
+        startTime.current = Date.now();
+      } catch (err: any) {
+        // ... error handling bez zmian
+      } finally {
+        setLoadingMore(false);
+      }
+    },
+    [subjectId, phase, questions], // ← dodaj questions do deps
+  );
+
+  const handleFiltersChange = useCallback(
+    (newFilters: LiveFilters) => {
+      setFilters(newFilters);
+      const hasAny =
+        newFilters.topicIds.length > 0 ||
+        newFilters.types.length > 0 ||
+        newFilters.difficulties.length > 0 ||
+        newFilters.sources.length > 0;
+      if (hasAny) {
+        loadFilteredQuestions(newFilters);
+      }
+    },
+    [loadFilteredQuestions],
+  );
+
+  const clearFilters = useCallback(() => {
+    setFilters(EMPTY_FILTERS);
+    setPoolTotal(undefined);
+    // Reload original unfiltered set
     sessionsApi
       .create({
         subjectId,
@@ -50,22 +231,29 @@ export function QuizPlayer({
         difficulty,
       })
       .then((data) => {
-        setSessionId(data.sessionId);
         setQuestions(data.questions);
+        setCurrentIndex(0);
+        setResponse(null);
+        setFeedbackData(null);
         setPhase("question");
         startTime.current = Date.now();
       })
       .catch(console.error);
-  }, [subjectId, sessionType, topicId, questionCount]);
+  }, [subjectId, sessionType, topicId, questionCount, difficulty]);
 
+  const hasActiveFilters =
+    filters.topicIds.length > 0 ||
+    filters.types.length > 0 ||
+    filters.difficulties.length > 0 ||
+    filters.sources.length > 0;
   const currentQuestion = questions[currentIndex];
   const progress =
     questions.length > 0 ? (currentIndex / questions.length) * 100 : 0;
 
+  // ── Actions ─────────────────────────────────────────────────────────
   const submitAnswer = useCallback(async () => {
     if (!currentQuestion || response === null || submitting) return;
     setSubmitting(true);
-
     try {
       const timeSpentMs = Date.now() - startTime.current;
       const result = await answersApi.submit({
@@ -74,18 +262,21 @@ export function QuizPlayer({
         sessionId,
         timeSpentMs,
       });
-
+      answeredIds.current.add(currentQuestion.id);
       setFeedbackData(result);
-      setResults((prev) => [...prev, result]);
-      setTotalXp((prev) => prev + result.xpEarned);
+      setResults((p) => [...p, result]);
+      setTotalXp((p) => p + result.xpEarned);
       setPhase("feedback");
     } catch (err: any) {
-      if (err.code === "DAILY_LIMIT") {
+      if (err.code === "AI_CREDITS_EXHAUSTED") {
         alert(
-          "Osiągnięto dzienny limit pytań (5). Przejdź na Premium, aby kontynuować.",
+          "Wykorzystano pulę kredytów AI w tym miesiącu. Pula odnowi się z nowym okresem rozliczeniowym.",
         );
       } else if (err.code === "PREMIUM_REQUIRED") {
-        alert("Ta funkcja wymaga Premium.");
+        alert("Dostęp do funkcji AI wymaga subskrypcji Premium.");
+      } else if (err.code === "PREMIUM_REQUIRED") {
+        alert("Dostęp do zadań wymaga aktywnej subskrypcji Premium.");
+        window.location.href = "/dashboard/subskrypcja";
       }
     } finally {
       setSubmitting(false);
@@ -94,6 +285,11 @@ export function QuizPlayer({
 
   const nextQuestion = useCallback(() => {
     if (currentIndex + 1 >= questions.length) {
+      // Try loading more with current filters
+      if (hasActiveFilters) {
+        loadFilteredQuestions(filters);
+        return;
+      }
       sessionsApi.complete(sessionId).catch(console.error);
       setPhase("summary");
     } else {
@@ -103,34 +299,78 @@ export function QuizPlayer({
       setPhase("question");
       startTime.current = Date.now();
     }
-  }, [currentIndex, questions.length, sessionId]);
+  }, [
+    currentIndex,
+    questions.length,
+    sessionId,
+    hasActiveFilters,
+    filters,
+    loadFilteredQuestions,
+  ]);
 
-  const skipQuestion = useCallback(() => {
+  const skipQuestion = useCallback(async () => {
+    if (!currentQuestion) return;
+
+    answeredIds.current.add(currentQuestion.id);
+
     setQuestions((prev) => {
-      const updated = [...prev];
-      const [skipped] = updated.splice(currentIndex, 1);
-      updated.push(skipped);
-      return updated;
+      const idx = prev.findIndex((q) => q.id === currentQuestion.id);
+      if (idx === -1) return prev;
+      const u = [...prev];
+      u.splice(idx, 1);
+      return u;
     });
+
     setResponse(null);
     setFeedbackData(null);
     setPhase("question");
     startTime.current = Date.now();
-  }, [currentIndex]);
 
-  if (phase === "loading") {
+    // Exclude WSZYSTKO: answered + currently loaded
+    const allExcluded = [
+      ...answeredIds.current,
+      ...questions.map((q) => q.id), // ← TO BRAKOWAŁO
+    ];
+
+    try {
+      const data = await questionsApi.pool({
+        subjectId,
+        ...(hasActiveFilters
+          ? {
+              topicIds: filters.topicIds,
+              types: filters.types,
+              difficulties: filters.difficulties,
+              sources: filters.sources,
+            }
+          : {}),
+        exclude: allExcluded,
+        limit: 1,
+      });
+      if (data.questions.length > 0) {
+        setQuestions((prev) => [...prev, ...data.questions]);
+      }
+    } catch {
+      // pula się skurczy — nie krytyczne
+    }
+  }, [currentQuestion, subjectId, hasActiveFilters, filters, questions]);
+  const endSession = useCallback(() => {
+    sessionsApi.complete(sessionId).catch(console.error);
+    setPhase("summary");
+  }, [sessionId]);
+
+  // ── Loading ─────────────────────────────────────────────────────────
+  if (phase === "loading")
     return (
       <div className="flex items-center justify-center py-20">
         <div className="w-8 h-8 border-3 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
-  }
 
+  // ── Summary ─────────────────────────────────────────────────────────
   if (phase === "summary") {
     const correct = results.filter((r) => r.isCorrect).length;
     const accuracy =
       results.length > 0 ? Math.round((correct / results.length) * 100) : 0;
-
     return (
       <div className="max-w-lg mx-auto text-center py-12 animate-scale-in">
         <div className="text-6xl mb-6">
@@ -142,7 +382,6 @@ export function QuizPlayer({
         <p className="text-zinc-500 mb-8">
           {correct} z {results.length} poprawnych
         </p>
-
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="stat-card text-center">
             <div className="text-2xl font-display font-bold text-brand-500">
@@ -154,7 +393,7 @@ export function QuizPlayer({
             <div className="text-2xl font-display font-bold text-navy-500">
               +{totalXp}
             </div>
-            <div className="text-xs text-zinc-500">XP zdobyte</div>
+            <div className="text-xs text-zinc-500">XP</div>
           </div>
           <div className="stat-card text-center">
             <div className="text-2xl font-display font-bold">
@@ -163,10 +402,9 @@ export function QuizPlayer({
             <div className="text-xs text-zinc-500">Pytań</div>
           </div>
         </div>
-
         <div className="flex gap-3 justify-center">
           <a href="/dashboard" className="btn-ghost">
-            Wróć do dashboard
+            Dashboard
           </a>
           <button
             onClick={() => window.location.reload()}
@@ -179,15 +417,40 @@ export function QuizPlayer({
     );
   }
 
+  // ── No questions ────────────────────────────────────────────────────
+  if (!currentQuestion)
+    return (
+      <div className="max-w-2xl mx-auto text-center py-12">
+        <p className="text-zinc-500 mb-4">Brak pytań pasujących do filtrów.</p>
+        <button onClick={clearFilters} className="btn-primary">
+          Wyczyść filtry
+        </button>
+      </div>
+    );
+
+  // ── Quiz ────────────────────────────────────────────────────────────
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Progress bar */}
-      <div className="mb-6">
+      {/* Progress */}
+      <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-zinc-500">
             Pytanie {currentIndex + 1} z {questions.length}
+            {poolTotal !== undefined && (
+              <span className="text-zinc-400 ml-1">(pula: {poolTotal})</span>
+            )}
           </span>
-          <span className="xp-badge">+{totalXp} XP</span>
+          <div className="flex items-center gap-3">
+            <span className="xp-badge">+{totalXp} XP</span>
+            {results.length > 0 && (
+              <button
+                onClick={endSession}
+                className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+              >
+                Zakończ
+              </button>
+            )}
+          </div>
         </div>
         <div className="progress-bar">
           <div
@@ -197,76 +460,369 @@ export function QuizPlayer({
         </div>
       </div>
 
-      {/* Topic & difficulty */}
+      {/* ═══ LIVE FILTER BAR ═══ */}
+      <LiveFilterBar
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        onClear={clearFilters}
+        open={filtersOpen}
+        setOpen={setFiltersOpen}
+        filterOptions={filterOptions}
+        poolTotal={poolTotal}
+        loading={loadingMore}
+      />
+
+      {/* Topic & meta */}
       <div className="flex items-center gap-3 mb-4">
         <span className="text-xs font-medium text-zinc-500 bg-zinc-100 dark:bg-surface-800 px-3 py-1 rounded-full">
           {currentQuestion.topic.name}
         </span>
         <DifficultyDots level={currentQuestion.difficulty} />
-      </div>
-
-      {/* Question renderer */}
-      <div
-        className="glass-card p-8 mb-6 animate-slide-up"
-        key={currentQuestion.id}
-      >
-        <QuestionRenderer
-          question={currentQuestion}
-          response={response}
-          onResponseChange={setResponse}
-          disabled={phase === "feedback"}
-          feedback={feedbackData}
-        />
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex justify-between">
-        {phase === "question" ? (
-          <button
-            onClick={skipQuestion}
-            className="btn-ghost text-sm text-zinc-500"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 5l7 7-7 7M5 5l7 7-7 7"
-              />
-            </svg>
-            Pomiń
-          </button>
-        ) : (
-          <div />
+        <span className="text-[10px] text-zinc-400 ml-auto uppercase tracking-wide">
+          {TYPE_LABELS[currentQuestion.type] || currentQuestion.type}
+        </span>
+        {(currentQuestion.type === "LISTENING" ||
+          currentQuestion.type === "OPEN") && (
+          <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold ml-1">
+            🤖 Ocena AI{" "}
+            {currentQuestion.type === "LISTENING" ? "~2 kr." : "~1 kr."}
+          </span>
         )}
-        <div className="flex gap-3">
-          {phase === "question" && (
-            <button
-              onClick={submitAnswer}
-              disabled={response === null || submitting}
-              className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Sprawdzam...
-                </span>
-              ) : (
-                "Sprawdź odpowiedź"
-              )}
-            </button>
+      </div>
+
+      {/* Loading overlay */}
+      {loadingMore && (
+        <div className="flex items-center justify-center py-8">
+          <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+          <span className="ml-2 text-sm text-zinc-500">Ładuję pytania...</span>
+        </div>
+      )}
+
+      {/* Question */}
+      {!loadingMore && (
+        <div
+          className="glass-card p-8 mb-6 animate-slide-up"
+          key={currentQuestion.id}
+        >
+          <QuestionRenderer
+            question={currentQuestion}
+            response={response}
+            onResponseChange={setResponse}
+            disabled={phase === "feedback"}
+            feedback={feedbackData}
+          />
+        </div>
+      )}
+
+      {/* Actions */}
+      {!loadingMore && (
+        <div className="flex justify-between">
+          {phase === "question" ? (
+            currentIndex + 1 >= questions.length ? (
+              <button
+                onClick={endSession}
+                className="btn-ghost text-sm text-zinc-500"
+              >
+                Zakończ sesję nauki
+              </button>
+            ) : (
+              <button
+                onClick={skipQuestion}
+                className="btn-ghost text-sm text-zinc-500"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                  />
+                </svg>
+                Pomiń
+              </button>
+            )
+          ) : (
+            <div />
           )}
-          {phase === "feedback" && (
-            <button onClick={nextQuestion} className="btn-primary">
-              {currentIndex + 1 >= questions.length
-                ? "Zakończ sesję"
-                : "Następne pytanie →"}
-            </button>
+          <div className="flex gap-3">
+            {phase === "question" && (
+              <button
+                onClick={submitAnswer}
+                disabled={response === null || submitting}
+                className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {submitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Sprawdzam...
+                  </span>
+                ) : (
+                  "Sprawdź odpowiedź"
+                )}
+              </button>
+            )}
+            {phase === "feedback" && (
+              <button onClick={nextQuestion} className="btn-primary">
+                Następne pytanie →
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// LIVE FILTER BAR — fetches from backend
+// ══════════════════════════════════════════════════════════════════════════
+
+function LiveFilterBar({
+  filters,
+  onFiltersChange,
+  onClear,
+  open,
+  setOpen,
+  filterOptions,
+  poolTotal,
+  loading,
+}: {
+  filters: LiveFilters;
+  onFiltersChange: (f: LiveFilters) => void;
+  onClear: () => void;
+  open: boolean;
+  setOpen: (o: boolean) => void;
+  filterOptions: FilterOptions | null;
+  poolTotal: number | undefined;
+  loading: boolean;
+}) {
+  const hasActive =
+    filters.topicIds.length > 0 ||
+    filters.types.length > 0 ||
+    filters.difficulties.length > 0 ||
+    filters.sources.length > 0;
+  const activeCount = [
+    filters.topicIds.length > 0,
+    filters.types.length > 0,
+    filters.difficulties.length > 0,
+    filters.sources.length > 0,
+  ].filter(Boolean).length;
+  const tog = (a: string[], v: string) =>
+    a.includes(v) ? a.filter((x) => x !== v) : [...a, v];
+  const togN = (a: number[], v: number) =>
+    a.includes(v) ? a.filter((x) => x !== v) : [...a, v].sort();
+
+  if (!filterOptions) return null;
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center gap-2 mb-2">
+        <button
+          onClick={() => setOpen(!open)}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all duration-200 shadow-sm ${hasActive ? "bg-gradient-to-r from-brand-500 to-navy-500 text-white shadow-brand-500/25" : "bg-white dark:bg-surface-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-600 hover:border-brand-400 hover:shadow-md"}`}
+        >
+          <svg
+            className="w-3.5 h-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+            />
+          </svg>
+          Filtruj
+          {activeCount > 0 && (
+            <span className="w-4 h-4 rounded-full bg-white/30 text-[9px] font-bold flex items-center justify-center">
+              {activeCount}
+            </span>
+          )}
+        </button>
+
+        {hasActive && !open && (
+          <div className="flex flex-wrap gap-1 flex-1 overflow-hidden">
+            {filters.types.length > 0 && (
+              <MiniChip
+                label={`${filters.types.map((t) => TYPE_LABELS[t] || t).join(", ")}`}
+                onClear={() => onFiltersChange({ ...filters, types: [] })}
+              />
+            )}
+            {filters.difficulties.length > 0 && (
+              <MiniChip
+                label={`Poz. ${filters.difficulties.join(",")}`}
+                onClear={() =>
+                  onFiltersChange({ ...filters, difficulties: [] })
+                }
+              />
+            )}
+            {filters.topicIds.length > 0 && (
+              <MiniChip
+                label={`${filters.topicIds.length} tem.`}
+                onClear={() => onFiltersChange({ ...filters, topicIds: [] })}
+              />
+            )}
+            {filters.sources.length > 0 && (
+              <MiniChip
+                label={filters.sources.join("+")}
+                onClear={() => onFiltersChange({ ...filters, sources: [] })}
+              />
+            )}
+          </div>
+        )}
+
+        {hasActive && (
+          <button
+            onClick={onClear}
+            className="text-[10px] text-zinc-400 hover:text-red-500 transition-colors ml-auto whitespace-nowrap"
+          >
+            ✕ Wyczyść
+          </button>
+        )}
+        {loading && (
+          <div className="w-3.5 h-3.5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin ml-1" />
+        )}
+        {poolTotal !== undefined && hasActive && !loading && (
+          <span className="text-[10px] text-zinc-400 tabular-nums whitespace-nowrap">
+            {poolTotal} w puli
+          </span>
+        )}
+      </div>
+
+      <div
+        className={`overflow-hidden transition-all duration-200 ease-out ${open ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}
+      >
+        <div className="p-5 rounded-2xl bg-white/90 dark:bg-surface-800/90 backdrop-blur-lg border border-zinc-200 dark:border-zinc-700 shadow-lg shadow-zinc-200/50 dark:shadow-black/20 space-y-4">
+          {/* Topics */}
+          {filterOptions.topics.length > 1 && (
+            <FRow label="Temat" color="indigo">
+              <div className="flex flex-wrap gap-1.5">
+                {filterOptions.topics.map((t) => (
+                  <Pill
+                    key={t.id}
+                    active={filters.topicIds.includes(t.id)}
+                    accent="indigo"
+                    onClick={() =>
+                      onFiltersChange({
+                        ...filters,
+                        topicIds: tog(filters.topicIds, t.id),
+                      })
+                    }
+                  >
+                    {t.name.replace(/^[IVXLCDM]+\.\s*/, "")}
+                    <span className="opacity-40 text-[9px] ml-0.5">
+                      {t.questionCount}
+                    </span>
+                  </Pill>
+                ))}
+              </div>
+            </FRow>
+          )}
+
+          {/* Types */}
+          {filterOptions.types.length > 1 && (
+            <FRow label="Typ" color="emerald">
+              <div className="flex flex-wrap gap-1.5">
+                {filterOptions.types.map((t) => (
+                  <Pill
+                    accent="emerald"
+                    key={t.type}
+                    active={filters.types.includes(t.type)}
+                    onClick={() =>
+                      onFiltersChange({
+                        ...filters,
+                        types: tog(filters.types, t.type),
+                      })
+                    }
+                  >
+                    <span className="opacity-50 text-[10px]">
+                      {TYPE_ICONS[t.type] || "?"}
+                    </span>
+                    {TYPE_LABELS[t.type] || t.type}
+                    <span className="opacity-40 text-[9px] ml-0.5">
+                      {t.count}
+                    </span>
+                  </Pill>
+                ))}
+              </div>
+            </FRow>
+          )}
+
+          {/* Difficulty */}
+          {filterOptions.difficulties.length > 1 && (
+            <FRow label="Trudność" color="brand">
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((d) => {
+                  const opt = filterOptions.difficulties.find(
+                    (x) => x.difficulty === d,
+                  );
+                  const colors = [
+                    "",
+                    "bg-emerald-500",
+                    "bg-sky-500",
+                    "bg-amber-500",
+                    "bg-orange-500",
+                    "bg-red-500",
+                  ];
+                  return (
+                    <button
+                      key={d}
+                      onClick={() =>
+                        opt &&
+                        onFiltersChange({
+                          ...filters,
+                          difficulties: togN(filters.difficulties, d),
+                        })
+                      }
+                      disabled={!opt}
+                      className={`w-10 h-10 rounded-xl text-sm font-bold transition-all duration-150 shadow-sm ${!opt ? "opacity-15 cursor-not-allowed bg-zinc-300 dark:bg-zinc-700" : filters.difficulties.includes(d) ? `${colors[d]} text-white shadow-lg scale-105` : "bg-white dark:bg-surface-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-600 hover:shadow-md hover:scale-105"}`}
+                    >
+                      {d}
+                      {opt && (
+                        <span
+                          className={`block text-[8px] font-normal ${filters.difficulties.includes(d) ? "text-white/70" : "text-zinc-400"}`}
+                        >
+                          {opt.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </FRow>
+          )}
+
+          {/* Sources */}
+          {filterOptions.sources.length > 1 && (
+            <FRow label="Źródło" color="amber">
+              <div className="flex gap-1.5">
+                {filterOptions.sources.map((s) => (
+                  <Pill
+                    accent="amber"
+                    key={s.source}
+                    active={filters.sources.includes(s.source)}
+                    onClick={() =>
+                      onFiltersChange({
+                        ...filters,
+                        sources: tog(filters.sources, s.source),
+                      })
+                    }
+                  >
+                    {s.source}
+                    <span className="opacity-40 text-[9px] ml-0.5">
+                      {s.count}
+                    </span>
+                  </Pill>
+                ))}
+              </div>
+            </FRow>
           )}
         </div>
       </div>
@@ -274,7 +830,112 @@ export function QuizPlayer({
   );
 }
 
-// ── Question Renderer ──────────────────────────────────────────────────────
+function FRow({
+  label,
+  children,
+  color = "zinc",
+}: {
+  label: string;
+  children: React.ReactNode;
+  color?: string;
+}) {
+  const borderColors: Record<string, string> = {
+    zinc: "border-zinc-200 dark:border-zinc-700",
+    indigo: "border-indigo-200 dark:border-indigo-800/40",
+    emerald: "border-emerald-200 dark:border-emerald-800/40",
+    amber: "border-amber-200 dark:border-amber-800/40",
+    brand: "border-brand-200 dark:border-brand-800/40",
+  };
+  return (
+    <div className="flex items-start gap-4">
+      <span
+        className={`text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest w-20 pt-2 flex-shrink-0 border-r-2 ${borderColors[color] || borderColors.zinc} pr-3 text-right`}
+      >
+        {label}
+      </span>
+      <div className="flex-1">{children}</div>
+    </div>
+  );
+}
+
+function Pill({
+  active,
+  onClick,
+  children,
+  accent = "brand",
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  accent?: "brand" | "indigo" | "amber" | "emerald";
+}) {
+  const colors = {
+    brand: {
+      active: "bg-brand-500 text-white shadow-brand-500/25 ring-brand-500/30",
+      hover:
+        "hover:border-brand-300 hover:text-brand-600 dark:hover:text-brand-400",
+    },
+    indigo: {
+      active:
+        "bg-indigo-500 text-white shadow-indigo-500/25 ring-indigo-500/30",
+      hover:
+        "hover:border-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400",
+    },
+    amber: {
+      active: "bg-amber-500 text-white shadow-amber-500/25 ring-amber-500/30",
+      hover:
+        "hover:border-amber-300 hover:text-amber-600 dark:hover:text-amber-400",
+    },
+    emerald: {
+      active:
+        "bg-emerald-500 text-white shadow-emerald-500/25 ring-emerald-500/30",
+      hover:
+        "hover:border-emerald-300 hover:text-emerald-600 dark:hover:text-emerald-400",
+    },
+  };
+  const c = colors[accent];
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all duration-150 ${active ? `${c.active} shadow-md scale-[1.03] ring-1` : `bg-white dark:bg-surface-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-600 ${c.hover} shadow-sm hover:shadow-md`}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function MiniChip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-0.5 pl-2.5 pr-1.5 py-0.5 rounded-full text-[10px] font-medium bg-brand-100/80 dark:bg-brand-900/25 text-brand-600 dark:text-brand-400">
+      {label}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onClear();
+        }}
+        className="w-3.5 h-3.5 rounded-full flex items-center justify-center hover:bg-brand-200 dark:hover:bg-brand-800/40"
+      >
+        <svg
+          className="w-2 h-2"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={3}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </span>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ALL QUESTION RENDERERS — identical to original (compact)
+// ══════════════════════════════════════════════════════════════════════════
 
 function QuestionRenderer({
   question,
@@ -285,16 +946,68 @@ function QuestionRenderer({
 }: {
   question: Question;
   response: any;
-  onResponseChange: (val: any) => void;
+  onResponseChange: (v: any) => void;
   disabled: boolean;
   feedback: any;
 }) {
   const { type, content } = question;
-
   switch (type) {
+    case "DIAGRAM_LABEL":
+      return (
+        <DiagramLabelQuestion
+          content={content}
+          response={response}
+          onChange={onResponseChange}
+          disabled={disabled}
+          feedback={feedback}
+        />
+      );
+
+    case "EXPERIMENT_DESIGN":
+      return (
+        <ExperimentDesignQuestion
+          content={content}
+          response={response}
+          onChange={onResponseChange}
+          disabled={disabled}
+          feedback={feedback}
+        />
+      );
+
+    case "CROSS_PUNNETT":
+      return (
+        <CrossPunnettQuestion
+          content={content}
+          response={response}
+          onChange={onResponseChange}
+          disabled={disabled}
+          feedback={feedback}
+        />
+      );
+
+    case "CALCULATION":
+      return (
+        <CalculationQuestion
+          content={content}
+          response={response}
+          onChange={onResponseChange}
+          disabled={disabled}
+          feedback={feedback}
+        />
+      );
     case "CLOZE":
       return (
         <ClozeQuestion
+          content={content}
+          response={response}
+          onChange={onResponseChange}
+          disabled={disabled}
+          feedback={feedback}
+        />
+      );
+    case "LISTENING":
+      return (
+        <ListeningQuestion
           content={content}
           response={response}
           onChange={onResponseChange}
@@ -427,8 +1140,6 @@ function QuestionRenderer({
   }
 }
 
-// ── CLOSED (single choice A/B/C/D) ────────────────────────────────────────
-
 function ClosedQuestion({
   content,
   response,
@@ -436,48 +1147,42 @@ function ClosedQuestion({
   disabled,
   feedback,
 }: any) {
-  const isAnswered = feedback !== null;
-
+  const isA = feedback !== null;
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-6">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
       <div className="space-y-3">
-        {content.options.map((opt: { id: string; text: string }) => {
-          let className = "option-card";
-          if (response === opt.id) className += " selected";
-          if (isAnswered && opt.id === feedback?.correctAnswer)
-            className += " correct";
-          if (isAnswered && response === opt.id && !feedback?.isCorrect)
-            className += " wrong";
-
+        {content.options.map((o: any) => {
+          let c = "option-card";
+          if (response === o.id) c += " selected";
+          if (isA && o.id === feedback?.correctAnswer) c += " correct";
+          if (isA && response === o.id && !feedback?.isCorrect) c += " wrong";
           return (
             <button
-              key={opt.id}
-              onClick={() => !disabled && onChange(opt.id)}
+              key={o.id}
+              onClick={() => !disabled && onChange(o.id)}
               disabled={disabled}
-              className={className + " w-full text-left"}
+              className={c + " w-full text-left"}
             >
               <span className="flex-shrink-0 w-8 h-8 rounded-xl bg-zinc-100 dark:bg-surface-700 flex items-center justify-center text-sm font-bold">
-                {opt.id}
+                {o.id}
               </span>
-              <span className="text-sm">{opt.text}</span>
-              {isAnswered && opt.id === feedback?.correctAnswer && (
+              <span className="text-sm">
+                <ChemText text={o.text} />
+              </span>
+              {isA && o.id === feedback?.correctAnswer && (
                 <span className="ml-auto text-brand-500">✓</span>
               )}
             </button>
           );
         })}
       </div>
-
-      {isAnswered && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
-
-// ── MULTI_SELECT ───────────────────────────────────────────────────────────
-
 function MultiSelectQuestion({
   content,
   response,
@@ -485,42 +1190,35 @@ function MultiSelectQuestion({
   disabled,
   feedback,
 }: any) {
-  const selected = (response as string[]) || [];
-  const isAnswered = feedback !== null;
-
-  const toggle = (id: string) => {
+  const sel = (response as string[]) || [];
+  const isA = feedback !== null;
+  const tog = (id: string) => {
     if (disabled) return;
-    if (selected.includes(id)) {
-      onChange(selected.filter((s: string) => s !== id));
-    } else {
-      onChange([...selected, id]);
-    }
+    onChange(
+      sel.includes(id) ? sel.filter((s: string) => s !== id) : [...sel, id],
+    );
   };
-
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-2">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
-      <p className="text-xs text-zinc-500 mb-6">
-        Wybierz wszystkie poprawne odpowiedzi
-      </p>
+      <p className="text-xs text-zinc-500 mb-6">Wybierz wszystkie poprawne</p>
       <div className="space-y-3">
-        {content.options.map((opt: { id: string; text: string }) => {
-          let className = "option-card";
-          if (selected.includes(opt.id)) className += " selected";
-
+        {content.options.map((o: any) => {
+          let c = "option-card";
+          if (sel.includes(o.id)) c += " selected";
           return (
             <button
-              key={opt.id}
-              onClick={() => toggle(opt.id)}
+              key={o.id}
+              onClick={() => tog(o.id)}
               disabled={disabled}
-              className={className + " w-full text-left"}
+              className={c + " w-full text-left"}
             >
               <div
-                className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center ${selected.includes(opt.id) ? "bg-navy-500 border-navy-500" : "border-zinc-300 dark:border-zinc-600"}`}
+                className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center ${sel.includes(o.id) ? "bg-navy-500 border-navy-500" : "border-zinc-300 dark:border-zinc-600"}`}
               >
-                {selected.includes(opt.id) && (
+                {sel.includes(o.id) && (
                   <svg
                     className="w-3 h-3 text-white"
                     fill="none"
@@ -536,18 +1234,17 @@ function MultiSelectQuestion({
                   </svg>
                 )}
               </div>
-              <span className="text-sm">{opt.text}</span>
+              <span className="text-sm">
+                <ChemText text={o.text} />
+              </span>
             </button>
           );
         })}
       </div>
-      {isAnswered && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
-
-// ── TRUE_FALSE ─────────────────────────────────────────────────────────────
-
 function TrueFalseQuestion({
   content,
   response,
@@ -555,56 +1252,51 @@ function TrueFalseQuestion({
   disabled,
   feedback,
 }: any) {
-  const answers = (response as boolean[]) || content.statements.map(() => null);
-  const isAnswered = feedback !== null;
-
-  const setAnswer = (index: number, value: boolean) => {
+  const ans = (response as boolean[]) || content.statements.map(() => null);
+  const isA = feedback !== null;
+  const set = (i: number, v: boolean) => {
     if (disabled) return;
-    const newAnswers = [...answers];
-    newAnswers[index] = value;
-    onChange(newAnswers);
+    const n = [...ans];
+    n[i] = v;
+    onChange(n);
   };
-
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-6">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
       <div className="space-y-3">
-        {content.statements.map(
-          (s: { text: string; isTrue: boolean }, i: number) => (
-            <div
-              key={i}
-              className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800"
-            >
-              <p className="flex-1 text-sm">{s.text}</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setAnswer(i, true)}
-                  disabled={disabled}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${answers[i] === true ? "bg-brand-500 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"}`}
-                >
-                  P
-                </button>
-                <button
-                  onClick={() => setAnswer(i, false)}
-                  disabled={disabled}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${answers[i] === false ? "bg-red-500 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"}`}
-                >
-                  F
-                </button>
-              </div>
+        {content.statements.map((s: any, i: number) => (
+          <div
+            key={i}
+            className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800"
+          >
+            <p className="flex-1 text-sm">
+              <ChemText text={s.text} />
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => set(i, true)}
+                disabled={disabled}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${ans[i] === true ? "bg-brand-500 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"}`}
+              >
+                P
+              </button>
+              <button
+                onClick={() => set(i, false)}
+                disabled={disabled}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${ans[i] === false ? "bg-red-500 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"}`}
+              >
+                F
+              </button>
             </div>
-          ),
-        )}
+          </div>
+        ))}
       </div>
-      {isAnswered && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
-
-// ── FILL_IN ────────────────────────────────────────────────────────────────
-
 function FillInQuestion({
   content,
   response,
@@ -612,50 +1304,41 @@ function FillInQuestion({
   disabled,
   feedback,
 }: any) {
-  const answers = (response as Record<string, string>) || {};
-  const isAnswered = feedback !== null;
-
-  const setBlank = (id: string, value: string) => {
-    if (disabled) return;
-    onChange({ ...answers, [id]: value });
-  };
-
+  const ans = (response as Record<string, string>) || {};
+  const isA = feedback !== null;
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-6">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
       <div className="space-y-4">
-        {content.blanks.map(
-          (blank: { id: string; acceptedAnswers: string[] }, i: number) => (
-            <div key={blank.id}>
-              <label className="block text-sm font-medium mb-1.5">
-                Luka {i + 1}
-              </label>
-              <input
-                type="text"
-                value={answers[blank.id] || ""}
-                onChange={(e) => setBlank(blank.id, e.target.value)}
-                disabled={disabled}
-                className="input"
-                placeholder="Wpisz odpowiedź..."
-              />
-              {isAnswered && feedback?.correctAnswer && (
-                <p className="text-xs mt-1 text-brand-600">
-                  Poprawna odpowiedź: {feedback.correctAnswer[i]}
-                </p>
-              )}
-            </div>
-          ),
-        )}
+        {content.blanks.map((b: any, i: number) => (
+          <div key={b.id}>
+            <label className="block text-sm font-medium mb-1.5">
+              Luka {i + 1}
+            </label>
+            <input
+              type="text"
+              value={ans[b.id] || ""}
+              onChange={(e) =>
+                !disabled && onChange({ ...ans, [b.id]: e.target.value })
+              }
+              disabled={disabled}
+              className="input"
+              placeholder="Wpisz odpowiedź..."
+            />
+            {isA && feedback?.correctAnswer && (
+              <p className="text-xs mt-1 text-brand-600">
+                Poprawna: {feedback.correctAnswer[i]}
+              </p>
+            )}
+          </div>
+        ))}
       </div>
-      {isAnswered && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
-
-// ── OPEN (AI-graded) ───────────────────────────────────────────────────────
-
 function OpenQuestion({
   content,
   response,
@@ -663,26 +1346,26 @@ function OpenQuestion({
   disabled,
   feedback,
 }: any) {
-  const isAnswered = feedback !== null;
-
+  const isA = feedback !== null;
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-2">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
       {content.rubric && (
-        <p className="text-xs text-zinc-500 mb-4">Kryteria: {content.rubric}</p>
+        <p className="text-xs text-zinc-500 mb-4">
+          Kryteria: <ChemText text={content.rubric} />
+        </p>
       )}
       <textarea
-        value={response || ""}
+        value={typeof response === "string" ? response : ""}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         rows={6}
         className="input resize-none"
         placeholder="Napisz odpowiedź..."
       />
-
-      {isAnswered && feedback?.aiGrading && (
+      {isA && feedback?.aiGrading && (
         <div className="mt-4 p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800 animate-slide-up">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-lg">{feedback.isCorrect ? "✅" : "❌"}</span>
@@ -694,22 +1377,11 @@ function OpenQuestion({
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {feedback.aiGrading.feedback}
           </p>
-          {feedback.aiGrading.correctAnswer && (
-            <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-700">
-              <p className="text-xs font-semibold text-zinc-500 mb-1">
-                Wzorcowa odpowiedź:
-              </p>
-              <p className="text-sm">{feedback.aiGrading.correctAnswer}</p>
-            </div>
-          )}
         </div>
       )}
     </div>
   );
 }
-
-// ── MATCHING ───────────────────────────────────────────────────────────────
-
 function MatchingQuestion({
   content,
   response,
@@ -717,45 +1389,59 @@ function MatchingQuestion({
   disabled,
   feedback,
 }: any) {
-  const pairs = (response as Record<string, string>) || {};
-  const rights = content.pairs.map((p: any) => p.right);
+  const p = (response as Record<string, string>) || {};
+  const allRight = useMemo(
+    () =>
+      [...content.pairs.map((x: any) => x.right)].sort(
+        () => Math.random() - 0.5,
+      ),
+    [content.pairs],
+  );
+
+  // Set of values already chosen (excluding current row)
+  const usedFor = (currentLeft: string) => {
+    const used = new Set<string>();
+    for (const [left, val] of Object.entries(p)) {
+      if (left !== currentLeft && val) used.add(val as string);
+    }
+    return used;
+  };
 
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-6">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
       <div className="space-y-3">
-        {content.pairs.map((pair: { left: string; right: string }) => (
-          <div key={pair.left} className="flex items-center gap-4">
-            <span className="flex-1 text-sm font-medium p-3 rounded-xl bg-zinc-50 dark:bg-surface-800">
-              {pair.left}
-            </span>
-            <span className="text-zinc-400">→</span>
-            <select
-              value={pairs[pair.left] || ""}
-              onChange={(e) =>
-                onChange({ ...pairs, [pair.left]: e.target.value })
-              }
-              disabled={disabled}
-              className="input flex-1"
-            >
-              <option value="">Wybierz...</option>
-              {rights.map((r: string) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-        ))}
+        {content.pairs.map((pr: any) => {
+          const used = usedFor(pr.left);
+          return (
+            <div key={pr.left} className="flex items-center gap-4">
+              <span className="flex-1 text-sm font-medium p-3 rounded-xl bg-zinc-50 dark:bg-surface-800">
+                <ChemText text={pr.left} />
+              </span>
+              <span className="text-zinc-400">→</span>
+              <select
+                value={p[pr.left] || ""}
+                onChange={(e) => onChange({ ...p, [pr.left]: e.target.value })}
+                disabled={disabled}
+                className="input flex-1"
+              >
+                <option value="">Wybierz...</option>
+                {allRight.map((x: string) => (
+                  <option key={x} value={x} disabled={used.has(x)}>
+                    {x}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
       </div>
       {feedback !== null && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
-
-// ── ORDERING ───────────────────────────────────────────────────────────────
 
 function OrderingQuestion({
   content,
@@ -764,39 +1450,22 @@ function OrderingQuestion({
   disabled,
   feedback,
 }: any) {
-  const order =
+  const ord =
     (response as number[]) || content.items.map((_: any, i: number) => i);
-
-  const moveUp = (index: number) => {
-    if (disabled || index === 0) return;
-    const newOrder = [...order];
-    [newOrder[index - 1], newOrder[index]] = [
-      newOrder[index],
-      newOrder[index - 1],
-    ];
-    onChange(newOrder);
+  const mv = (i: number, d: -1 | 1) => {
+    if (disabled) return;
+    const n = [...ord];
+    [n[i], n[i + d]] = [n[i + d], n[i]];
+    onChange(n);
   };
-
-  const moveDown = (index: number) => {
-    if (disabled || index === order.length - 1) return;
-    const newOrder = [...order];
-    [newOrder[index], newOrder[index + 1]] = [
-      newOrder[index + 1],
-      newOrder[index],
-    ];
-    onChange(newOrder);
-  };
-
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-2">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
-      <p className="text-xs text-zinc-500 mb-6">
-        Ustaw elementy w poprawnej kolejności
-      </p>
+      <p className="text-xs text-zinc-500 mb-6">Ustaw w poprawnej kolejności</p>
       <div className="space-y-2">
-        {order.map((itemIndex: number, i: number) => (
+        {ord.map((idx: number, i: number) => (
           <div
             key={i}
             className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-surface-800"
@@ -804,10 +1473,12 @@ function OrderingQuestion({
             <span className="text-xs font-bold text-zinc-400 w-6">
               {i + 1}.
             </span>
-            <span className="flex-1 text-sm">{content.items[itemIndex]}</span>
+            <span className="flex-1 text-sm">
+              <ChemText text={content.items[idx]} />
+            </span>
             <div className="flex gap-1">
               <button
-                onClick={() => moveUp(i)}
+                onClick={() => i > 0 && mv(i, -1)}
                 disabled={disabled || i === 0}
                 className="p-1 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-30"
               >
@@ -826,8 +1497,8 @@ function OrderingQuestion({
                 </svg>
               </button>
               <button
-                onClick={() => moveDown(i)}
-                disabled={disabled || i === order.length - 1}
+                onClick={() => i < ord.length - 1 && mv(i, 1)}
+                disabled={disabled || i === ord.length - 1}
                 className="p-1 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-30"
               >
                 <svg
@@ -852,76 +1523,6 @@ function OrderingQuestion({
     </div>
   );
 }
-
-// ── Feedback block ─────────────────────────────────────────────────────────
-
-function FeedbackBlock({ feedback }: { feedback: any }) {
-  if (!feedback) return null;
-
-  return (
-    <div
-      className={`mt-6 p-4 rounded-2xl animate-slide-up ${feedback.isCorrect ? "bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30"}`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{feedback.isCorrect ? "✅" : "❌"}</span>
-          <span className="font-display font-semibold text-sm">
-            {feedback.isCorrect ? "Poprawnie!" : "Niepoprawnie"}
-          </span>
-        </div>
-        <span className="xp-badge animate-xp-pop">+{feedback.xpEarned} XP</span>
-      </div>
-
-      {feedback.explanation && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
-          {feedback.explanation}
-        </p>
-      )}
-
-      {/* Gamification events */}
-      {feedback.gamification?.leveledUp && (
-        <div className="mt-3 p-3 rounded-xl bg-navy-50 dark:bg-navy-900/20 border border-navy-200 dark:border-navy-800/30 animate-scale-in">
-          <span className="font-display font-bold text-sm">
-            🎉 Awans na poziom {feedback.gamification.subjectLevel}!
-          </span>
-        </div>
-      )}
-
-      {feedback.gamification?.achievements?.length > 0 && (
-        <div className="mt-3 space-y-2">
-          {feedback.gamification.achievements.map((a: any) => (
-            <div
-              key={a.slug}
-              className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 animate-scale-in"
-            >
-              <span className="font-display font-bold text-sm">
-                {a.icon} Osiągnięcie: {a.name} (+{a.xpReward} XP)
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Difficulty dots ────────────────────────────────────────────────────────
-
-function DifficultyDots({ level }: { level: number }) {
-  return (
-    <div className="flex gap-1" title={`Trudność: ${level}/5`}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div
-          key={i}
-          className={`diff-dot ${i <= level ? "active" : "inactive"}`}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ── CLOZE — tekst z lukami inline ──────────────────────────────────────────
-
 function ClozeQuestion({
   content,
   response,
@@ -929,77 +1530,53 @@ function ClozeQuestion({
   disabled,
   feedback,
 }: any) {
-  const answers = (response as Record<string, string>) || {};
-  const isAnswered = feedback !== null;
-
-  const setBlank = (id: string, value: string) => {
-    if (disabled) return;
-    onChange({ ...answers, [id]: value });
-  };
-
-  // Render template with inline inputs
-  const renderTemplate = () => {
-    const parts = content.template.split(/(\{\{[^}]+\}\})/g);
-    return parts.map((part: string, i: number) => {
-      const match = part.match(/\{\{(\w+)\}\}/);
-      if (!match) return <span key={i}>{part}</span>;
-
-      const blankId = match[1];
-      const blank = content.blanks[blankId];
-      const isCorrect =
-        isAnswered &&
-        blank?.acceptedAnswers?.some(
-          (a: string) =>
-            a.toLowerCase().trim() ===
-            (answers[blankId] || "").toLowerCase().trim(),
+  const ans = (response as Record<string, string>) || {};
+  const isA = feedback !== null;
+  const tmpl = () =>
+    content.template.split(/(\{\{[^}]+\}\})/g).map((p: string, i: number) => {
+      const m = p.match(/\{\{(\w+)\}\}/);
+      if (!m)
+        return (
+          <span key={i}>
+            <ChemText text={p} />
+          </span>
         );
-
+      const id = m[1];
+      const b = content.blanks[id];
+      const ok =
+        isA &&
+        b?.acceptedAnswers?.some(
+          (a: string) =>
+            a.toLowerCase().trim() === (ans[id] || "").toLowerCase().trim(),
+        );
       return (
         <input
           key={i}
           type="text"
-          value={answers[blankId] || ""}
-          onChange={(e) => setBlank(blankId, e.target.value)}
+          value={ans[id] || ""}
+          onChange={(e) =>
+            !disabled && onChange({ ...ans, [id]: e.target.value })
+          }
           disabled={disabled}
-          placeholder={blank?.hint || "..."}
-          className={`inline-block w-28 mx-1 px-2 py-1 text-sm text-center border-b-2 bg-transparent outline-none transition-all ${
-            isAnswered
-              ? isCorrect
-                ? "border-brand-500 text-brand-600"
-                : "border-red-500 text-red-600"
-              : "border-zinc-300 dark:border-zinc-600 focus:border-navy-500"
-          }`}
+          placeholder="..."
+          className={`inline-block w-28 mx-1 px-2 py-1 text-sm text-center border-b-2 bg-transparent outline-none transition-all ${isA ? (ok ? "border-brand-500 text-brand-600" : "border-red-500 text-red-600") : "border-zinc-300 dark:border-zinc-600 focus:border-navy-500"}`}
         />
       );
     });
-  };
-
   return (
     <div>
       {content.instruction && (
         <h3 className="font-display font-semibold text-lg mb-4">
-          {content.instruction}
+          <ChemText text={content.instruction} />
         </h3>
       )}
       <div className="text-sm leading-8 p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800">
-        {renderTemplate()}
+        {tmpl()}
       </div>
-      {isAnswered && (
-        <div className="mt-4 space-y-1">
-          {Object.entries(content.blanks).map(([id, blank]: [string, any]) => (
-            <p key={id} className="text-xs text-brand-600">
-              {id}: {blank.acceptedAnswers[0]}
-            </p>
-          ))}
-        </div>
-      )}
-      {isAnswered && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
-
-// ── ERROR_FIND — znajdź błąd w rozwiązaniu ─────────────────────────────────
-
 function ErrorFindQuestion({
   content,
   response,
@@ -1007,64 +1584,47 @@ function ErrorFindQuestion({
   disabled,
   feedback,
 }: any) {
-  const isAnswered = feedback !== null;
-
+  const isA = feedback !== null;
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-2">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
-      <p className="text-xs text-zinc-500 mb-6">
-        Kliknij krok, który zawiera błąd
-      </p>
+      <p className="text-xs text-zinc-500 mb-6">Kliknij krok z błędem</p>
       <div className="space-y-2">
-        {content.steps.map(
-          (step: { id: number; text: string; isCorrect: boolean }) => {
-            const isSelected = response === step.id;
-            const isError = step.id === content.correctErrorStep;
-
-            let className =
-              "flex items-start gap-3 p-4 rounded-2xl cursor-pointer transition-all border-2 ";
-            if (isAnswered && isError) {
-              className += "border-red-400 bg-red-50 dark:bg-red-900/10";
-            } else if (isAnswered && isSelected && !isError) {
-              className += "border-amber-400 bg-amber-50 dark:bg-amber-900/10";
-            } else if (isSelected) {
-              className += "border-navy-500 bg-navy-50 dark:bg-navy-900/10";
-            } else {
-              className +=
-                "border-transparent bg-zinc-50 dark:bg-surface-800 hover:bg-zinc-100 dark:hover:bg-surface-700";
-            }
-
-            return (
-              <button
-                key={step.id}
-                onClick={() => !disabled && onChange(step.id)}
-                disabled={disabled}
-                className={className + " w-full text-left"}
-              >
-                <span className="flex-shrink-0 w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold">
-                  {step.id}
-                </span>
-                <span className="text-sm flex-1">{step.text}</span>
-                {isAnswered && isError && (
-                  <span className="text-red-500 text-lg">✗</span>
-                )}
-                {isAnswered && !isError && step.isCorrect && (
-                  <span className="text-brand-500 text-lg">✓</span>
-                )}
-              </button>
-            );
-          },
-        )}
+        {content.steps.map((s: any) => {
+          const sel = response === s.id;
+          const err = s.id === content.correctErrorStep;
+          let c =
+            "flex items-start gap-3 p-4 rounded-2xl cursor-pointer transition-all border-2 ";
+          if (isA && err) c += "border-red-400 bg-red-50 dark:bg-red-900/10";
+          else if (isA && sel && !err)
+            c += "border-amber-400 bg-amber-50 dark:bg-amber-900/10";
+          else if (sel) c += "border-navy-500 bg-navy-50 dark:bg-navy-900/10";
+          else
+            c +=
+              "border-transparent bg-zinc-50 dark:bg-surface-800 hover:bg-zinc-100 dark:hover:bg-surface-700";
+          return (
+            <button
+              key={s.id}
+              onClick={() => !disabled && onChange(s.id)}
+              disabled={disabled}
+              className={c + " w-full text-left"}
+            >
+              <span className="flex-shrink-0 w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold">
+                {s.id}
+              </span>
+              <span className="text-sm flex-1">
+                <ChemText text={s.text} />
+              </span>
+            </button>
+          );
+        })}
       </div>
-      {isAnswered && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
-
-// ── TABLE_DATA — analiza tabeli ────────────────────────────────────────────
-
 function TableDataQuestion({
   content,
   response,
@@ -1072,21 +1632,13 @@ function TableDataQuestion({
   disabled,
   feedback,
 }: any) {
-  const answers = (response as Record<string, string>) || {};
-  const isAnswered = feedback !== null;
-
-  const setAnswer = (id: string, value: string) => {
-    if (disabled) return;
-    onChange({ ...answers, [id]: value });
-  };
-
+  const ans = (response as Record<string, string>) || {};
+  const isA = feedback !== null;
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-4">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
-
-      {/* Table */}
       <div className="overflow-x-auto mb-6">
         <table className="w-full text-sm border-collapse">
           <thead>
@@ -1096,7 +1648,7 @@ function TableDataQuestion({
                   key={i}
                   className="px-4 py-2 bg-zinc-100 dark:bg-surface-700 text-left font-semibold border border-zinc-200 dark:border-zinc-700"
                 >
-                  {h}
+                  <ChemText text={h} />
                 </th>
               ))}
             </tr>
@@ -1109,7 +1661,7 @@ function TableDataQuestion({
                     key={ci}
                     className="px-4 py-2 border border-zinc-200 dark:border-zinc-700"
                   >
-                    {cell}
+                    <ChemText text={cell} />
                   </td>
                 ))}
               </tr>
@@ -1117,48 +1669,43 @@ function TableDataQuestion({
           </tbody>
         </table>
       </div>
-
-      {/* Sub-questions */}
       <div className="space-y-4">
-        {content.subQuestions.map(
-          (sq: { id: string; text: string; acceptedAnswers: string[] }) => {
-            const isCorrect =
-              isAnswered &&
-              sq.acceptedAnswers.some(
-                (a: string) =>
-                  a.toLowerCase().trim() ===
-                  (answers[sq.id] || "").toLowerCase().trim(),
-              );
-            return (
-              <div key={sq.id}>
-                <label className="block text-sm font-medium mb-1.5">
-                  {sq.text}
-                </label>
-                <input
-                  type="text"
-                  value={answers[sq.id] || ""}
-                  onChange={(e) => setAnswer(sq.id, e.target.value)}
-                  disabled={disabled}
-                  className={`input ${isAnswered ? (isCorrect ? "!border-brand-500" : "!border-red-500") : ""}`}
-                  placeholder="Odpowiedź..."
-                />
-                {isAnswered && !isCorrect && (
-                  <p className="text-xs mt-1 text-brand-600">
-                    Poprawna: {sq.acceptedAnswers[0]}
-                  </p>
-                )}
-              </div>
+        {content.subQuestions.map((sq: any) => {
+          const ok =
+            isA &&
+            sq.acceptedAnswers.some(
+              (a: string) =>
+                a.toLowerCase().trim() ===
+                (ans[sq.id] || "").toLowerCase().trim(),
             );
-          },
-        )}
+          return (
+            <div key={sq.id}>
+              <label className="block text-sm font-medium mb-1.5">
+                <ChemText text={sq.text} />
+              </label>
+              <input
+                type="text"
+                value={ans[sq.id] || ""}
+                onChange={(e) =>
+                  !disabled && onChange({ ...ans, [sq.id]: e.target.value })
+                }
+                disabled={disabled}
+                className={`input ${isA ? (ok ? "!border-brand-500" : "!border-red-500") : ""}`}
+                placeholder="Odpowiedź..."
+              />
+              {isA && !ok && (
+                <p className="text-xs mt-1 text-brand-600">
+                  Poprawna: {sq.acceptedAnswers[0]}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
-      {isAnswered && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
-
-// ── GRAPH_INTERPRET — odczyt z wykresu ─────────────────────────────────────
-
 function GraphInterpretQuestion({
   content,
   response,
@@ -1166,22 +1713,20 @@ function GraphInterpretQuestion({
   disabled,
   feedback,
 }: any) {
-  const answers = (response as Record<string, string>) || {};
-  const isAnswered = feedback !== null;
-
-  const setAnswer = (id: string, value: string) => {
-    if (disabled) return;
-    onChange({ ...answers, [id]: value });
-  };
-
+  const ans = (response as Record<string, string>) || {};
+  const isA = feedback !== null;
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-4">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
-
-      {/* Mafs graph */}
-      {content.graph && (
+      {content.graphSvg && (
+        <div
+          className="mb-6 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4"
+          dangerouslySetInnerHTML={{ __html: content.graphSvg }}
+        />
+      )}
+      {content.graph && !content.graphSvg && (
         <div className="mb-6">
           <MathGraph
             segments={content.graph.segments}
@@ -1196,63 +1741,43 @@ function GraphInterpretQuestion({
           />
         </div>
       )}
-
-      {/* Fallback for old graphSvg format */}
-      {!content.graph && content.graphSvg && (
-        <div
-          className="mb-6 p-4 rounded-2xl bg-white dark:bg-surface-800 border border-zinc-200 dark:border-zinc-700"
-          dangerouslySetInnerHTML={{ __html: content.graphSvg }}
-        />
-      )}
-
-      {/* Text description fallback */}
-      {!content.graph && !content.graphSvg && content.graphDescription && (
-        <p className="text-sm text-zinc-500 italic mb-6 p-4 bg-zinc-50 dark:bg-surface-800 rounded-2xl">
-          📊 {content.graphDescription}
-        </p>
-      )}
-
-      {/* Sub-questions */}
       <div className="space-y-4">
-        {content.subQuestions.map(
-          (sq: { id: string; text: string; acceptedAnswers: string[] }) => {
-            const isCorrect =
-              isAnswered &&
-              sq.acceptedAnswers.some(
-                (a: string) =>
-                  a.toLowerCase().trim() ===
-                  (answers[sq.id] || "").toLowerCase().trim(),
-              );
-            return (
-              <div key={sq.id}>
-                <label className="block text-sm font-medium mb-1.5">
-                  {sq.text}
-                </label>
-                <input
-                  type="text"
-                  value={answers[sq.id] || ""}
-                  onChange={(e) => setAnswer(sq.id, e.target.value)}
-                  disabled={disabled}
-                  className={`input ${isAnswered ? (isCorrect ? "!border-brand-500" : "!border-red-500") : ""}`}
-                  placeholder="Odpowiedź..."
-                />
-                {isAnswered && !isCorrect && (
-                  <p className="text-xs mt-1 text-brand-600">
-                    Poprawna: {sq.acceptedAnswers[0]}
-                  </p>
-                )}
-              </div>
+        {content.subQuestions?.map((sq: any) => {
+          const ok =
+            isA &&
+            sq.acceptedAnswers.some(
+              (a: string) =>
+                a.toLowerCase().trim() ===
+                (ans[sq.id] || "").toLowerCase().trim(),
             );
-          },
-        )}
+          return (
+            <div key={sq.id}>
+              <label className="block text-sm font-medium mb-1.5">
+                <ChemText text={sq.text} />
+              </label>
+              <input
+                type="text"
+                value={ans[sq.id] || ""}
+                onChange={(e) =>
+                  !disabled && onChange({ ...ans, [sq.id]: e.target.value })
+                }
+                disabled={disabled}
+                className={`input ${isA ? (ok ? "!border-brand-500" : "!border-red-500") : ""}`}
+                placeholder="Odpowiedź..."
+              />
+              {isA && !ok && (
+                <p className="text-xs mt-1 text-brand-600">
+                  Poprawna: {sq.acceptedAnswers[0]}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
-      {isAnswered && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
-
-// ── PROOF_ORDER — ułóż kroki dowodu ────────────────────────────────────────
-
 function ProofOrderQuestion({
   content,
   response,
@@ -1260,64 +1785,41 @@ function ProofOrderQuestion({
   disabled,
   feedback,
 }: any) {
-  const order = (response as string[]) || content.steps.map((s: any) => s.id);
-  const isAnswered = feedback !== null;
-
-  const moveUp = (index: number) => {
-    if (disabled || index === 0) return;
-    const newOrder = [...order];
-    [newOrder[index - 1], newOrder[index]] = [
-      newOrder[index],
-      newOrder[index - 1],
-    ];
-    onChange(newOrder);
+  const ord = (response as string[]) || content.steps.map((s: any) => s.id);
+  const isA = feedback !== null;
+  const mv = (i: number, d: -1 | 1) => {
+    if (disabled) return;
+    const n = [...ord];
+    [n[i], n[i + d]] = [n[i + d], n[i]];
+    onChange(n);
   };
-
-  const moveDown = (index: number) => {
-    if (disabled || index === order.length - 1) return;
-    const newOrder = [...order];
-    [newOrder[index], newOrder[index + 1]] = [
-      newOrder[index + 1],
-      newOrder[index],
-    ];
-    onChange(newOrder);
-  };
-
-  const stepsMap = Object.fromEntries(content.steps.map((s: any) => [s.id, s]));
-
+  const sm = Object.fromEntries(content.steps.map((s: any) => [s.id, s]));
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-2">
-        {content.question}
+        <ChemText text={content.question} />
       </h3>
       <p className="text-xs text-zinc-500 mb-6">
         Ułóż kroki w poprawnej kolejności
       </p>
       <div className="space-y-2">
-        {order.map((stepId: string, i: number) => {
-          const step = stepsMap[stepId];
-          const isCorrectPosition =
-            isAnswered && content.correctOrder[i] === stepId;
-
+        {ord.map((sid: string, i: number) => {
+          const ok = isA && content.correctOrder[i] === sid;
           return (
             <div
               key={i}
-              className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
-                isAnswered
-                  ? isCorrectPosition
-                    ? "bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30"
-                    : "bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30"
-                  : "bg-zinc-50 dark:bg-surface-800"
-              }`}
+              className={`flex items-center gap-3 p-3 rounded-xl transition-all ${isA ? (ok ? "bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30") : "bg-zinc-50 dark:bg-surface-800"}`}
             >
               <span className="text-xs font-bold text-zinc-400 w-6">
                 {i + 1}.
               </span>
-              <span className="flex-1 text-sm">{step?.text}</span>
+              <span className="flex-1 text-sm">
+                <ChemText text={sm[sid]?.text || ""} />
+              </span>
               {!disabled && (
                 <div className="flex gap-1">
                   <button
-                    onClick={() => moveUp(i)}
+                    onClick={() => i > 0 && mv(i, -1)}
                     disabled={i === 0}
                     className="p-1 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-30"
                   >
@@ -1336,8 +1838,8 @@ function ProofOrderQuestion({
                     </svg>
                   </button>
                   <button
-                    onClick={() => moveDown(i)}
-                    disabled={i === order.length - 1}
+                    onClick={() => i < ord.length - 1 && mv(i, 1)}
+                    disabled={i === ord.length - 1}
                     className="p-1 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-30"
                   >
                     <svg
@@ -1360,13 +1862,10 @@ function ProofOrderQuestion({
           );
         })}
       </div>
-      {isAnswered && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
-
-// ── WIAZKA — wiązka podpytań ───────────────────────────────────────────────
-
 function WiazkaQuestion({
   content,
   response,
@@ -1374,22 +1873,19 @@ function WiazkaQuestion({
   disabled,
   feedback,
 }: any) {
-  const answers = (response as Record<string, any>) || {};
-  const isAnswered = feedback !== null;
-
-  const setSubAnswer = (subId: string, value: any) => {
+  const ans = (response as Record<string, any>) || {};
+  const isA = feedback !== null;
+  const set = (id: string, v: any) => {
     if (disabled) return;
-    onChange({ ...answers, [subId]: value });
+    onChange({ ...ans, [id]: v });
   };
-
   return (
     <div>
-      {/* Shared context */}
       <div className="p-4 rounded-2xl bg-navy-50 dark:bg-navy-900/10 border border-navy-200 dark:border-navy-800/30 mb-6">
-        <p className="text-sm font-medium">{content.context}</p>
+        <p className="text-sm font-medium whitespace-pre-line">
+          <ChemText text={content.context} />
+        </p>
       </div>
-
-      {/* Sub-questions */}
       <div className="space-y-6">
         {content.subQuestions.map((sq: any, i: number) => (
           <div
@@ -1400,74 +1896,46 @@ function WiazkaQuestion({
               <span className="w-6 h-6 rounded-full bg-navy-500 text-white text-xs flex items-center justify-center font-bold">
                 {String.fromCharCode(97 + i)}
               </span>
-              <span className="text-sm font-medium">{sq.text}</span>
+              <span className="text-sm font-medium">
+                <ChemText text={sq.text} />
+              </span>
               <span className="ml-auto text-xs text-zinc-400">
                 {sq.points} pkt
               </span>
             </div>
-
-            {/* Sub-question renderers */}
-            {sq.type === "FILL_IN" && sq.template && (
-              <div className="text-sm leading-8">
-                {sq.template
-                  .split(/(\{\{[^}]+\}\})/g)
-                  .map((part: string, pi: number) => {
-                    const match = part.match(/\{\{(\w+)\}\}/);
-                    if (!match) return <span key={pi}>{part}</span>;
-                    const blankId = match[1];
-                    return (
-                      <input
-                        key={pi}
-                        type="text"
-                        value={(answers[sq.id] || {})[blankId] || ""}
-                        onChange={(e) => {
-                          const sub = {
-                            ...(answers[sq.id] || {}),
-                            [blankId]: e.target.value,
-                          };
-                          setSubAnswer(sq.id, sub);
-                        }}
-                        disabled={disabled}
-                        className="inline-block w-20 mx-1 px-2 py-1 text-sm text-center border-b-2 border-zinc-300 dark:border-zinc-600 bg-transparent outline-none focus:border-navy-500"
-                        placeholder="..."
-                      />
-                    );
-                  })}
-              </div>
-            )}
-
             {sq.type === "TRUE_FALSE" && sq.statements && (
               <div className="space-y-2">
                 {sq.statements.map((st: any, si: number) => {
-                  const subAnswers =
-                    (answers[sq.id] as boolean[]) ||
-                    sq.statements.map(() => null);
+                  const sa =
+                    (ans[sq.id] as boolean[]) || sq.statements.map(() => null);
                   return (
                     <div
                       key={si}
                       className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-surface-700"
                     >
-                      <p className="flex-1 text-xs">{st.text}</p>
+                      <p className="flex-1 text-xs">
+                        <ChemText text={st.text} />
+                      </p>
                       <div className="flex gap-1">
                         <button
                           onClick={() => {
-                            const newA = [...subAnswers];
-                            newA[si] = true;
-                            setSubAnswer(sq.id, newA);
+                            const n = [...sa];
+                            n[si] = true;
+                            set(sq.id, n);
                           }}
                           disabled={disabled}
-                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${subAnswers[si] === true ? "bg-brand-500 text-white" : "bg-zinc-200 dark:bg-zinc-600"}`}
+                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${sa[si] === true ? "bg-brand-500 text-white" : "bg-zinc-200 dark:bg-zinc-600"}`}
                         >
                           P
                         </button>
                         <button
                           onClick={() => {
-                            const newA = [...subAnswers];
-                            newA[si] = false;
-                            setSubAnswer(sq.id, newA);
+                            const n = [...sa];
+                            n[si] = false;
+                            set(sq.id, n);
                           }}
                           disabled={disabled}
-                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${subAnswers[si] === false ? "bg-red-500 text-white" : "bg-zinc-200 dark:bg-zinc-600"}`}
+                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${sa[si] === false ? "bg-red-500 text-white" : "bg-zinc-200 dark:bg-zinc-600"}`}
                         >
                           F
                         </button>
@@ -1477,31 +1945,31 @@ function WiazkaQuestion({
                 })}
               </div>
             )}
-
             {sq.type === "OPEN" && (
               <textarea
-                value={answers[sq.id] || ""}
-                onChange={(e) => setSubAnswer(sq.id, e.target.value)}
+                value={ans[sq.id] || ""}
+                onChange={(e) => set(sq.id, e.target.value)}
                 disabled={disabled}
                 rows={3}
                 className="input resize-none text-sm"
                 placeholder="Odpowiedź..."
               />
             )}
-
             {sq.type === "CLOSED" && sq.options && (
               <div className="space-y-2">
-                {sq.options.map((opt: any) => (
+                {sq.options.map((o: any) => (
                   <button
-                    key={opt.id}
-                    onClick={() => !disabled && setSubAnswer(sq.id, opt.id)}
+                    key={o.id}
+                    onClick={() => !disabled && set(sq.id, o.id)}
                     disabled={disabled}
-                    className={`option-card w-full text-left text-sm ${answers[sq.id] === opt.id ? "selected" : ""}`}
+                    className={`option-card w-full text-left text-sm ${ans[sq.id] === o.id ? "selected" : ""}`}
                   >
-                    <span className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-surface-600 flex items-center justify-center text-xs font-bold">
-                      {opt.id}
+                    <span className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-surface-700 flex items-center justify-center text-xs font-bold">
+                      {o.id}
                     </span>
-                    <span>{opt.text}</span>
+                    <span>
+                      <ChemText text={o.text} />
+                    </span>
                   </button>
                 ))}
               </div>
@@ -1509,7 +1977,65 @@ function WiazkaQuestion({
           </div>
         ))}
       </div>
-      {isAnswered && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
+    </div>
+  );
+}
+
+function FeedbackBlock({ feedback }: { feedback: any }) {
+  if (!feedback) return null;
+  return (
+    <div
+      className={`mt-6 p-4 rounded-2xl animate-slide-up ${feedback.isCorrect ? "bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30"}`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{feedback.isCorrect ? "✅" : "❌"}</span>
+          <span className="font-display font-semibold text-sm">
+            {feedback.isCorrect ? "Poprawnie!" : "Niepoprawnie"}
+          </span>
+        </div>
+        <span className="xp-badge animate-xp-pop">+{feedback.xpEarned} XP</span>
+      </div>
+      {feedback.explanation && (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
+          <ChemText text={feedback.explanation} />
+        </p>
+      )}
+
+      {feedback.gamification?.leveledUp && (
+        <div className="mt-3 p-3 rounded-xl bg-navy-50 dark:bg-navy-900/20 border border-navy-200 dark:border-navy-800/30 animate-scale-in">
+          <span className="font-display font-bold text-sm">
+            🎉 Awans na poziom {feedback.gamification.subjectLevel}!
+          </span>
+        </div>
+      )}
+      {feedback.gamification?.achievements?.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {feedback.gamification.achievements.map((a: any) => (
+            <div
+              key={a.slug}
+              className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 animate-scale-in"
+            >
+              <span className="font-display font-bold text-sm">
+                {a.icon} {a.name} (+{a.xpReward} XP)
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+function DifficultyDots({ level }: { level: number }) {
+  return (
+    <div className="flex gap-1" title={`Trudność: ${level}/5`}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className={`diff-dot ${i <= level ? "active" : "inactive"}`}
+        />
+      ))}
     </div>
   );
 }

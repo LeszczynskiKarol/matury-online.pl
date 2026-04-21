@@ -3,7 +3,9 @@
 // submit → grade → xp → adaptive difficulty → spaced repetition → achievements
 // ============================================================================
 
+import { Prisma } from "@prisma/client";
 import { FastifyPluginAsync } from "fastify";
+import { gradeListeningQuestion } from "../services/listening-grading.js";
 import { gradeOpenQuestion } from "../services/ai-grading.js";
 import {
   calculateXp,
@@ -49,11 +51,14 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
       if (!question)
         return reply.code(404).send({ error: "Question not found" });
 
-      // ── Freemium check ───────────────────────────────────────────────────
-      // Daily limit check for free users
+      // ── Premium required ─────────────────────────────────────────────────
       const user = await app.prisma.user.findUniqueOrThrow({
         where: { id: req.user.userId },
-        select: { subscriptionStatus: true, subscriptionEnd: true },
+        select: {
+          subscriptionStatus: true,
+          subscriptionEnd: true,
+          currentStreak: true,
+        },
       });
 
       const now = new Date();
@@ -67,24 +72,11 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           user.subscriptionEnd > now);
 
       if (!isPremium) {
-        const today = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-        );
-        const todayCount = await app.prisma.answer.count({
-          where: { userId: req.user.userId, createdAt: { gte: today } },
+        return reply.code(403).send({
+          error: "Dostęp do zadań wymaga aktywnej subskrypcji Premium.",
+          code: "PREMIUM_REQUIRED",
         });
-        if (todayCount >= 5) {
-          return reply.code(403).send({
-            error: "Dzienny limit pytań (5) osiągnięty",
-            code: "DAILY_LIMIT",
-            dailyUsed: todayCount,
-            dailyLimit: 5,
-          });
-        }
       }
-
       // ── Grade ────────────────────────────────────────────────────────────
       const content = question.content as Record<string, any>;
       let isCorrect: boolean | null = null;
@@ -95,6 +87,17 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
         case "CLOSED": {
           isCorrect = response === content.correctAnswer;
           score = isCorrect ? 1.0 : 0.0;
+          break;
+        }
+        case "LISTENING": {
+          // Grading is deterministic (no AI) — credits were already consumed
+          // at generation time in /listening/start and /listening/next.
+          const result = gradeListeningQuestion(
+            question.content as any,
+            response,
+          );
+          isCorrect = result.isCorrect;
+          score = result.score;
           break;
         }
         case "MULTI_SELECT": {
@@ -163,7 +166,10 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           break;
         }
         case "OPEN": {
-          // AI grading
+          // AI grading — check credits first
+          const { requireAiCredits } =
+            await import("../services/ai-credits.js");
+          await requireAiCredits(app.prisma, userId);
           const result = await gradeOpenQuestion({
             subjectSlug: question.subject.slug,
             question: content.question,
@@ -195,15 +201,15 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
       // ── Save answer ──────────────────────────────────────────────────────
       const answer = await app.prisma.answer.create({
         data: {
-          userId,
-          questionId,
-          sessionId: sessionId || null,
+          user: { connect: { id: userId } },
+          question: { connect: { id: questionId } },
+          ...(sessionId ? { session: { connect: { id: sessionId } } } : {}),
           response,
           isCorrect,
           score,
           pointsEarned: question.points,
-          xpEarned: xp,
-          aiGrading,
+          xpEarned: xp || 0,
+          aiGrading: aiGrading ?? Prisma.JsonNull,
           gradedAt: new Date(),
           timeSpentMs: timeSpentMs || null,
         },

@@ -135,15 +135,37 @@ export function DashboardHome() {
           <h2 className="font-display font-bold text-lg">Twoje przedmioty</h2>
           {subjectProgress.length === 0 ? (
             <div className="glass-card p-8 text-center">
-              <p className="text-zinc-500 mb-4">
-                Nie masz jeszcze wybranych przedmiotów.
-              </p>
-              <a
-                href="/dashboard/sesja"
-                className="btn-secondary py-2 px-5 text-sm"
-              >
-                Rozpocznij pierwszą sesję
-              </a>
+              {user.subscriptionStatus === "FREE" ||
+              user.subscriptionStatus === "EXPIRED" ? (
+                <>
+                  <span className="text-4xl block mb-3">🔒</span>
+                  <p className="font-display font-semibold text-sm mb-2">
+                    Dostęp tylko dla Premium
+                  </p>
+                  <p className="text-xs text-zinc-500 mb-4">
+                    Wykup subskrypcję, aby rozpocząć naukę i uzyskać dostęp do
+                    wszystkich funkcji.
+                  </p>
+                  <a
+                    href="/dashboard/subskrypcja"
+                    className="btn-primary py-2 px-6 text-sm"
+                  >
+                    Przejdź na Premium — 49 zł/mies.
+                  </a>
+                </>
+              ) : (
+                <>
+                  <p className="text-zinc-500 mb-4">
+                    Nie masz jeszcze wybranych przedmiotów.
+                  </p>
+                  <a
+                    href="/dashboard/sesja"
+                    className="btn-secondary py-2 px-5 text-sm"
+                  >
+                    Rozpocznij pierwszą sesję
+                  </a>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 gap-4">
@@ -252,28 +274,6 @@ export function DashboardHome() {
           )}
         </div>
       </div>
-
-      {/* Premium upsell for free users */}
-      {user.subscriptionStatus === "FREE" && (
-        <div className="relative overflow-hidden rounded-3xl p-8 bg-gradient-to-br from-navy-800 to-navy-900">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brand-500/10 rounded-full blur-[80px]"></div>
-          <div className="relative">
-            <h3 className="font-display font-bold text-xl text-white mb-2">
-              Odblokuj pełny potencjał
-            </h3>
-            <p className="text-zinc-400 text-sm mb-6 max-w-lg">
-              Premium daje Ci nieograniczone pytania, wybór tematów, AI ocenę
-              wypracowań, powtórki i pełne statystyki. Za mniej niż godzina
-              korepetycji.
-            </p>
-            <div className="flex items-center gap-4">
-              <a href="/dashboard/subskrypcja" className="btn-primary">
-                Przejdź na Premium — 49 zł/mies.
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

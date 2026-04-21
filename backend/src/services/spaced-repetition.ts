@@ -3,7 +3,7 @@
 // Used for review cards (topic drills, flashcard-style review)
 // ============================================================================
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 /**
  * SM-2 quality ratings:
@@ -17,18 +17,19 @@ import { PrismaClient } from '@prisma/client';
 
 interface SM2Result {
   easeFactor: number;
-  interval: number;     // days
+  interval: number; // days
   repetitions: number;
   nextReviewAt: Date;
 }
 
 export function calculateSM2(params: {
-  quality: number;          // 0-5
+  quality: number; // 0-5
   currentEaseFactor: number;
   currentInterval: number;
   currentRepetitions: number;
 }): SM2Result {
-  const { quality, currentEaseFactor, currentInterval, currentRepetitions } = params;
+  const { quality, currentEaseFactor, currentInterval, currentRepetitions } =
+    params;
   const q = Math.min(5, Math.max(0, quality));
 
   let newEF = currentEaseFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
@@ -66,7 +67,11 @@ export function calculateSM2(params: {
 /**
  * Map answer correctness → SM-2 quality
  */
-export function answerToQuality(isCorrect: boolean, score: number, timeSpentMs?: number): number {
+export function answerToQuality(
+  isCorrect: boolean,
+  score: number,
+  timeSpentMs?: number,
+): number {
   if (!isCorrect && score < 0.2) return 0;
   if (!isCorrect && score < 0.5) return 1;
   if (!isCorrect) return 2;
@@ -83,14 +88,22 @@ export async function getDueCards(
   prisma: PrismaClient,
   userId: string,
   options?: { topicId?: string; limit?: number },
-): Promise<{ id: string; questionId: string; topicId: string; easeFactor: number; interval: number }[]> {
+): Promise<
+  {
+    id: string;
+    questionId: string;
+    topicId: string;
+    easeFactor: number;
+    interval: number;
+  }[]
+> {
   return prisma.reviewCard.findMany({
     where: {
       userId,
       nextReviewAt: { lte: new Date() },
       ...(options?.topicId ? { topicId: options.topicId } : {}),
     },
-    orderBy: { nextReviewAt: 'asc' },
+    orderBy: { nextReviewAt: "asc" },
     take: options?.limit || 20,
     select: {
       id: true,
@@ -110,7 +123,9 @@ export async function processReview(
   cardId: string,
   quality: number,
 ): Promise<SM2Result> {
-  const card = await prisma.reviewCard.findUniqueOrThrow({ where: { id: cardId } });
+  const card = await prisma.reviewCard.findUniqueOrThrow({
+    where: { id: cardId },
+  });
 
   const result = calculateSM2({
     quality,
@@ -137,12 +152,20 @@ export async function processReview(
 /**
  * Ensure a review card exists for a question (create if not)
  */
+// backend/src/services/spaced-repetition.ts
 export async function ensureReviewCard(
   prisma: PrismaClient,
   userId: string,
   questionId: string,
   topicId: string,
 ): Promise<void> {
+  // Pomiń LISTENING — powtórki bez audio są bezużyteczne
+  const q = await prisma.question.findUnique({
+    where: { id: questionId },
+    select: { type: true },
+  });
+  if (q?.type === "LISTENING") return;
+
   await prisma.reviewCard.upsert({
     where: { userId_questionId: { userId, questionId } },
     update: {},

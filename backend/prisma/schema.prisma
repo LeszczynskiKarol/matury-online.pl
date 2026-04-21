@@ -38,6 +38,8 @@ model User {
 
   // Gamification — global
   totalXp       Int      @default(0)
+  aiCreditsRemaining  Int      @default(0)
+  aiCreditsResetAt    DateTime?
   globalLevel   Int      @default(1)
   currentStreak Int      @default(0)
   longestStreak Int      @default(0)
@@ -86,6 +88,8 @@ enum SubscriptionStatus {
   CANCELLED    // cancelled but access until period end
   EXPIRED
 }
+
+
 
 // ============================================================================
 // SUBJECTS & TAXONOMY
@@ -217,12 +221,18 @@ enum QuestionType {
   MATCHING
   ORDERING
   TRUE_FALSE
-  ERROR_FIND       // znajdź błąd w rozwiązaniu
-  GRAPH_INTERPRET  // odczyt z wykresu/diagramu (SVG w content)
-  TABLE_DATA       // analiza tabeli danych
-  WIAZKA           // wiązka podpytań z jednym kontekstem
-  PROOF_ORDER      // ułóż kroki dowodu
-  CLOZE            // tekst z wieloma lukami inline
+  ERROR_FIND
+  GRAPH_INTERPRET
+  TABLE_DATA
+  WIAZKA
+  PROOF_ORDER
+  CLOZE
+  LISTENING
+  // ── NEW (biologia / genetyka / chemia) ──────────────────────────────────
+  DIAGRAM_LABEL       // opis elementów rysunku/schematu (z imageUrl)
+  EXPERIMENT_DESIGN   // projekt doświadczenia: hipoteza, próba kontrolna, wniosek
+  CROSS_PUNNETT       // krzyżówka genetyczna z tabelą Punnetta + prawdopodobieństwo
+  CALCULATION         // obliczenia rachunkowe z jednostką i tolerancją
 }
 
 // ============================================================================
@@ -544,4 +554,27 @@ enum EmailStatus {
   CLICKED
   BOUNCED
   COMPLAINED
+}
+
+model ClaudeApiLog {
+  id            String   @id @default(cuid())
+  caller        String
+  model         String
+  userId        String?
+  questionId    String?
+  systemPrompt  String?  @db.Text
+  userPrompt    String   @db.Text
+  rawResponse   String   @db.Text
+  inputTokens   Int      @default(0)
+  outputTokens  Int      @default(0)
+  costUsd       Float    @default(0)
+  durationMs    Int      @default(0)
+  success       Boolean  @default(true)
+  error         String?  @db.Text
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  @@index([caller])
+  @@index([createdAt])
+  @@index([userId])
 }

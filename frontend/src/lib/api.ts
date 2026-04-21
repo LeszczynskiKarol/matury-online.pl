@@ -86,8 +86,12 @@ export const sessions = {
     subjectId: string;
     type: string;
     topicId?: string;
+    topicIds?: string[];
     difficulty?: number;
+    difficulties?: number[];
     questionCount?: number;
+    questionTypes?: string[];
+    sources?: string[];
   }) =>
     request<{ sessionId: string; type: string; questions: any[] }>(
       "/sessions/create",
@@ -185,6 +189,43 @@ export const review = {
     ),
 };
 
+export const questions = {
+  pool: (params: {
+    subjectId: string;
+    topicIds?: string[];
+    types?: string[];
+    difficulties?: number[];
+    sources?: string[];
+    exclude?: string[];
+    limit?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    qs.set("subjectId", params.subjectId);
+    qs.set("shuffle", "true");
+    if (params.topicIds?.length) qs.set("topicIds", params.topicIds.join(","));
+    if (params.types?.length) qs.set("types", params.types.join(","));
+    if (params.difficulties?.length)
+      qs.set("difficulties", params.difficulties.join(","));
+    if (params.sources?.length) qs.set("sources", params.sources.join(","));
+    if (params.exclude?.length) qs.set("exclude", params.exclude.join(","));
+    if (params.limit) qs.set("limit", String(params.limit));
+    return request<{ questions: any[]; total: number }>(`/questions?${qs}`);
+  },
+
+  filterOptions: (subjectId: string) =>
+    request<{
+      topics: {
+        id: string;
+        name: string;
+        slug: string;
+        questionCount: number;
+      }[];
+      types: { type: string; count: number }[];
+      difficulties: { difficulty: number; count: number }[];
+      sources: { source: string; count: number }[];
+      totalQuestions: number;
+    }>(`/questions/filter-options?subjectId=${subjectId}`),
+};
 // ── Gamification ─────────────────────────────────────────────────────────
 
 export const gamification = {
@@ -223,8 +264,6 @@ export const stripe = {
       subscriptionEnd: string | null;
       willExpire: string | null;
       canResume: boolean;
-      dailyUsed: number;
-      dailyLimit: number;
     }>("/stripe/status"),
 
   cancel: () =>
@@ -234,6 +273,17 @@ export const stripe = {
 
   resume: () =>
     request<{ message: string }>("/stripe/resume", { method: "POST" }),
+
+  credits: () =>
+    request<{ allowed: boolean; remaining: number; total: number }>(
+      "/stripe/credits",
+    ),
+
+  buyCredits: (pkg: "credits_200" | "credits_500" | "credits_1200") =>
+    request<{ url: string }>("/stripe/buy-credits", {
+      method: "POST",
+      body: JSON.stringify({ package: pkg }),
+    }),
 };
 
 // ── Admin ────────────────────────────────────────────────────────────────
