@@ -18,7 +18,7 @@ import {
 
 export const listeningRoutes: FastifyPluginAsync = async (app) => {
   // ── Start listening mode: creates session + returns first question ─────
-  app.post("/start", { preHandler: [app.authenticate] }, async (req) => {
+  app.post("/start", { preHandler: [app.authenticate] }, async (req, reply) => {
     const userId = req.user.userId;
     try {
       const { requireAiCredits } = await import("../services/ai-credits.js");
@@ -98,7 +98,7 @@ export const listeningRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // ── Get next listening question (prefetched or generated live) ─────────
-  app.post("/next", { preHandler: [app.authenticate] }, async (req) => {
+  app.post("/next", { preHandler: [app.authenticate] }, async (req, reply) => {
     const userId = req.user.userId;
     try {
       const { requireAiCredits } = await import("../services/ai-credits.js");
@@ -169,7 +169,7 @@ export const listeningRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // ── End listening session ──────────────────────────────────────────────
-  app.post("/end", { preHandler: [app.authenticate] }, async (req) => {
+  app.post("/end", { preHandler: [app.authenticate] }, async (req, reply) => {
     const { sessionId } = req.body as { sessionId: string };
 
     cleanupPrefetch(sessionId);
