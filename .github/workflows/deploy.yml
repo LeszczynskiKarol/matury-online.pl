@@ -48,21 +48,16 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            echo "=== Install dependencies ==="
+            echo "=== Backend dependencies + build ==="
             cd /var/www/matury-online.pl/backend
-            npm ci --omit=dev
-
-            cd /var/www/matury-online.pl/frontend
             npm ci
-
-            echo "=== Backend build ==="
-            cd /var/www/matury-online.pl/backend
-            npx prisma migrate deploy
+            npx prisma db push
             npx prisma generate
             npm run build || { echo "TSC BUILD FAILED"; exit 1; }
 
             echo "=== Frontend build ==="
             cd /var/www/matury-online.pl/frontend
+            npm ci
             npm run build || { echo "FRONTEND BUILD FAILED"; exit 1; }
 
             echo "=== Restart PM2 ==="
