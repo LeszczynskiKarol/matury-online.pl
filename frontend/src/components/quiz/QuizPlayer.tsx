@@ -149,20 +149,23 @@ export function QuizPlayer({
       });
       setSessionId(data.sessionId);
 
-      // If questionTypes pre-selected, load filtered pool instead of session questions
+      let loadedQuestions: any[];
       if (questionTypes && questionTypes.length > 0) {
         const filtered = await questionsApi.pool({
           subjectId,
           types: questionTypes,
           limit: questionCount,
         });
-        setQuestions(filtered.questions);
+        loadedQuestions = filtered.questions;
         setPoolTotal(filtered.total);
         setFilters({ ...EMPTY_FILTERS, types: questionTypes });
       } else {
-        setQuestions(data.questions);
+        loadedQuestions = data.questions;
       }
 
+      // ← NOWE: zarejestruj załadowane pytania w refie
+      loadedQuestions.forEach((q: any) => answeredIds.current.add(q.id));
+      setQuestions(loadedQuestions);
       setPhase("question");
       startTime.current = Date.now();
     };
@@ -174,19 +177,17 @@ export function QuizPlayer({
     async (newFilters: LiveFilters) => {
       setLoadingMore(true);
       try {
-        const allExcluded = [
-          ...answeredIds.current,
-          ...questions.map((q) => q.id), // ← TUTAJ TEŻ
-        ];
         const data = await questionsApi.pool({
           subjectId,
           topicIds: newFilters.topicIds,
           types: newFilters.types,
           difficulties: newFilters.difficulties,
           sources: newFilters.sources,
-          exclude: allExcluded,
+          exclude: [...answeredIds.current], // ← TYLKO ref, zero stale closures
           limit: 30,
         });
+        // Dodaj nowe ID do refa żeby nie wróciły
+        data.questions.forEach((q: any) => answeredIds.current.add(q.id));
         setQuestions(data.questions);
         setPoolTotal(data.total);
         setCurrentIndex(0);
@@ -195,12 +196,18 @@ export function QuizPlayer({
         if (phase === "feedback") setPhase("question");
         startTime.current = Date.now();
       } catch (err: any) {
-        // ... error handling bez zmian
+        if (err.code === "AI_CREDITS_EXHAUSTED") {
+          alert("Wykorzystano pulę kredytów AI w tym miesiącu.");
+        } else if (err.code === "PREMIUM_REQUIRED") {
+          alert("Dostęp do serwisu wymaga subskrypcji Premium.");
+        } else if (err.code === "DAILY_LIMIT") {
+          alert("Osiągnięto dzienny limit pytań (5). Przejdź na Premium.");
+        }
       } finally {
         setLoadingMore(false);
       }
     },
-    [subjectId, phase, questions], // ← dodaj questions do deps
+    [subjectId, phase], // ← BEZ questions w deps!
   );
 
   const handleFiltersChange = useCallback(
@@ -308,51 +315,51 @@ export function QuizPlayer({
     loadFilteredQuestions,
   ]);
 
-  const skipQuestion = useCallback(async () => {
+  const skipQuestion = useCallback(() => {
     if (!currentQuestion) return;
+
+    // Zapisz skip w bazie — backend będzie wiedział przy następnej sesji
+    questionsApi.skip(currentQuestion.id, sessionId).catch(console.error);
 
     answeredIds.current.add(currentQuestion.id);
 
-    setQuestions((prev) => {
-      const idx = prev.findIndex((q) => q.id === currentQuestion.id);
-      if (idx === -1) return prev;
-      const u = [...prev];
-      u.splice(idx, 1);
-      return u;
-    });
-
+    if (currentIndex + 1 >= questions.length) {
+      if (hasActiveFilters) {
+        loadFilteredQuestions(filters);
+      } else {
+        questionsApi
+          .pool({
+            subjectId,
+            exclude: [...answeredIds.current],
+            limit: 10,
+          })
+          .then((data) => {
+            if (data.questions.length > 0) {
+              setQuestions(data.questions);
+              setCurrentIndex(0);
+            } else {
+              setPhase("summary");
+            }
+          })
+          .catch(console.error);
+      }
+    } else {
+      setCurrentIndex((i) => i + 1);
+    }
     setResponse(null);
     setFeedbackData(null);
-    setPhase("question");
     startTime.current = Date.now();
+  }, [
+    currentQuestion,
+    currentIndex,
+    questions.length,
+    subjectId,
+    sessionId,
+    hasActiveFilters,
+    filters,
+    loadFilteredQuestions,
+  ]);
 
-    // Exclude WSZYSTKO: answered + currently loaded
-    const allExcluded = [
-      ...answeredIds.current,
-      ...questions.map((q) => q.id), // ← TO BRAKOWAŁO
-    ];
-
-    try {
-      const data = await questionsApi.pool({
-        subjectId,
-        ...(hasActiveFilters
-          ? {
-              topicIds: filters.topicIds,
-              types: filters.types,
-              difficulties: filters.difficulties,
-              sources: filters.sources,
-            }
-          : {}),
-        exclude: allExcluded,
-        limit: 1,
-      });
-      if (data.questions.length > 0) {
-        setQuestions((prev) => [...prev, ...data.questions]);
-      }
-    } catch {
-      // pula się skurczy — nie krytyczne
-    }
-  }, [currentQuestion, subjectId, hasActiveFilters, filters, questions]);
   const endSession = useCallback(() => {
     sessionsApi.complete(sessionId).catch(console.error);
     setPhase("summary");
@@ -1152,6 +1159,25 @@ function QuestionRenderer({
           feedback={feedback}
         />
       );
+    case "ESSAY":
+      return (
+        <OpenQuestion
+          content={{
+            question: content.prompt || content.question,
+            rubric: content.criteria
+              ?.map(
+                (c: any) => `${c.name} (${c.maxPoints} pkt): ${c.description}`,
+              )
+              .join("; "),
+            ...content,
+          }}
+          response={response}
+          onChange={onResponseChange}
+          disabled={disabled}
+          feedback={feedback}
+        />
+      );
+
     default:
       return <p className="text-red-500">Nieznany typ pytania: {type}</p>;
   }
@@ -1235,6 +1261,7 @@ function MultiSelectQuestion({
 }: any) {
   const sel = (response as string[]) || [];
   const isA = feedback !== null;
+  const correctSet = new Set<string>(feedback?.correctAnswer || []);
   const tog = (id: string) => {
     if (disabled) return;
     onChange(
@@ -1249,8 +1276,12 @@ function MultiSelectQuestion({
       <p className="text-xs text-zinc-500 mb-6">Wybierz wszystkie poprawne</p>
       <div className="space-y-3">
         {content.options.map((o: any) => {
+          const isSelected = sel.includes(o.id);
+          const isCorrectOption = correctSet.has(o.id);
           let c = "option-card";
-          if (sel.includes(o.id)) c += " selected";
+          if (isSelected) c += " selected";
+          if (isA && isCorrectOption) c += " correct";
+          if (isA && isSelected && !isCorrectOption) c += " wrong";
           return (
             <button
               key={o.id}
@@ -1259,9 +1290,15 @@ function MultiSelectQuestion({
               className={c + " w-full text-left"}
             >
               <div
-                className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center ${sel.includes(o.id) ? "bg-navy-500 border-navy-500" : "border-zinc-300 dark:border-zinc-600"}`}
+                className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center ${
+                  isA && isCorrectOption
+                    ? "bg-brand-500 border-brand-500"
+                    : isSelected
+                      ? "bg-navy-500 border-navy-500"
+                      : "border-zinc-300 dark:border-zinc-600"
+                }`}
               >
-                {sel.includes(o.id) && (
+                {(isSelected || (isA && isCorrectOption)) && (
                   <svg
                     className="w-3 h-3 text-white"
                     fill="none"
@@ -1280,6 +1317,9 @@ function MultiSelectQuestion({
               <span className="text-sm">
                 <ChemText text={o.text} />
               </span>
+              {isA && isCorrectOption && (
+                <span className="ml-auto text-brand-500">✓</span>
+              )}
             </button>
           );
         })}
@@ -1349,34 +1389,52 @@ function FillInQuestion({
 }: any) {
   const ans = (response as Record<string, string>) || {};
   const isA = feedback !== null;
+  // correctAnswer to tablica: ["odpowiedź1", "odpowiedź2", ...]
+  const correctAnswers = (feedback?.correctAnswer as string[]) || [];
+
   return (
     <div>
       <h3 className="font-display font-semibold text-lg mb-6">
         <ChemText text={content.question} />
       </h3>
       <div className="space-y-4">
-        {content.blanks.map((b: any, i: number) => (
-          <div key={b.id}>
-            <label className="block text-sm font-medium mb-1.5">
-              Luka {i + 1}
-            </label>
-            <input
-              type="text"
-              value={ans[b.id] || ""}
-              onChange={(e) =>
-                !disabled && onChange({ ...ans, [b.id]: e.target.value })
-              }
-              disabled={disabled}
-              className="input"
-              placeholder="Wpisz odpowiedź..."
-            />
-            {isA && feedback?.correctAnswer && (
-              <p className="text-xs mt-1 text-brand-600">
-                Poprawna: {feedback.correctAnswer[i]}
-              </p>
-            )}
-          </div>
-        ))}
+        {content.blanks.map((b: any, i: number) => {
+          const userAns = (ans[b.id] || "").trim().toLowerCase();
+          const correct = correctAnswers[i];
+          const isCorrectBlank =
+            isA &&
+            b.acceptedAnswers?.some(
+              (a: string) => a.toLowerCase().trim() === userAns,
+            );
+          return (
+            <div key={b.id}>
+              <label className="block text-sm font-medium mb-1.5">
+                Luka {i + 1}
+              </label>
+              <input
+                type="text"
+                value={ans[b.id] || ""}
+                onChange={(e) =>
+                  !disabled && onChange({ ...ans, [b.id]: e.target.value })
+                }
+                disabled={disabled}
+                className={`input ${
+                  isA
+                    ? isCorrectBlank
+                      ? "!border-brand-500"
+                      : "!border-red-500"
+                    : ""
+                }`}
+                placeholder="Wpisz odpowiedź..."
+              />
+              {isA && !isCorrectBlank && correct && (
+                <p className="text-xs mt-1 text-brand-600">
+                  Poprawna: {correct}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
       {isA && <FeedbackBlock feedback={feedback} />}
     </div>
@@ -1399,6 +1457,25 @@ function OpenQuestion({
       {content.rubric && (
         <p className="text-xs text-zinc-500 mb-4">
           Kryteria: <ChemText text={content.rubric} />
+        </p>
+      )}
+
+      {content.hints && content.hints.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {content.hints.map((h: string, i: number) => (
+            <span
+              key={i}
+              className="text-xs px-2.5 py-1.5 rounded-lg bg-sky-50 dark:bg-sky-900/15 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800/30"
+            >
+              💡 {h}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {content.instruction && (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 italic">
+          {content.instruction}
         </p>
       )}
 
@@ -1477,6 +1554,7 @@ function MatchingQuestion({
   feedback,
 }: any) {
   const p = (response as Record<string, string>) || {};
+  const isA = feedback !== null;
   const allRight = useMemo(
     () =>
       [...content.pairs.map((x: any) => x.right)].sort(
@@ -1485,7 +1563,17 @@ function MatchingQuestion({
     [content.pairs],
   );
 
-  // Set of values already chosen (excluding current row)
+  // Poprawne pary jako mapa left→right
+  const correctMap = useMemo(() => {
+    const m = new Map<string, string>();
+    if (feedback?.correctAnswer) {
+      (feedback.correctAnswer as { left: string; right: string }[]).forEach(
+        (pair) => m.set(pair.left, pair.right),
+      );
+    }
+    return m;
+  }, [feedback?.correctAnswer]);
+
   const usedFor = (currentLeft: string) => {
     const used = new Set<string>();
     for (const [left, val] of Object.entries(p)) {
@@ -1502,30 +1590,48 @@ function MatchingQuestion({
       <div className="space-y-3">
         {content.pairs.map((pr: any) => {
           const used = usedFor(pr.left);
+          const userAnswer = p[pr.left] || "";
+          const correctAnswer = correctMap.get(pr.left);
+          const isCorrectPair = userAnswer === correctAnswer;
           return (
             <div key={pr.left} className="flex items-center gap-4">
               <span className="flex-1 text-sm font-medium p-3 rounded-xl bg-zinc-50 dark:bg-surface-800">
                 <ChemText text={pr.left} />
               </span>
               <span className="text-zinc-400">→</span>
-              <select
-                value={p[pr.left] || ""}
-                onChange={(e) => onChange({ ...p, [pr.left]: e.target.value })}
-                disabled={disabled}
-                className="input flex-1"
-              >
-                <option value="">Wybierz...</option>
-                {allRight.map((x: string) => (
-                  <option key={x} value={x} disabled={used.has(x)}>
-                    {x}
-                  </option>
-                ))}
-              </select>
+              <div className="flex-1">
+                <select
+                  value={userAnswer}
+                  onChange={(e) =>
+                    onChange({ ...p, [pr.left]: e.target.value })
+                  }
+                  disabled={disabled}
+                  className={`input w-full ${
+                    isA
+                      ? isCorrectPair
+                        ? "!border-brand-500"
+                        : "!border-red-500"
+                      : ""
+                  }`}
+                >
+                  <option value="">Wybierz...</option>
+                  {allRight.map((x: string) => (
+                    <option key={x} value={x} disabled={used.has(x)}>
+                      {x}
+                    </option>
+                  ))}
+                </select>
+                {isA && !isCorrectPair && correctAnswer && (
+                  <p className="text-xs mt-1 text-brand-600">
+                    Poprawna: {correctAnswer}
+                  </p>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
-      {feedback !== null && <FeedbackBlock feedback={feedback} />}
+      {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
@@ -2084,11 +2190,13 @@ function FeedbackBlock({ feedback }: { feedback: any }) {
         </div>
         <span className="xp-badge animate-xp-pop">+{feedback.xpEarned} XP</span>
       </div>
-      {feedback.explanation && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
-          <ChemText text={feedback.explanation} />
-        </p>
-      )}
+      {feedback.explanation &&
+        !feedback.explanation.startsWith("Typ dopasowania") &&
+        feedback.explanation.length > 10 && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
+            <ChemText text={feedback.explanation} />
+          </p>
+        )}
 
       {feedback.gamification?.leveledUp && (
         <div className="mt-3 p-3 rounded-xl bg-navy-50 dark:bg-navy-900/20 border border-navy-200 dark:border-navy-800/30 animate-scale-in">

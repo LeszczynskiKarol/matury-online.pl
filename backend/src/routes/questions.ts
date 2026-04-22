@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
+import { selectSmartQuestions } from "../services/smart-question-selector.js";
 
 export const questionRoutes: FastifyPluginAsync = async (app) => {
   // Get questions with filtering (supports single AND multi values)
@@ -86,7 +87,6 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
               await import("../services/listening-topic.js");
             const ltopic = await ensureListeningTopic(app.prisma, subjectId);
             if (!ltopic) {
-              // Subject doesn't support listening — return empty result
               return { questions: [], total: 0 };
             }
             const diff = diffArr.length > 0 ? diffArr[0] : 2;
@@ -113,25 +113,21 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
           }
         }
 
-        // Oversample + shuffle for randomness
-        const all = await app.prisma.question.findMany({
-          where,
-          select: {
-            id: true,
-            type: true,
-            difficulty: true,
-            points: true,
-            content: true,
-            source: true,
-            topic: { select: { id: true, name: true, slug: true } },
-            totalAttempts: true,
-            correctCount: true,
-          },
-          take: Math.min((limit || 10) * 3, 150),
-          orderBy: { totalAttempts: "asc" },
+        // ── SMART SELECTION (replaces dumb shuffle) ─────────────────────
+        const result = await selectSmartQuestions(app.prisma, {
+          userId: req.user?.userId || "anon",
+          subjectId,
+          topicId: topicIdArr.length === 1 ? topicIdArr[0] : undefined,
+          topicIds: topicIdArr.length > 1 ? topicIdArr : undefined,
+          types: typeArr.length > 0 ? typeArr : undefined,
+          difficulties: diffArr.length > 0 ? diffArr : undefined,
+          sources: sourceArr.length > 0 ? sourceArr : undefined,
+          exclude: excludeIds,
+          count: limit || 10,
+          context: "POOL",
         });
-        const shuffled = all.sort(() => Math.random() - 0.5);
-        return { questions: shuffled.slice(0, limit || 10), total };
+
+        return { questions: result.questions, total: result.total };
       }
 
       const questions = await app.prisma.question.findMany({
@@ -285,4 +281,41 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
     if (!q) return reply.code(404).send({ error: "Question not found" });
     return q;
   });
+
+  // Record a skip — so smart selector knows this question was shown
+  app.post(
+    "/:id/skip",
+    {
+      preHandler: [app.authenticate],
+    },
+    async (req) => {
+      const userId = req.user.userId;
+      const { id } = req.params as { id: string };
+      const { sessionId } = (req.body as any) || {};
+
+      const question = await app.prisma.question.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+      if (!question) return { ok: false };
+
+      // Record as Answer with __SKIPPED__ marker
+      // Smart selector reads Answer history → will deprioritize
+      await app.prisma.answer.create({
+        data: {
+          userId,
+          questionId: id,
+          ...(sessionId ? { sessionId } : {}),
+          response: "__SKIPPED__",
+          isCorrect: null,
+          score: 0,
+          pointsEarned: 0,
+          xpEarned: 0,
+          timeSpentMs: 0,
+        },
+      });
+
+      return { ok: true };
+    },
+  );
 };

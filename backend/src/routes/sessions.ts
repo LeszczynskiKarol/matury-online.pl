@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from "fastify";
 import { selectAdaptiveQuestions } from "../services/adaptive-difficulty.js";
 import { getDueCards } from "../services/spaced-repetition.js";
+import { selectSmartQuestions } from "../services/smart-question-selector.js";
 
 export const sessionRoutes: FastifyPluginAsync = async (app) => {
   // ── Create session ───────────────────────────────────────────────────────
@@ -116,44 +117,47 @@ export const sessionRoutes: FastifyPluginAsync = async (app) => {
         case "PRACTICE":
         case "MOCK_EXAM":
         default: {
-          // Random selection — difficulty as range, not exact
-          const diffFilter = difficulty
-            ? {
-                difficulty: {
-                  gte: Math.max(1, difficulty - 1),
-                  lte: Math.min(5, difficulty + 1),
-                },
-              }
-            : {};
-          const questions = await app.prisma.question.findMany({
-            where: {
-              subjectId,
-              isActive: true,
-              ...(topicId ? { topicId } : {}),
-              ...diffFilter,
-            },
-            select: { id: true },
-            take: questionCount * 3,
-          });
-          // Shuffle and take
-          const shuffled = questions.sort(() => Math.random() - 0.5);
-          questionIds = shuffled.slice(0, questionCount).map((q) => q.id);
+          // pusty — obsługiwane niżej w bloku "Fetch full questions"
           break;
         }
       }
 
-      // Fetch full questions
-      const questions = await app.prisma.question.findMany({
-        where: { id: { in: questionIds } },
-        select: {
-          id: true,
-          type: true,
-          difficulty: true,
-          points: true,
-          content: true,
-          topic: { select: { id: true, name: true, slug: true } },
-        },
-      });
+      // For PRACTICE/MOCK_EXAM, smart selector already returned full objects
+      // For other types we only have IDs — need to fetch
+      let questions: any[];
+
+      if (type === "PRACTICE" || type === "MOCK_EXAM") {
+        const result = await selectSmartQuestions(app.prisma, {
+          userId,
+          subjectId,
+          topicId,
+          count: questionCount,
+          ...(difficulty
+            ? {
+                difficulties: [
+                  Math.max(1, difficulty - 1),
+                  difficulty,
+                  Math.min(5, difficulty + 1),
+                ],
+              }
+            : {}),
+          context: "SESSION",
+        });
+        questions = result.questions;
+      } else {
+        questions = await app.prisma.question.findMany({
+          where: { id: { in: questionIds } },
+          select: {
+            id: true,
+            type: true,
+            difficulty: true,
+            points: true,
+            content: true,
+            source: true,
+            topic: { select: { id: true, name: true, slug: true } },
+          },
+        });
+      }
 
       return {
         sessionId: session.id,

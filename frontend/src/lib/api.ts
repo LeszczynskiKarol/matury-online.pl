@@ -212,6 +212,12 @@ export const questions = {
     return request<{ questions: any[]; total: number }>(`/questions?${qs}`);
   },
 
+  skip: (questionId: string, sessionId?: string) =>
+    request<{ ok: boolean }>(`/questions/${questionId}/skip`, {
+      method: "POST",
+      body: JSON.stringify({ sessionId }),
+    }),
+
   filterOptions: (subjectId: string) =>
     request<{
       topics: {
