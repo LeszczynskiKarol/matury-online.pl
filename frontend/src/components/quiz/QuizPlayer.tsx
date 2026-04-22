@@ -220,9 +220,28 @@ export function QuizPlayer({
         newFilters.sources.length > 0;
       if (hasAny) {
         loadFilteredQuestions(newFilters);
+      } else {
+        // Wszystkie filtry usunięte — załaduj świeżą pulę bez filtrów
+        setPoolTotal(undefined);
+        questionsApi
+          .pool({
+            subjectId,
+            exclude: [...answeredIds.current],
+            limit: 10,
+          })
+          .then((data) => {
+            data.questions.forEach((q: any) => answeredIds.current.add(q.id));
+            setQuestions(data.questions);
+            setCurrentIndex(0);
+            setResponse(null);
+            setFeedbackData(null);
+            setPhase("question");
+            startTime.current = Date.now();
+          })
+          .catch(console.error);
       }
     },
-    [loadFilteredQuestions],
+    [loadFilteredQuestions, subjectId],
   );
 
   const clearFilters = useCallback(() => {
@@ -721,13 +740,13 @@ function LiveFilterBar({
       </div>
 
       <div
-        className={`overflow-hidden transition-all duration-200 ease-out ${open ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}
+        className={`overflow-hidden transition-all duration-200 ease-out ${open ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"}`}
       >
         <div className="p-5 rounded-2xl bg-white/90 dark:bg-surface-800/90 backdrop-blur-lg border border-zinc-200 dark:border-zinc-700 shadow-lg shadow-zinc-200/50 dark:shadow-black/20 space-y-4">
           {/* Topics */}
           {filterOptions.topics.length > 1 && (
             <FRow label="Temat" color="indigo">
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
                 {filterOptions.topics.map((t) => (
                   <Pill
                     key={t.id}
