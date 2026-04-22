@@ -177,6 +177,7 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
             maxPoints: content.maxPoints,
             userAnswer: response as string,
             sampleAnswer: content.sampleAnswer,
+            userId,
           });
           isCorrect = result.isCorrect;
           score = result.score;

@@ -148,6 +148,7 @@ export async function gradeOpenQuestion(params: {
   maxPoints: number;
   userAnswer: string;
   sampleAnswer?: string;
+  userId?: string;
 }): Promise<OpenGradeResult> {
   const systemPrompt =
     SUBJECT_SYSTEM_PROMPTS[params.subjectSlug] ||
@@ -181,6 +182,7 @@ Oceń odpowiedź ucznia. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
     model: "claude-sonnet-4-6",
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],
+    userId: params.userId,
     metadata: { subjectSlug: params.subjectSlug, maxPoints: params.maxPoints },
   });
   const text = result.text;
@@ -208,6 +210,7 @@ export async function gradeEssay(params: {
   subjectSlug: string;
   prompt: string;
   content: string;
+  userId?: string;
 }): Promise<EssayGradeResult> {
   const systemPrompt =
     SUBJECT_SYSTEM_PROMPTS[params.subjectSlug] ||
@@ -248,6 +251,7 @@ Oceń wypracowanie. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
     model: "claude-sonnet-4-6",
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],
+    userId: params.userId,
     metadata: { subjectSlug: params.subjectSlug },
   });
   const text = result.text;

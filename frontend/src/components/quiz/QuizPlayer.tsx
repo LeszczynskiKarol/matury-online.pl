@@ -2185,6 +2185,102 @@ function WiazkaQuestion({
                   </button>
                 ))}
               </div>
+            )}{" "}
+            {sq.type === "FILL_IN" && sq.template && (
+              <div className="text-sm leading-8 p-3 rounded-xl bg-white dark:bg-surface-700">
+                {sq.template
+                  .split(/(\{\{[^}]+\}\})/g)
+                  .map((part: string, pi: number) => {
+                    const match = part.match(/\{\{(\w+)\}\}/);
+                    if (!match)
+                      return (
+                        <span key={pi}>
+                          <ChemText text={part} />
+                        </span>
+                      );
+                    const blankId = match[1];
+                    const blank = sq.blanks?.[blankId];
+                    const subAns = (ans[sq.id] as Record<string, string>) || {};
+                    const userVal = (subAns[blankId] || "")
+                      .trim()
+                      .toLowerCase();
+                    const isOk =
+                      isA &&
+                      blank?.acceptedAnswers?.some(
+                        (a: string) => a.toLowerCase().trim() === userVal,
+                      );
+                    return (
+                      <input
+                        key={pi}
+                        type="text"
+                        value={subAns[blankId] || ""}
+                        onChange={(e) => {
+                          if (disabled) return;
+                          set(sq.id, {
+                            ...subAns,
+                            [blankId]: e.target.value,
+                          });
+                        }}
+                        disabled={disabled}
+                        placeholder="..."
+                        className={`inline-block w-20 mx-1 px-2 py-1 text-sm text-center border-b-2 bg-transparent outline-none transition-all ${
+                          isA
+                            ? isOk
+                              ? "border-brand-500 text-brand-600"
+                              : "border-red-500 text-red-600"
+                            : "border-zinc-300 dark:border-zinc-600 focus:border-navy-500"
+                        }`}
+                      />
+                    );
+                  })}
+              </div>
+            )}
+            {/* FILL_IN bez template — zwykłe inputy */}
+            {sq.type === "FILL_IN" && !sq.template && sq.blanks && (
+              <div className="space-y-2">
+                {Object.entries(sq.blanks).map(
+                  ([blankId, blank]: [string, any], bi: number) => {
+                    const subAns = (ans[sq.id] as Record<string, string>) || {};
+                    const userVal = (subAns[blankId] || "")
+                      .trim()
+                      .toLowerCase();
+                    const isOk =
+                      isA &&
+                      blank?.acceptedAnswers?.some(
+                        (a: string) => a.toLowerCase().trim() === userVal,
+                      );
+                    return (
+                      <div key={blankId}>
+                        <input
+                          type="text"
+                          value={subAns[blankId] || ""}
+                          onChange={(e) => {
+                            if (disabled) return;
+                            set(sq.id, {
+                              ...subAns,
+                              [blankId]: e.target.value,
+                            });
+                          }}
+                          disabled={disabled}
+                          className={`input text-sm ${
+                            isA
+                              ? isOk
+                                ? "!border-brand-500"
+                                : "!border-red-500"
+                              : ""
+                          }`}
+                          placeholder={`Odpowiedź ${bi + 1}...`}
+                        />
+                        {isA && !isOk && blank?.acceptedAnswers?.[0] && (
+                          <p className="text-xs mt-1 text-brand-600">
+                            Poprawna: {blank.acceptedAnswers[0]}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  },
+                )}
+              </div>
             )}
           </div>
         ))}
