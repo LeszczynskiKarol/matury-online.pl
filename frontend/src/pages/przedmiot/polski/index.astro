@@ -1,0 +1,786 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { ThemeToggle } from '../../../components/ui/ThemeToggle';
+
+// ── DANE PRZEDMIOTU ──────────────────────────────────────────────────────
+const subject = {
+  slug: 'polski',
+  name: 'Język polski',
+  icon: '📚',
+  color: '#6366f1',
+  level: 'PP + PR',
+};
+
+// ── EPOKI I LEKTURY ──────────────────────────────────────────────────────
+const epochs = [
+  {
+    name: 'Starożytność', dateFrom: '4000 p.n.e.', dateTo: '476 n.e.', questions: 142,
+    works: [
+      { name: 'Antygona', author: 'Sofokles', q: 142 },
+      { name: 'Król Edyp', author: 'Sofokles', q: 175 },
+      { name: 'Odyseja', author: 'Homer', q: 4 },
+      { name: 'Iliada', author: 'Homer', q: 1 },
+    ],
+  },
+  {
+    name: 'Średniowiecze', dateFrom: '476', dateTo: '1450', questions: 165,
+    works: [
+      { name: 'Bogurodzica', author: null, q: 50 },
+      { name: 'Pieśń o Rolandzie', author: null, q: 50 },
+      { name: 'Boska komedia', author: 'Dante Alighieri', q: 60 },
+    ],
+  },
+  {
+    name: 'Renesans', dateFrom: '1450', dateTo: '1600', questions: 13,
+    works: [
+      { name: 'Treny', author: 'Jan Kochanowski', q: 62 },
+      { name: 'Makbet', author: 'William Szekspir', q: 92 },
+      { name: 'Odprawa posłów greckich', author: 'Jan Kochanowski', q: 2 },
+      { name: 'Kazania sejmowe', author: 'Piotr Skarga', q: 50 },
+    ],
+  },
+  {
+    name: 'Barok', dateFrom: '1600', dateTo: '1764', questions: 73,
+    works: [
+      { name: 'Pamiętniki', author: 'Jan Chryzostom Pasek', q: 60 },
+    ],
+  },
+  {
+    name: 'Oświecenie', dateFrom: '1764', dateTo: '1822', questions: 17,
+    works: [
+      { name: 'Świętoszek', author: 'Molier', q: 50 },
+      { name: 'Skąpiec', author: 'Molier', q: 50 },
+      { name: 'Powrót posła', author: 'Julian Ursyn Niemcewicz', q: 50 },
+    ],
+  },
+  {
+    name: 'Romantyzm', dateFrom: '1822', dateTo: '1863', questions: 21,
+    works: [
+      { name: 'Dziady cz. III', author: 'Adam Mickiewicz', q: 208 },
+      { name: 'Nie-Boska komedia', author: 'Zygmunt Krasiński', q: 51 },
+      { name: 'Pan Tadeusz', author: 'Adam Mickiewicz', q: 76 },
+      { name: 'Ballady i romanse', author: 'Adam Mickiewicz', q: 50 },
+      { name: 'Konrad Wallenrod', author: 'Adam Mickiewicz', q: 64 },
+      { name: 'Kordian', author: 'Juliusz Słowacki', q: 50 },
+    ],
+  },
+  {
+    name: 'Pozytywizm', dateFrom: '1863', dateTo: '1890', questions: 96,
+    works: [
+      { name: 'Lalka', author: 'Bolesław Prus', q: 134 },
+      { name: 'Nad Niemnem', author: 'Eliza Orzeszkowa', q: 50 },
+      { name: 'Zbrodnia i kara', author: 'Fiodor Dostojewski', q: 72 },
+      { name: 'Chłopi', author: 'Władysław Reymont', q: 51 },
+    ],
+  },
+  {
+    name: 'Młoda Polska', dateFrom: '1890', dateTo: '1918', questions: 14,
+    works: [
+      { name: 'Wesele', author: 'Stanisław Wyspiański', q: 65 },
+      { name: 'Ludzie bezdomni', author: 'Stefan Żeromski', q: 121 },
+    ],
+  },
+  {
+    name: 'Dwudziestolecie międzywojenne', dateFrom: '1918', dateTo: '1939', questions: 12,
+    works: [
+      { name: 'Ferdydurke', author: 'Witold Gombrowicz', q: 62 },
+      { name: 'Przedwiośnie', author: 'Stefan Żeromski', q: 48 },
+      { name: 'Sklepy cynamonowe', author: 'Bruno Schulz', q: 66 },
+    ],
+  },
+  {
+    name: 'Współczesność', dateFrom: '1945', dateTo: 'dziś', questions: 19,
+    works: [
+      { name: 'Tango', author: 'Sławomir Mrożek', q: 62 },
+      { name: 'Dżuma', author: 'Albert Camus', q: 99 },
+      { name: 'Medaliony', author: 'Zofia Nałkowska', q: 50 },
+      { name: 'Zdążyć przed Panem Bogiem', author: 'Hanna Krall', q: 60 },
+      { name: 'Inny świat', author: 'Gustaw Herling-Grudziński', q: 50 },
+    ],
+  },
+];
+
+const extraTopics = [
+  { name: 'Język w użyciu', questions: 399, desc: 'Gramatyka, składnia, frazeologia, słowotwórstwo, odmiana, norma językowa' },
+  { name: 'Teoria literatury', questions: 76, desc: 'Środki stylistyczne, gatunki, prądy, konwencje, narracja, kompozycja' },
+  { name: 'Pisanie (rozprawka, esej)', questions: 24, desc: 'Rozprawka problemowa, interpretacja, esej — oceniane przez AI wg CKE' },
+];
+
+const totalQuestions = epochs.reduce((s, e) => s + e.works.reduce((ws, w) => ws + w.q, 0), 0)
+  + extraTopics.reduce((s, t) => s + t.questions, 0);
+
+// ── TYPY ZADAŃ DLA POLSKIEGO ─────────────────────────────────────────────
+const questionTypes = [
+  { icon: '◉', name: 'Zamknięte A–D', desc: 'Pytania o treść lektury, epokę, prąd literacki' },
+  { icon: '☑', name: 'Wielokrotne', desc: 'Wskaż wszystkie poprawne odpowiedzi dotyczące tekstu' },
+  { icon: '⚖', name: 'Prawda / Fałsz', desc: 'Oceń prawdziwość stwierdzeń o lekturach i epokach' },
+  { icon: '✎', name: 'Otwarte', desc: 'Krótkie odpowiedzi o bohaterach, motywach, symbolice', badge: 'AI' },
+  { icon: '📄', name: 'Wypracowania', desc: 'Rozprawka problemowa i interpretacja — ocena AI wg 6 kryteriów CKE', badge: 'AI' },
+  { icon: '⎵', name: 'Uzupełnij luki', desc: 'Wpisz brakujące pojęcia z teorii literatury' },
+  { icon: '⇄', name: 'Dopasuj pary', desc: 'Połącz autora z dziełem, postać z lekturą' },
+  { icon: '↕', name: 'Ustaw kolejność', desc: 'Uporządkuj epoki, wydarzenia fabularne' },
+  { icon: '◫', name: 'Wiązka tekstu', desc: 'Fragment tekstu literackiego z pytaniami mieszanymi' },
+  { icon: '✗', name: 'Znajdź błąd', desc: 'Wskaż błąd w analizie lub interpretacji' },
+];
+
+// ── POPULARNE LEKTURY (TOP 8 po liczbie pytań) ───────────────────────────
+const topWorks = epochs.flatMap(e => e.works.map(w => ({ ...w, epoch: e.name })))
+  .sort((a, b) => b.q - a.q)
+  .slice(0, 8);
+
+// ── FAQ ──────────────────────────────────────────────────────────────────
+const faq = [
+  {
+    q: 'Jakie lektury obowiązkowe są na maturze z polskiego 2026?',
+    a: `Na maturze 2026 obowiązuje pełen kanon lektur z podstawy programowej CKE — od Antygony i Bogurodzicy, przez Dziady cz. III, Lalkę, Wesele, po Dżumę i Tango. Na platformie mamy pytania do każdej obowiązkowej lektury z podziałem na epoki. Możesz filtrować pytania po konkretnej lekturze, np. przećwiczyć tylko Dziady cz. III (208 pytań) lub Lalkę (134 pytania).`,
+  },
+  {
+    q: 'Jak AI ocenia wypracowanie z polskiego?',
+    a: 'AI (Claude Sonnet) ocenia według dokładnych 6 kryteriów CKE: realizacja tematu (0-2 pkt), teza i argumentacja (0-12 pkt), kompozycja (0-8 pkt), styl tekstu (0-4 pkt), język (0-6 pkt), zapis (0-4 pkt) — łącznie do 36 punktów. Dostajesz ocenę każdego kryterium z uzasadnieniem, listę mocnych stron i konkretne wskazówki do poprawy. Czas oceny: ok. 30 sekund.',
+  },
+  {
+    q: 'Czym różni się matura z polskiego PP od PR?',
+    a: 'Poziom podstawowy (PP) obejmuje test z rozumienia tekstu, naukę o języku i krótkie wypracowanie (rozprawkę 250+ słów). Poziom rozszerzony (PR) to dłuższe wypracowanie — rozprawka problemowa lub interpretacja porównawcza (min. 300 słów), oceniane według 6 kryteriów. Na platformie masz pytania do obu poziomów — możesz filtrować PP, PR lub mieszać.',
+  },
+  {
+    q: 'Ile pytań z języka polskiego jest na platformie?',
+    a: `Aktualnie mamy ${totalQuestions}+ pytań z polskiego, obejmujących wszystkie 10 epok literackich, ponad 30 lektur obowiązkowych, teorię literatury, naukę o języku i zadania pisemne. Pytania są autorskie, zgodne z podstawą programową CKE 2026. Baza jest regularnie rozbudowywana.`,
+  },
+  {
+    q: 'Jak przygotować się do rozprawki maturalnej z polskiego?',
+    a: 'Najlepsza metoda: (1) Przećwicz pytania zamknięte z lektur, żeby dobrze znać treść i bohaterów. (2) Pisz co najmniej jedną rozprawkę tygodniowo na platformie — AI oceni ją w 30 sekund i wskaże co poprawić. (3) Skup się na najsłabszym kryterium CKE (najczęściej kompozycja lub argumentacja). (4) Powtarzaj kluczowe cytaty przez Spaced Repetition.',
+  },
+  {
+    q: 'Czy platforma pomoże mi zdobyć 100% z matury z polskiego?',
+    a: 'System adaptacyjnej trudności utrzymuje Cię w strefie ~70% poprawnych odpowiedzi, co jest optymalną strefą nauki. Średni wzrost wyniku po 30 dniach regularnej pracy to +18 punktów procentowych. Wypracowanie oceniane przez AI pozwala systematycznie poprawiać każde kryterium CKE — bez czekania tygodnia na feedback od nauczyciela.',
+  },
+];
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faq.map(f => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
+
+// ── INNE PRZEDMIOTY (do cross-linkowania) ────────────────────────────────
+const otherSubjects = [
+  { slug: 'matematyka', name: 'Matematyka', icon: '📐' },
+  { slug: 'angielski', name: 'Angielski', icon: '🇬🇧' },
+  { slug: 'biologia', name: 'Biologia', icon: '🧬' },
+  { slug: 'chemia', name: 'Chemia', icon: '⚗️' },
+  { slug: 'fizyka', name: 'Fizyka', icon: '⚛️' },
+  { slug: 'historia', name: 'Historia', icon: '🏛️' },
+  { slug: 'geografia', name: 'Geografia', icon: '🌍' },
+  { slug: 'wos', name: 'WOS', icon: '⚖️' },
+];
+---
+
+<Base title="Matura z Polskiego 2026 — Lektury, Epoki, Wypracowania AI | Matury Online">
+
+<!-- NAV -->
+<nav class="fixed top-0 w-full z-50 border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-surface-950/80 backdrop-blur-xl">
+  <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+    <a href="/" class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
+        <span class="text-white font-display font-bold text-lg">M</span>
+      </div>
+      <span class="font-display font-bold text-xl hidden sm:block">Matury Online</span>
+    </a>
+    <div class="hidden md:flex items-center gap-7">
+      <a href="#epoki" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Epoki i lektury</a>
+      <a href="#typy-zadan" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Typy zadań</a>
+      <a href="#wypracowania" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Wypracowania AI</a>
+      <a href="#cennik" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Cennik</a>
+      <a href="#faq" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">FAQ</a>
+    </div>
+    <div class="flex items-center gap-3">
+      <ThemeToggle client:load />
+      <a href="/auth/login" class="btn-ghost text-sm py-2 px-4 hidden sm:inline-flex">Zaloguj się</a>
+      <a href="/auth/register" class="btn-primary text-sm py-2 px-5">Rozpocznij naukę</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- HERO                                                                    -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="relative pt-32 pb-16 md:pt-40 md:pb-20 overflow-hidden">
+  <div class="absolute inset-0 -z-10">
+    <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-500/10 dark:bg-indigo-500/5 rounded-full blur-[120px]"></div>
+    <div class="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 dark:bg-purple-500/5 rounded-full blur-[100px]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(99,102,241,0.08),transparent_60%)]"></div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-6 text-center">
+    <div class="animate-fade-in">
+      <a href="/" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-sm font-medium mb-6 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition">
+        ← Wszystkie przedmioty
+      </a>
+    </div>
+
+    <div class="animate-fade-in">
+      <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 text-sm font-semibold mb-8">
+        <span class="text-2xl">📚</span>
+        Język polski · PP + PR · {totalQuestions}+ pytań
+      </div>
+    </div>
+
+    <h1 class="font-display font-extrabold text-5xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tight mb-6 animate-slide-up">
+      Matura z polskiego<br/>
+      <span class="text-gradient">bez stresu</span>
+    </h1>
+
+    <p class="max-w-2xl mx-auto text-lg md:text-xl text-zinc-600 dark:text-zinc-400 mb-10 animate-slide-up" style="animation-delay: 100ms">
+      <strong class="text-zinc-900 dark:text-zinc-100">10 epok literackich</strong>, <strong class="text-zinc-900 dark:text-zinc-100">30+ lektur obowiązkowych</strong>, wypracowania oceniane przez AI według <strong class="text-zinc-900 dark:text-zinc-100">6 kryteriów CKE</strong> w 30 sekund. Teoria literatury, nauka o języku, rozprawka — wszystko w jednym miejscu.
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style="animation-delay: 200ms">
+      <a href="/auth/register" class="btn-primary text-base py-4 px-8">
+        Zacznij ćwiczyć polski — 49 zł/mies.
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="flex flex-wrap justify-center gap-8 md:gap-16 mt-16 animate-fade-in" style="animation-delay: 400ms">
+      <div class="text-center">
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">10</div>
+        <div class="text-sm text-zinc-500 mt-1">epok literackich</div>
+      </div>
+      <div class="text-center">
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">30+</div>
+        <div class="text-sm text-zinc-500 mt-1">lektur</div>
+      </div>
+      <div class="text-center">
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">{totalQuestions}+</div>
+        <div class="text-sm text-zinc-500 mt-1">pytań</div>
+      </div>
+      <div class="text-center">
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">36</div>
+        <div class="text-sm text-zinc-500 mt-1">pkt rozprawka</div>
+      </div>
+      <div class="text-center">
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">30s</div>
+        <div class="text-sm text-zinc-500 mt-1">ocena AI</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- COUNTDOWN                                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="py-12 bg-gradient-to-r from-indigo-500 to-purple-600">
+  <div class="max-w-5xl mx-auto px-6 text-center">
+    <p class="text-white/80 text-sm font-semibold uppercase tracking-widest mb-3">
+      ⏰ Matura z języka polskiego — poniedziałek, 4 maja 2026, godz. 9:00
+    </p>
+    <h2 class="font-display font-bold text-2xl md:text-3xl text-white mb-6">
+      Do matury z polskiego zostało:
+    </h2>
+    <div class="grid grid-cols-4 gap-3 md:gap-6 max-w-2xl mx-auto">
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6">
+        <div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-days>--</div>
+        <div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">dni</div>
+      </div>
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6">
+        <div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-hours>--</div>
+        <div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">godzin</div>
+      </div>
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6">
+        <div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-minutes>--</div>
+        <div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">minut</div>
+      </div>
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6">
+        <div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-seconds>--</div>
+        <div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">sekund</div>
+      </div>
+    </div>
+    <p class="text-white/80 text-sm mt-6">
+      Język polski to <strong class="text-white">pierwszy egzamin maturalny</strong>. Nie daj się zaskoczyć.
+    </p>
+    <a href="/auth/register" class="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-2xl bg-white text-indigo-600 font-display font-semibold text-sm hover:bg-white/90 transition-all">
+      Zacznij przygotowania do polskiego →
+    </a>
+  </div>
+</section>
+
+<script is:inline>
+  (function () {
+    var target = new Date('2026-05-04T09:00:00').getTime();
+    function tick() {
+      var diff = Math.max(0, target - Date.now());
+      var d = Math.floor(diff / 86400000);
+      var h = Math.floor((diff % 86400000) / 3600000);
+      var m = Math.floor((diff % 3600000) / 60000);
+      var s = Math.floor((diff % 60000) / 1000);
+      var el;
+      el = document.querySelector('[data-countdown-days]'); if (el) el.textContent = d;
+      el = document.querySelector('[data-countdown-hours]'); if (el) el.textContent = h;
+      el = document.querySelector('[data-countdown-minutes]'); if (el) el.textContent = m;
+      el = document.querySelector('[data-countdown-seconds]'); if (el) el.textContent = s;
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- POPULARNE LEKTURY (TOP 8)                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-semibold mb-4">
+        NAJPOPULARNIEJSZE
+      </div>
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Lektury z największą bazą pytań</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">
+        Wybierz lekturę i ćwicz dokładnie to, czego potrzebujesz. Każda lektura ma pytania zamknięte, otwarte i tematy na wypracowania.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {topWorks.map((w) => (
+        <div class="glass-card p-5 text-center group hover:border-indigo-500/30 transition-all">
+          <div class="text-3xl mb-2">📖</div>
+          <h3 class="font-display font-bold text-sm mb-1">{w.name}</h3>
+          {w.author && <p class="text-xs text-zinc-500 mb-1">{w.author}</p>}
+          <p class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{w.q} pytań</p>
+          <p class="text-[10px] text-zinc-400 mt-1">{w.epoch}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- EPOKI LITERACKIE                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section id="epoki" class="py-20">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">10 epok literackich — pełny kanon lektur</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">
+        Od Starożytności po Współczesność. Każda epoka z pytaniami do wszystkich lektur obowiązkowych — zamknięte, otwarte, wiązki tekstowe i wypracowania.
+      </p>
+    </div>
+
+    <div class="space-y-4">
+      {epochs.map((epoch) => (
+        <div class="glass-card p-6 hover:border-indigo-500/20 transition-all">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="font-display font-bold text-lg">{epoch.name}</h3>
+              <span class="text-xs text-zinc-500">{epoch.dateFrom} – {epoch.dateTo}</span>
+            </div>
+            <span class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{epoch.works.reduce((s, w) => s + w.q, 0)} pytań</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            {epoch.works.map((w) => (
+              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-surface-800 text-xs font-medium hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+                {w.name}
+                {w.author && <span class="text-zinc-400">({w.author})</span>}
+                <span class="text-indigo-500 font-semibold">{w.q}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <!-- Extra topics -->
+    <div class="mt-8 grid md:grid-cols-3 gap-4">
+      {extraTopics.map((t) => (
+        <div class="glass-card p-5 hover:border-indigo-500/20 transition-all">
+          <h3 class="font-display font-bold text-sm mb-1">{t.name}</h3>
+          <p class="text-xs text-zinc-500 mb-2">{t.desc}</p>
+          <span class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{t.questions} pytań</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TYPY ZADAŃ                                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section id="typy-zadan" class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Typy zadań maturalnych z polskiego</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">
+        Ćwiczysz dokładnie te formaty, które spotkasz na prawdziwym egzaminie — od zamkniętych pytań po pełną rozprawkę ocenianą przez AI.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      {questionTypes.map((t) => (
+        <div class="glass-card p-5 relative group hover:border-indigo-500/30 transition-all">
+          {t.badge && (
+            <span class="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400">
+              {t.badge}
+            </span>
+          )}
+          <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">{t.icon}</div>
+          <h3 class="font-display font-bold text-sm mb-1">{t.name}</h3>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">{t.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- AI GRADING DEMO — POLSKI                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section id="wypracowania" class="py-20">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-semibold mb-4">
+        🤖 OCENA AI
+      </div>
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">
+        Twoja rozprawka sprawdzona w 30 sekund — dokładnie jak egzaminator CKE
+      </h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">
+        AI ocenia według 6 kryteriów CKE — punkt po punkcie. Dostajesz ocenę do 36 punktów, mocne strony i konkretne wskazówki do poprawy. Bez czekania tygodnia na nauczyciela.
+      </p>
+    </div>
+
+    <div class="max-w-4xl mx-auto glass-card p-8">
+      <!-- Prompt -->
+      <div class="mb-6 pb-6 border-b border-zinc-200 dark:border-zinc-700">
+        <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Temat wypracowania · Polski PR · Rozprawka problemowa</div>
+        <p class="font-display text-lg font-semibold">Określ, jaką postawę wobec cierpienia prezentują bohaterowie literaccy. Odwołaj się do <em>Dżumy</em> Alberta Camusa i dwóch innych tekstów literackich.</p>
+      </div>
+
+      <!-- Ocena -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Ocena według 6 kryteriów CKE</div>
+          <div class="flex items-baseline gap-1">
+            <span class="font-display font-extrabold text-3xl text-indigo-500">30</span>
+            <span class="text-zinc-500 text-sm">/ 36 pkt</span>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-display font-semibold text-sm">Realizacja tematu</span>
+              <span class="text-sm"><strong class="text-indigo-600">2</strong><span class="text-zinc-400">/2</span></span>
+            </div>
+            <div class="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full" style="width: 100%"></div>
+            </div>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-2">Praca precyzyjnie odpowiada na problem — wyraźnie rozróżniasz trzy postawy wobec cierpienia.</p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-display font-semibold text-sm">Teza i argumentacja</span>
+              <span class="text-sm"><strong class="text-indigo-600">10</strong><span class="text-zinc-400">/12</span></span>
+            </div>
+            <div class="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full" style="width: 83%"></div>
+            </div>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-2">Silna teza i trzy argumenty. Brakuje głębszej analizy postaci Tarrou — rozwiń motywację bohatera.</p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-display font-semibold text-sm">Kompozycja</span>
+              <span class="text-sm"><strong class="text-indigo-600">6</strong><span class="text-zinc-400">/8</span></span>
+            </div>
+            <div class="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full" style="width: 75%"></div>
+            </div>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-2">Logiczna trójdzielna struktura. Zakończenie zbyt skrótowe — domknij klamrą nawiązującą do tezy.</p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-display font-semibold text-sm">Styl tekstu</span>
+              <span class="text-sm"><strong class="text-indigo-600">4</strong><span class="text-zinc-400">/4</span></span>
+            </div>
+            <div class="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full" style="width: 100%"></div>
+            </div>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-2">Styl konsekwentny, funkcjonalny, adekwatny do formy rozprawki.</p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-display font-semibold text-sm">Język</span>
+              <span class="text-sm"><strong class="text-indigo-600">5</strong><span class="text-zinc-400">/6</span></span>
+            </div>
+            <div class="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full" style="width: 83%"></div>
+            </div>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-2">Bogata składnia i zróżnicowane słownictwo. Jeden błąd fleksyjny w akapicie trzecim.</p>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-display font-semibold text-sm">Zapis</span>
+              <span class="text-sm"><strong class="text-indigo-600">3</strong><span class="text-zinc-400">/4</span></span>
+            </div>
+            <div class="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full" style="width: 75%"></div>
+            </div>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-2">Dwa błędy interpunkcyjne — sprawdź zasady przecinków przed spójnikami współrzędnymi.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mocne strony / do poprawy -->
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/30">
+          <div class="font-display font-semibold text-sm mb-2 flex items-center gap-2">✅ Mocne strony</div>
+          <ul class="text-xs text-zinc-600 dark:text-zinc-400 space-y-1">
+            <li>• Precyzyjny dobór cytatów z Dżumy</li>
+            <li>• Celna analiza postawy doktora Rieux</li>
+            <li>• Śmiały kontekst literacki (Stoff, Mickiewicz)</li>
+          </ul>
+        </div>
+        <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30">
+          <div class="font-display font-semibold text-sm mb-2 flex items-center gap-2">📝 Do poprawy</div>
+          <ul class="text-xs text-zinc-600 dark:text-zinc-400 space-y-1">
+            <li>• Pogłębić analizę psychologiczną Tarrou</li>
+            <li>• Domknąć kompozycję (zakończenie)</li>
+            <li>• Uważność przy przecinkach</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <p class="text-center text-sm text-zinc-500 mt-6">
+      Ocena rozprawki z polskiego: <strong>6 kryteriów CKE</strong>, łącznie do <strong>36 punktów</strong>. AI wskazuje dokładnie co poprawić.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- FUNKCJE KLUCZOWE DLA POLSKIEGO                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Wszystko, czego potrzebujesz do matury z polskiego</h2>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="glass-card p-8">
+        <div class="text-4xl mb-4">📄</div>
+        <h3 class="font-display font-bold text-lg mb-2">Wypracowania oceniane przez AI</h3>
+        <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">Rozprawka problemowa i interpretacja — AI ocenia 6 kryteriów CKE w 30 sekund. Pisz tyle rozprawek, ile chcesz, bez czekania na nauczyciela.</p>
+      </div>
+      <div class="glass-card p-8">
+        <div class="text-4xl mb-4">📚</div>
+        <h3 class="font-display font-bold text-lg mb-2">Filtruj po lekturze lub epoce</h3>
+        <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">Ćwicz tylko Dziady cz. III, tylko Lalkę, lub losuj z całego romantyzmu. Pełna kontrola nad tym, co powtarzasz.</p>
+      </div>
+      <div class="glass-card p-8">
+        <div class="text-4xl mb-4">🧠</div>
+        <h3 class="font-display font-bold text-lg mb-2">Spaced Repetition (SM-2)</h3>
+        <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">Cytaty, pojęcia z teorii literatury, fakty o lekturach — algorytm pilnuje, żebyś nie zapomniał tego, co już umiesz.</p>
+      </div>
+      <div class="glass-card p-8">
+        <div class="text-4xl mb-4">🎯</div>
+        <h3 class="font-display font-bold text-lg mb-2">Adaptacyjna trudność</h3>
+        <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">System Elo utrzymuje Cię w strefie ~70% poprawnych odpowiedzi — optymalny punkt nauki między nudą a frustracją.</p>
+      </div>
+      <div class="glass-card p-8">
+        <div class="text-4xl mb-4">◫</div>
+        <h3 class="font-display font-bold text-lg mb-2">Wiązki tekstowe</h3>
+        <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">Fragment tekstu literackiego + zestaw pytań różnych typów — dokładnie jak na prawdziwej maturze z polskiego.</p>
+      </div>
+      <div class="glass-card p-8">
+        <div class="text-4xl mb-4">📊</div>
+        <h3 class="font-display font-bold text-lg mb-2">Dashboard i statystyki</h3>
+        <p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">Heatmapa aktywności, celność per epoka, XP, streaki. Widzisz dokładnie, które lektury opanowałeś, a które wymagają pracy.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PRICING                                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section id="cennik" class="py-20">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Jedna cena — polski + 9 innych przedmiotów</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg">
+        Subskrypcja daje pełny dostęp do wszystkich 10 przedmiotów maturalnych. Nie płacisz osobno za polski.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <!-- Subskrypcja -->
+      <div class="glass-card p-8 ring-2 ring-indigo-500 relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-500 text-white text-xs font-bold px-4 py-1 rounded-full">
+          POLECANY
+        </div>
+        <h3 class="font-display font-bold text-lg mb-1">Subskrypcja miesięczna</h3>
+        <p class="text-sm text-zinc-500 mb-6">Wszystkie przedmioty, bez limitów</p>
+        <div class="flex items-baseline gap-1 mb-6">
+          <span class="font-display font-extrabold text-5xl">49</span>
+          <span class="text-zinc-500">zł/mies.</span>
+        </div>
+        <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+          <li class="flex items-start gap-2"><span class="text-indigo-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">Polski + 9 innych przedmiotów</strong></li>
+          <li class="flex items-start gap-2"><span class="text-indigo-500 mt-0.5">✓</span> AI ocena wypracowań (6 kryteriów CKE)</li>
+          <li class="flex items-start gap-2"><span class="text-indigo-500 mt-0.5">✓</span> {totalQuestions}+ pytań z polskiego</li>
+          <li class="flex items-start gap-2"><span class="text-indigo-500 mt-0.5">✓</span> Spaced Repetition + adaptacyjna trudność</li>
+          <li class="flex items-start gap-2"><span class="text-indigo-500 mt-0.5">✓</span> 600 kredytów AI co miesiąc</li>
+          <li class="flex items-start gap-2"><span class="text-indigo-500 mt-0.5">✓</span> Anulujesz kiedy chcesz</li>
+        </ul>
+        <a href="/auth/register?plan=subscription" class="btn-primary w-full">Rozpocznij subskrypcję</a>
+      </div>
+
+      <!-- Jednorazowa -->
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-lg mb-1">Dostęp jednorazowy</h3>
+        <p class="text-sm text-zinc-500 mb-6">30 dni pełnego dostępu, bez subskrypcji</p>
+        <div class="flex items-baseline gap-1 mb-6">
+          <span class="font-display font-extrabold text-5xl">59</span>
+          <span class="text-zinc-500">zł / 30 dni</span>
+        </div>
+        <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+          <li class="flex items-start gap-2"><span class="text-indigo-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">Identyczny dostęp</strong> jak subskrypcja</li>
+          <li class="flex items-start gap-2"><span class="text-indigo-500 mt-0.5">✓</span> Bez automatycznego odnowienia</li>
+          <li class="flex items-start gap-2"><span class="text-indigo-500 mt-0.5">✓</span> Idealny na ostatni miesiąc przed maturą</li>
+          <li class="flex items-start gap-2"><span class="text-indigo-500 mt-0.5">✓</span> BLIK, karta, Revolut Pay</li>
+        </ul>
+        <a href="/auth/register?plan=one_time" class="btn-outline w-full">Kup dostęp 59 zł</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- FAQ                                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section id="faq" class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-3xl mx-auto px-6">
+    <h2 class="font-display font-bold text-3xl md:text-4xl text-center mb-4">FAQ — Matura z polskiego 2026</h2>
+    <p class="text-center text-zinc-600 dark:text-zinc-400 mb-14">
+      Najczęstsze pytania o przygotowanie do matury z języka polskiego
+    </p>
+    <div class="space-y-3">
+      {faq.map((item) => (
+        <details class="glass-card group">
+          <summary class="flex items-center justify-between p-6 cursor-pointer font-display font-semibold select-none gap-4">
+            <span>{item.q}</span>
+            <svg class="w-5 h-5 text-zinc-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-6 pb-6 text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
+            {item.a}
+          </div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- INNE PRZEDMIOTY                                                         -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="py-20">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-10">
+      <h2 class="font-display font-bold text-2xl md:text-3xl mb-3">Zdajesz też inne przedmioty?</h2>
+      <p class="text-zinc-600 dark:text-zinc-400">Jedna subskrypcja — wszystkie przedmioty odblokowane</p>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {otherSubjects.map((s) => (
+        <a href={`/przedmiot/${s.slug}`} class="glass-card p-4 text-center group hover:border-indigo-500/30 transition-all block">
+          <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">{s.icon}</div>
+          <div class="font-display font-semibold text-sm">{s.name}</div>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- FINAL CTA                                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="py-20 relative overflow-hidden">
+  <div class="absolute inset-0 -z-10">
+    <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent"></div>
+  </div>
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <div class="text-5xl mb-6">📚</div>
+    <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">
+      Matura z polskiego 4 maja 2026 — nie odkładaj przygotowań
+    </h2>
+    <p class="text-zinc-600 dark:text-zinc-400 text-lg mb-8 max-w-2xl mx-auto">
+      Rozprawka to 70% wyniku na rozszerzeniu. Jedyna metoda na jej opanowanie to regularne pisanie z feedbackiem. AI daje Ci feedback w 30 sekund zamiast tygodnia.
+    </p>
+    <a href="/auth/register" class="btn-primary text-base py-4 px-8">
+      Rozpocznij naukę polskiego — 49 zł/mies.
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-zinc-200 dark:border-zinc-800 py-12 bg-white dark:bg-surface-950">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="grid md:grid-cols-4 gap-8 mb-8">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center">
+            <span class="text-white font-display font-bold text-sm">M</span>
+          </div>
+          <span class="font-display font-bold">Matury Online</span>
+        </div>
+        <p class="text-sm text-zinc-500 mb-4 max-w-sm">
+          Inteligentna platforma do nauki przed maturą z języka polskiego 2026. Lektury, epoki, rozprawki, teoria literatury — z oceną AI według kryteriów CKE.
+        </p>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-sm mb-4">Przedmioty</h4>
+        <ul class="space-y-2 text-sm text-zinc-500">
+          <li><span class="text-zinc-900 dark:text-zinc-100 font-medium">Język polski</span></li>
+          {otherSubjects.slice(0, 5).map((s) => (
+            <li><a href={`/przedmiot/${s.slug}`} class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">{s.name}</a></li>
+          ))}
+          <li><a href="/" class="text-brand-500 hover:text-brand-600 transition">Wszystkie przedmioty →</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-sm mb-4">Prawne</h4>
+        <ul class="space-y-2 text-sm text-zinc-500">
+          <li><a href="/terms-of-service" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Regulamin</a></li>
+          <li><a href="/privacy-policy" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polityka prywatności</a></li>
+          <li>
+            <button
+              type="button"
+              onclick="window.openConsentSettings && window.openConsentSettings()"
+              class="hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+            >
+              Cookies
+            </button>
+          </li>
+          <li><a href="/kontakt" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Kontakt</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-zinc-200 dark:border-zinc-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-sm text-zinc-500">© 2026 matury-online.pl · Realizacja: <a href="https://karol-leszczynski.pl" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">karol-leszczynski.pl</a></p>
+      <p class="text-xs text-zinc-400">Matura z polskiego 2026 · Lektury · Rozprawka · AI</p>
+    </div>
+  </div>
+</footer>
+
+<!-- JSON-LD -->
+<script type="application/ld+json" set:html={JSON.stringify(faqSchema)}></script>
+
+</Base>

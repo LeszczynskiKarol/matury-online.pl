@@ -160,7 +160,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           return reply
             .code(403)
             .send({ error: "Weryfikacja reCAPTCHA nie powiodła się." });
-      } else if (RECAPTCHA_SECRET) {
+      } else if (
+        RECAPTCHA_SECRET &&
+        req.headers["x-client"] !== "matury-mobile"
+      ) {
         return reply.code(400).send({ error: "Brak tokenu reCAPTCHA" });
       }
 
@@ -346,7 +349,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           return reply
             .code(403)
             .send({ error: "Weryfikacja reCAPTCHA nie powiodła się." });
-      } else if (RECAPTCHA_SECRET) {
+      } else if (
+        RECAPTCHA_SECRET &&
+        req.headers["x-client"] !== "matury-mobile"
+      ) {
         return reply.code(400).send({ error: "Brak tokenu reCAPTCHA" });
       }
 

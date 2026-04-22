@@ -107,7 +107,7 @@ export function DashboardHome() {
         />
       </div>
 
-      {/* Due reviews alert */}
+      {/* Due reviews alert 
       {dueReviews > 0 && (
         <div className="flex items-center gap-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30">
           <span className="text-2xl">🧠</span>
@@ -127,12 +127,14 @@ export function DashboardHome() {
             Powtarzaj
           </a>
         </div>
-      )}
+      )}*/}
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Subject progress */}
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="font-display font-bold text-lg">Twoje przedmioty</h2>
+          <h2 className="font-display font-bold text-lg">
+            Ostatnie przedmioty
+          </h2>
           {subjectProgress.length === 0 ? (
             <div className="glass-card p-8 text-center">
               {user.subscriptionStatus === "FREE" ||

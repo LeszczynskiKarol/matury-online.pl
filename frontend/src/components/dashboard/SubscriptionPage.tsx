@@ -569,7 +569,7 @@ export function SubscriptionPage() {
                 />
               </div>
               <p className="text-[10px] text-zinc-400 mt-1.5">
-                1 kredyt ≈ $0.01 · Słuchanie ~2 kr. · Ocena AI ~1 kr.
+                1 kredyt ≈ $0.01 · Słuchanie ~4 kr. · Ocena AI ~1-2 kr.
               </p>
             </div>
             <div className="text-4xl">

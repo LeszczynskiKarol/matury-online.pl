@@ -2,13 +2,6 @@
 // ListeningQuestion — React component for audio-based questions
 // frontend/src/components/quiz/ListeningQuestion.tsx
 // ============================================================================
-//
-// Features:
-// - Audio player with play count limit (matura: max 2 plays)
-// - Visual play counter
-// - Sub-questions: CLOSED, TRUE_FALSE, OPEN, FILL_IN
-// - Responsive, matches existing quiz design system
-// ============================================================================
 
 import { useState, useRef, useEffect, useCallback } from "react";
 
@@ -82,13 +75,11 @@ export function ListeningQuestion({
 
   return (
     <div>
-      {/* Context / instruction */}
       <p className="text-sm text-zinc-500 mb-3">{content.contextPL}</p>
       <h3 className="font-display font-semibold text-lg mb-5">
         {content.question}
       </h3>
 
-      {/* Audio Player */}
       <AudioPlayer
         src={content.audioUrl}
         maxPlays={content.maxPlays}
@@ -96,7 +87,6 @@ export function ListeningQuestion({
         disabled={disabled}
       />
 
-      {/* Sub-questions */}
       <div className="space-y-5 mt-6">
         {normalizedContent.subQuestions.map((sq: any, i: number) => (
           <div
@@ -111,49 +101,99 @@ export function ListeningQuestion({
               <span className="text-xs text-zinc-400">{sq.points} pkt</span>
             </div>
 
+            {/* ─── CLOSED (A/B/C/D) ─── */}
             {sq.type === "CLOSED" && sq.options && (
               <div className="space-y-2">
-                {sq.options.map((o) => {
-                  let c = "option-card w-full text-left text-sm";
-                  if (ans[sq.id] === o.id) c += " selected";
-                  if (isA && o.id === sq.correctAnswer) c += " correct";
-                  if (
-                    isA &&
-                    ans[sq.id] === o.id &&
-                    ans[sq.id] !== sq.correctAnswer
-                  )
-                    c += " wrong";
+                {sq.options.map((o: any) => {
+                  const userPicked = ans[sq.id] === o.id;
+                  const isCorrectOpt = o.id === sq.correctAnswer;
+
+                  let bg = "bg-white dark:bg-surface-700";
+                  let border = "border-transparent";
+                  let icon = null;
+
+                  if (isA) {
+                    if (isCorrectOpt) {
+                      bg = "bg-brand-50 dark:bg-brand-900/15";
+                      border = "border-brand-400 dark:border-brand-600";
+                      icon = (
+                        <span className="ml-auto text-brand-500 font-bold">
+                          ✓ Poprawna
+                        </span>
+                      );
+                    } else if (userPicked && !isCorrectOpt) {
+                      bg = "bg-red-50 dark:bg-red-900/15";
+                      border = "border-red-400 dark:border-red-600";
+                      icon = (
+                        <span className="ml-auto text-red-500 font-bold">
+                          ✗ Twoja odpowiedź
+                        </span>
+                      );
+                    }
+                  } else if (userPicked) {
+                    bg = "bg-navy-50 dark:bg-navy-900/20";
+                    border = "border-navy-400 dark:border-navy-600";
+                  }
+
                   return (
                     <button
                       key={o.id}
                       onClick={() => !disabled && set(sq.id, o.id)}
                       disabled={disabled}
-                      className={c}
+                      className={`w-full flex items-center gap-3 text-left text-sm p-3 rounded-xl border-2 transition-all ${bg} ${border}`}
                     >
-                      <span className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-surface-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      <span className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-surface-800 flex items-center justify-center text-xs font-bold flex-shrink-0">
                         {o.id}
                       </span>
-                      <span>{o.text}</span>
-                      {isA && o.id === sq.correctAnswer && (
-                        <span className="ml-auto text-brand-500">✓</span>
-                      )}
+                      <span className="flex-1">{o.text}</span>
+                      {icon}
                     </button>
                   );
                 })}
               </div>
             )}
 
+            {/* ─── TRUE / FALSE ─── */}
             {sq.type === "TRUE_FALSE" && sq.statements && (
               <div className="space-y-2">
                 {sq.statements.map((st: any, si: number) => {
                   const sa =
                     (ans[sq.id] as boolean[]) || sq.statements!.map(() => null);
+                  const userAnswer = sa[si];
+                  const correctAnswer = st.isTrue;
+                  const userRight = isA && userAnswer === correctAnswer;
+                  const userWrong =
+                    isA && userAnswer != null && userAnswer !== correctAnswer;
+
                   return (
                     <div
                       key={si}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-surface-700"
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                        isA
+                          ? userRight
+                            ? "bg-brand-50 dark:bg-brand-900/15 border-brand-400"
+                            : userWrong
+                              ? "bg-red-50 dark:bg-red-900/15 border-red-400"
+                              : "bg-white dark:bg-surface-700 border-transparent"
+                          : "bg-white dark:bg-surface-700 border-transparent"
+                      }`}
                     >
                       <p className="flex-1 text-xs">{st.text}</p>
+
+                      {/* Po feedbacku: badge z poprawną odpowiedzią */}
+                      {isA && (
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-lg whitespace-nowrap ${
+                            correctAnswer
+                              ? "bg-brand-500 text-white"
+                              : "bg-red-500 text-white"
+                          }`}
+                          title="Poprawna odpowiedź"
+                        >
+                          Poprawnie: {correctAnswer ? "TRUE" : "FALSE"}
+                        </span>
+                      )}
+
                       <div className="flex gap-1">
                         <button
                           onClick={() => {
@@ -162,7 +202,15 @@ export function ListeningQuestion({
                             set(sq.id, n);
                           }}
                           disabled={disabled}
-                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${sa[si] === true ? "bg-brand-500 text-white" : "bg-zinc-200 dark:bg-zinc-600"}`}
+                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+                            userAnswer === true
+                              ? isA
+                                ? correctAnswer
+                                  ? "bg-brand-500 text-white ring-2 ring-brand-300"
+                                  : "bg-red-500 text-white ring-2 ring-red-300"
+                                : "bg-brand-500 text-white"
+                              : "bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
+                          }`}
                         >
                           T
                         </button>
@@ -173,7 +221,15 @@ export function ListeningQuestion({
                             set(sq.id, n);
                           }}
                           disabled={disabled}
-                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${sa[si] === false ? "bg-red-500 text-white" : "bg-zinc-200 dark:bg-zinc-600"}`}
+                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+                            userAnswer === false
+                              ? isA
+                                ? !correctAnswer
+                                  ? "bg-brand-500 text-white ring-2 ring-brand-300"
+                                  : "bg-red-500 text-white ring-2 ring-red-300"
+                                : "bg-red-500 text-white"
+                              : "bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
+                          }`}
                         >
                           F
                         </button>
@@ -184,6 +240,7 @@ export function ListeningQuestion({
               </div>
             )}
 
+            {/* ─── OPEN ─── */}
             {sq.type === "OPEN" && (
               <textarea
                 value={ans[sq.id] || ""}
@@ -195,38 +252,62 @@ export function ListeningQuestion({
               />
             )}
 
+            {/* ─── FILL_IN ─── */}
             {sq.type === "FILL_IN" && (
-              <input
-                type="text"
-                value={ans[sq.id] || ""}
-                onChange={(e) => set(sq.id, e.target.value)}
-                disabled={disabled}
-                className={`input text-sm ${isA ? (sq.acceptedAnswers?.some((a) => a.toLowerCase().trim() === (ans[sq.id] || "").toLowerCase().trim()) ? "!border-brand-500" : "!border-red-500") : ""}`}
-                placeholder="Type your answer..."
-              />
+              <>
+                {(() => {
+                  const userVal = (ans[sq.id] || "").toLowerCase().trim();
+                  const isOk =
+                    isA &&
+                    sq.acceptedAnswers?.some(
+                      (a: string) => a.toLowerCase().trim() === userVal,
+                    );
+                  return (
+                    <>
+                      <input
+                        type="text"
+                        value={ans[sq.id] || ""}
+                        onChange={(e) => set(sq.id, e.target.value)}
+                        disabled={disabled}
+                        className={`input text-sm ${
+                          isA
+                            ? isOk
+                              ? "!border-brand-500 bg-brand-50 dark:bg-brand-900/15"
+                              : "!border-red-500 bg-red-50 dark:bg-red-900/15"
+                            : ""
+                        }`}
+                        placeholder="Type your answer..."
+                      />
+                      {isA && !isOk && sq.acceptedAnswers?.length > 0 && (
+                        <p className="text-xs mt-1.5 font-medium text-brand-600 dark:text-brand-400">
+                          ✓ Poprawna odpowiedź:{" "}
+                          <span className="font-bold">
+                            {sq.acceptedAnswers[0]}
+                          </span>
+                          {sq.acceptedAnswers.length > 1 && (
+                            <span className="text-zinc-500">
+                              {" "}
+                              (lub: {sq.acceptedAnswers.slice(1).join(", ")})
+                            </span>
+                          )}
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
+              </>
             )}
-
-            {/* Show correct answer after feedback */}
-            {isA &&
-              sq.type === "FILL_IN" &&
-              sq.acceptedAnswers &&
-              !sq.acceptedAnswers.some(
-                (a) =>
-                  a.toLowerCase().trim() ===
-                  (ans[sq.id] || "").toLowerCase().trim(),
-              ) && (
-                <p className="text-xs mt-1 text-brand-600">
-                  Correct: {sq.acceptedAnswers[0]}
-                </p>
-              )}
           </div>
         ))}
       </div>
 
-      {/* Feedback block (reuse from parent or inline) */}
       {isA && feedback?.explanation && (
         <div
-          className={`mt-6 p-4 rounded-2xl animate-slide-up ${feedback.isCorrect ? "bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30"}`}
+          className={`mt-6 p-4 rounded-2xl animate-slide-up ${
+            feedback.isCorrect
+              ? "bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30"
+              : "bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30"
+          }`}
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -251,7 +332,7 @@ export function ListeningQuestion({
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// AUDIO PLAYER — with play count limit, progress bar, waveform-style UI
+// AUDIO PLAYER (bez zmian)
 // ══════════════════════════════════════════════════════════════════════════
 
 function AudioPlayer({
@@ -345,7 +426,6 @@ function AudioPlayer({
       <audio ref={audioRef} src={src} preload="metadata" />
 
       <div className="flex items-center gap-4">
-        {/* Play button */}
         <button
           onClick={handlePlay}
           disabled={!canPlay || isPlaying}
@@ -373,9 +453,7 @@ function AudioPlayer({
           )}
         </button>
 
-        {/* Progress + info */}
         <div className="flex-1 min-w-0">
-          {/* Waveform-style progress bar */}
           <div className="relative h-10 flex items-center gap-[2px] mb-1.5">
             {Array.from({ length: 50 }).map((_, i) => {
               const height =
@@ -395,7 +473,6 @@ function AudioPlayer({
             })}
           </div>
 
-          {/* Time + plays */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-zinc-500 font-mono tabular-nums">
               {formatTime(currentTime)} / {formatTime(duration)}
@@ -421,7 +498,6 @@ function AudioPlayer({
         </div>
       </div>
 
-      {/* Warning when last play */}
       {playCount === maxPlays - 1 && !isPlaying && playCount > 0 && (
         <div className="mt-3 p-2 rounded-xl bg-amber-50 dark:bg-amber-900/10 text-center">
           <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
@@ -430,7 +506,6 @@ function AudioPlayer({
         </div>
       )}
 
-      {/* Exhausted */}
       {playCount >= maxPlays && !isPlaying && (
         <div className="mt-3 p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-center">
           <span className="text-xs text-zinc-500">

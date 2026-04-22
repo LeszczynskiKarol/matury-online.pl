@@ -139,7 +139,54 @@ export function QuizPlayer({
   // Create session on mount
   useEffect(() => {
     const init = async () => {
-      // Create session first
+      // ── Special case: LISTENING-only session goes through AI live-gen ────
+      const isListeningOnly =
+        questionTypes?.length === 1 && questionTypes[0] === "LISTENING";
+
+      if (isListeningOnly) {
+        // Użyj dedykowanej ścieżki AI — /listening/start
+        try {
+          const res = await fetch(
+            `${import.meta.env.PUBLIC_API_URL || "/api"}/listening/start`,
+            {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ subjectId, difficulty }),
+            },
+          );
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw Object.assign(new Error(err.error || "Start failed"), {
+              code: err.code,
+              remaining: err.remaining,
+            });
+          }
+          const data = await res.json();
+          if (data.error) throw new Error(data.error);
+
+          setSessionId(data.sessionId);
+          setQuestions([data.question]); // startujemy z jednym, dociągniemy /next
+          answeredIds.current.add(data.question.id);
+          setPhase("question");
+          startTime.current = Date.now();
+          return;
+        } catch (err: any) {
+          if (err.code === "AI_CREDITS_EXHAUSTED") {
+            alert("Wykorzystano pulę kredytów AI w tym miesiącu.");
+            return;
+          }
+          if (err.code === "PREMIUM_REQUIRED") {
+            alert("Dostęp do funkcji AI wymaga subskrypcji Premium.");
+            return;
+          }
+          console.error("Listening start error:", err);
+          alert("Błąd generowania słuchania. Spróbuj ponownie.");
+          return;
+        }
+      }
+
+      // ── Standardowa ścieżka (pozostaje bez zmian) ────────────────────────
       const data = await sessionsApi.create({
         subjectId,
         type: sessionType,
@@ -163,7 +210,6 @@ export function QuizPlayer({
         loadedQuestions = data.questions;
       }
 
-      // ← NOWE: zarejestruj załadowane pytania w refie
       loadedQuestions.forEach((q: any) => answeredIds.current.add(q.id));
       setQuestions(loadedQuestions);
       setPhase("question");
@@ -273,8 +319,11 @@ export function QuizPlayer({
     filters.difficulties.length > 0 ||
     filters.sources.length > 0;
   const currentQuestion = questions[currentIndex];
+  const isListeningOnly =
+    questionTypes?.length === 1 && questionTypes[0] === "LISTENING";
+  const totalForProgress = isListeningOnly ? questionCount : questions.length;
   const progress =
-    questions.length > 0 ? (currentIndex / questions.length) * 100 : 0;
+    totalForProgress > 0 ? (currentIndex / totalForProgress) * 100 : 0;
 
   // ── Actions ─────────────────────────────────────────────────────────
   const submitAnswer = useCallback(async () => {
@@ -309,9 +358,59 @@ export function QuizPlayer({
     }
   }, [currentQuestion, response, sessionId, submitting]);
 
-  const nextQuestion = useCallback(() => {
+  const nextQuestion = useCallback(async () => {
+    const isListeningOnly =
+      questionTypes?.length === 1 && questionTypes[0] === "LISTENING";
+
+    // ── LISTENING-only: generuj kolejne przez AI ────────────────────────
+    if (isListeningOnly) {
+      // Zakończ po osiągnięciu wybranego questionCount
+      if (results.length >= questionCount) {
+        fetch(`${import.meta.env.PUBLIC_API_URL || "/api"}/listening/end`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        }).catch(console.error);
+        setPhase("summary");
+        return;
+      }
+
+      // Pobierz kolejne nagranie (powinno być prefetched — zero wait)
+      setLoadingMore(true);
+      try {
+        const res = await fetch(
+          `${import.meta.env.PUBLIC_API_URL || "/api"}/listening/next`,
+          {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId, subjectId, difficulty }),
+          },
+        );
+        const data = await res.json();
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+        setQuestions((prev) => [...prev, data.question]);
+        answeredIds.current.add(data.question.id);
+        setCurrentIndex((i) => i + 1);
+        setResponse(null);
+        setFeedbackData(null);
+        setPhase("question");
+        startTime.current = Date.now();
+      } catch (err) {
+        console.error("Listening next error:", err);
+        alert("Błąd generowania kolejnego nagrania.");
+      } finally {
+        setLoadingMore(false);
+      }
+      return;
+    }
+
+    // ── Standardowa logika dla pozostałych typów pytań ──────────────────
     if (currentIndex + 1 >= questions.length) {
-      // Try loading more with current filters
       if (hasActiveFilters) {
         loadFilteredQuestions(filters);
         return;
@@ -332,6 +431,11 @@ export function QuizPlayer({
     hasActiveFilters,
     filters,
     loadFilteredQuestions,
+    questionTypes,
+    subjectId,
+    difficulty,
+    results.length,
+    questionCount,
   ]);
 
   const skipQuestion = useCallback(() => {
@@ -380,17 +484,45 @@ export function QuizPlayer({
   ]);
 
   const endSession = useCallback(() => {
-    sessionsApi.complete(sessionId).catch(console.error);
+    const isListeningOnly =
+      questionTypes?.length === 1 && questionTypes[0] === "LISTENING";
+
+    if (isListeningOnly) {
+      // Wyczyść in-memory prefetch cache w backendzie
+      fetch(`${import.meta.env.PUBLIC_API_URL || "/api"}/listening/end`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      }).catch(console.error);
+    } else {
+      sessionsApi.complete(sessionId).catch(console.error);
+    }
     setPhase("summary");
-  }, [sessionId]);
+  }, [sessionId, questionTypes]);
 
   // ── Loading ─────────────────────────────────────────────────────────
-  if (phase === "loading")
+  if (phase === "loading") {
+    const isListeningOnly =
+      questionTypes?.length === 1 && questionTypes[0] === "LISTENING";
+
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-3 border-brand-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="w-10 h-10 border-3 border-brand-500 border-t-transparent rounded-full animate-spin" />
+        {isListeningOnly && (
+          <>
+            <p className="font-display font-semibold text-sm">
+              🤖 AI generuje pierwsze nagranie...
+            </p>
+            <p className="text-xs text-zinc-500 max-w-sm text-center">
+              Claude pisze transkrypt, Google TTS syntezuje głos — zajmie ~8-12
+              sekund. Kolejne nagrania pobiorą się w tle (zero czekania).
+            </p>
+          </>
+        )}
       </div>
     );
+  }
 
   // ── Summary ─────────────────────────────────────────────────────────
   if (phase === "summary") {
@@ -461,7 +593,10 @@ export function QuizPlayer({
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-zinc-500">
-            Pytanie {currentIndex + 1} z {questions.length}
+            Pytanie {currentIndex + 1} z{" "}
+            {questionTypes?.length === 1 && questionTypes[0] === "LISTENING"
+              ? questionCount
+              : questions.length}
             {poolTotal !== undefined && (
               <span className="text-zinc-400 ml-1">(pula: {poolTotal})</span>
             )}
@@ -511,7 +646,7 @@ export function QuizPlayer({
           currentQuestion.type === "OPEN") && (
           <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold ml-1">
             🤖 Ocena AI{" "}
-            {currentQuestion.type === "LISTENING" ? "~2 kr." : "~1 kr."}
+            {currentQuestion.type === "LISTENING" ? "~4 kr." : "~1 kr."}
           </span>
         )}
       </div>
@@ -2119,15 +2254,42 @@ function WiazkaQuestion({
               <div className="space-y-2">
                 {sq.statements.map((st: any, si: number) => {
                   const sa =
-                    (ans[sq.id] as boolean[]) || sq.statements.map(() => null);
+                    (ans[sq.id] as boolean[]) || sq.statements!.map(() => null);
+                  const userAnswer = sa[si];
+                  const correctAnswer = st.isTrue;
+                  const userWasRight = isA && userAnswer === correctAnswer;
+                  const userWasWrong =
+                    isA && userAnswer !== null && userAnswer !== correctAnswer;
+
                   return (
                     <div
                       key={si}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-surface-700"
+                      className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                        isA
+                          ? userWasRight
+                            ? "bg-brand-50 dark:bg-brand-900/15 border border-brand-200 dark:border-brand-800/30"
+                            : userWasWrong
+                              ? "bg-red-50 dark:bg-red-900/15 border border-red-200 dark:border-red-800/30"
+                              : "bg-white dark:bg-surface-700"
+                          : "bg-white dark:bg-surface-700"
+                      }`}
                     >
-                      <p className="flex-1 text-xs">
-                        <ChemText text={st.text} />
-                      </p>
+                      <p className="flex-1 text-xs">{st.text}</p>
+
+                      {/* Po feedbacku: pokaż jasno co było poprawne */}
+                      {isA && (
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded-lg ${
+                            correctAnswer
+                              ? "bg-brand-500 text-white"
+                              : "bg-red-500 text-white"
+                          }`}
+                          title="Poprawna odpowiedź"
+                        >
+                          {correctAnswer ? "TRUE" : "FALSE"} ✓
+                        </span>
+                      )}
+
                       <div className="flex gap-1">
                         <button
                           onClick={() => {
@@ -2136,9 +2298,17 @@ function WiazkaQuestion({
                             set(sq.id, n);
                           }}
                           disabled={disabled}
-                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${sa[si] === true ? "bg-brand-500 text-white" : "bg-zinc-200 dark:bg-zinc-600"}`}
+                          className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+                            userAnswer === true
+                              ? isA
+                                ? correctAnswer
+                                  ? "bg-brand-500 text-white ring-2 ring-brand-300"
+                                  : "bg-red-500 text-white ring-2 ring-red-300"
+                                : "bg-brand-500 text-white"
+                              : "bg-zinc-200 dark:bg-zinc-600"
+                          }`}
                         >
-                          P
+                          T
                         </button>
                         <button
                           onClick={() => {
@@ -2147,7 +2317,15 @@ function WiazkaQuestion({
                             set(sq.id, n);
                           }}
                           disabled={disabled}
-                          className={`px-2 py-1 rounded-lg text-xs font-semibold ${sa[si] === false ? "bg-red-500 text-white" : "bg-zinc-200 dark:bg-zinc-600"}`}
+                          className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+                            userAnswer === false
+                              ? isA
+                                ? !correctAnswer
+                                  ? "bg-brand-500 text-white ring-2 ring-brand-300"
+                                  : "bg-red-500 text-white ring-2 ring-red-300"
+                                : "bg-red-500 text-white"
+                              : "bg-zinc-200 dark:bg-zinc-600"
+                          }`}
                         >
                           F
                         </button>
