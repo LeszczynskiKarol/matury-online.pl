@@ -60,6 +60,8 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
           user.subscriptionStatus === "CANCELLED" &&
           user.subscriptionEnd &&
           user.subscriptionEnd > now,
+        canCancel:
+          user.subscriptionStatus === "ACTIVE" && !!user.stripeSubscriptionId,
       };
     },
   );

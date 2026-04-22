@@ -1,0 +1,16 @@
+---
+import DashboardLayout from '../../layouts/Dashboard.astro';
+---
+
+<DashboardLayout title="Kontakt — Matury Online">
+  <div id="contact-root"></div>
+
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { ContactForm } from '../../components/dashboard/ContactForm';
+
+    const root = createRoot(document.getElementById('contact-root')!);
+    root.render(createElement(ContactForm));
+  </script>
+</DashboardLayout>

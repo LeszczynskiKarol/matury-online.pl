@@ -264,6 +264,7 @@ export const stripe = {
       subscriptionEnd: string | null;
       willExpire: string | null;
       canResume: boolean;
+      canCancel: boolean;
     }>("/stripe/status"),
 
   cancel: () =>

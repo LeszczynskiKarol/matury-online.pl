@@ -21,6 +21,7 @@ import { reviewRoutes } from "./routes/review.js";
 import { gamificationRoutes } from "./routes/gamification.js";
 import { stripeRoutes } from "./routes/stripe.js";
 import { adminRoutes } from "./routes/admin.js";
+import { contactRoutes } from "./routes/contact.js";
 import { adminListeningRoutes } from "./routes/admin-listening.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { adminClaudeRoutes } from "./routes/admin-claude.js";
@@ -95,6 +96,7 @@ await app.register(adminRoutes, { prefix: "/api/admin" });
 await app.register(adminListeningRoutes, { prefix: "/api/admin" });
 await app.register(adminClaudeRoutes, { prefix: "/api/admin" });
 await app.register(listeningRoutes, { prefix: "/api/listening" });
+await app.register(contactRoutes, { prefix: "/api/contact" });
 
 // ── Health ───────────────────────────────────────────────────────────────────
 
