@@ -504,6 +504,23 @@ export function QuizPlayer({
           className="glass-card p-8 mb-6 animate-slide-up"
           key={currentQuestion.id}
         >
+          {/* 📚 Lektura / epoka badge */}
+          {(currentQuestion.content.work ||
+            currentQuestion.content.epochLabel) && (
+            <div className="flex flex-wrap items-center gap-2 mb-4 pb-3 border-b border-zinc-200 dark:border-zinc-700">
+              {currentQuestion.content.work && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/30">
+                  📚 {currentQuestion.content.work}
+                </span>
+              )}
+              {currentQuestion.content.epochLabel && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/30">
+                  {currentQuestion.content.epochLabel}
+                </span>
+              )}
+            </div>
+          )}
+
           <QuestionRenderer
             question={currentQuestion}
             response={response}
@@ -1150,9 +1167,35 @@ function ClosedQuestion({
   const isA = feedback !== null;
   return (
     <div>
-      <h3 className="font-display font-semibold text-lg mb-6">
+      <h3 className="font-display font-semibold text-lg mb-4">
         <ChemText text={content.question} />
       </h3>
+
+      {/* Kontekst / tekst źródłowy (z migracji maturapolski) */}
+      {content.context && (
+        <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800 border border-zinc-200 dark:border-zinc-700 mb-6">
+          <p className="text-sm italic whitespace-pre-wrap">
+            <ChemText text={content.context} />
+          </p>
+        </div>
+      )}
+
+      {/* Autor / dzieło */}
+      {(content.author || content.work) && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {content.author && (
+            <span className="text-xs px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-medium">
+              ✍️ {content.author}
+            </span>
+          )}
+          {content.work && (
+            <span className="text-xs px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-medium">
+              📚 {content.work}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="space-y-3">
         {content.options.map((o: any) => {
           let c = "option-card";
@@ -1352,11 +1395,55 @@ function OpenQuestion({
       <h3 className="font-display font-semibold text-lg mb-2">
         <ChemText text={content.question} />
       </h3>
+
       {content.rubric && (
         <p className="text-xs text-zinc-500 mb-4">
           Kryteria: <ChemText text={content.rubric} />
         </p>
       )}
+
+      {/* Kontekst (zdanie/fragment do analizy) */}
+      {content.context && (
+        <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800 border border-zinc-200 dark:border-zinc-700 mb-4">
+          <p className="text-sm italic whitespace-pre-wrap">
+            <ChemText text={content.context} />
+          </p>
+        </div>
+      )}
+
+      {/* Wymagania (notatka syntetyzująca) */}
+      {content.requirements && content.requirements.length > 0 && (
+        <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/30 mb-4">
+          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1.5">
+            ✅ Wymagania:
+          </p>
+          <ul className="space-y-1">
+            {content.requirements.map((r: string, i: number) => (
+              <li
+                key={i}
+                className="text-xs text-emerald-600 dark:text-emerald-400"
+              >
+                • {r}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Wyrazy do użycia */}
+      {content.words && content.words.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {content.words.map((w: string, i: number) => (
+            <span
+              key={i}
+              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/30"
+            >
+              {w}
+            </span>
+          ))}
+        </div>
+      )}
+
       <textarea
         value={typeof response === "string" ? response : ""}
         onChange={(e) => onChange(e.target.value)}
