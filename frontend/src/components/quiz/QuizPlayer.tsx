@@ -50,6 +50,16 @@ function getCorrectAnswerLocal(type: string, content: any): any {
         type: sq.type,
         correctAnswer: sq.correctAnswer || sq.acceptedAnswers?.[0],
       }));
+    case "OPEN":
+      return content.sampleAnswer || content.rubric || null;
+    case "ESSAY":
+      return (
+        content.sampleAnswer ||
+        content.criteria
+          ?.map((c: any) => `${c.name} (max ${c.maxPoints} pkt)`)
+          .join(", ") ||
+        null
+      );
     default:
       return null;
   }
@@ -1629,8 +1639,10 @@ function MultiSelectQuestion({
           const isCorrectOption = correctSet.has(o.id);
           let c = "option-card";
           if (isSelected) c += " selected";
-          if (isA && isCorrectOption) c += " correct";
-          if (isA && isSelected && !isCorrectOption) c += " wrong";
+          if (isA && (isCorrectOption || (feedback?.isCorrect && isSelected)))
+            c += " correct";
+          if (isA && isSelected && !isCorrectOption && !feedback?.isCorrect)
+            c += " wrong";
           return (
             <button
               key={o.id}
@@ -1894,6 +1906,7 @@ function OpenQuestion({
           </p>
         </div>
       )}
+      {isA && !feedback?.aiGrading && <FeedbackBlock feedback={feedback} />}
     </div>
   );
 }
@@ -2692,10 +2705,23 @@ function FeedbackBlock({ feedback }: { feedback: any }) {
           </span>
         </div>
         {feedback.correctAnswer && (
-          <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
+          <div className="text-sm text-zinc-700 dark:text-zinc-300 font-medium whitespace-pre-wrap">
             {typeof feedback.correctAnswer === "string"
               ? feedback.correctAnswer
-              : JSON.stringify(feedback.correctAnswer, null, 2)}
+              : Array.isArray(feedback.correctAnswer)
+                ? feedback.correctAnswer.map((a: any, i: number) => (
+                    <div key={i} className="mb-1">
+                      {typeof a === "object"
+                        ? JSON.stringify(a)
+                        : `${i + 1}. ${a}`}
+                    </div>
+                  ))
+                : JSON.stringify(feedback.correctAnswer, null, 2)}
+          </div>
+        )}
+        {!feedback.correctAnswer && (
+          <p className="text-sm text-zinc-500 italic">
+            Brak wzorcowej odpowiedzi dla tego pytania.
           </p>
         )}
         {feedback.explanation && feedback.explanation.length > 10 && (
