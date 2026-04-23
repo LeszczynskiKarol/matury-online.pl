@@ -388,25 +388,8 @@ export function QuizPlayer({
   const clearFilters = useCallback(() => {
     setFilters(EMPTY_FILTERS);
     setPoolTotal(undefined);
-    // Reload original unfiltered set
-    sessionsApi
-      .create({
-        subjectId,
-        type: sessionType,
-        topicId,
-        questionCount,
-        difficulty,
-      })
-      .then((data) => {
-        setQuestions(data.questions);
-        setCurrentIndex(0);
-        setResponse(null);
-        setFeedbackData(null);
-        setPhase("question");
-        startTime.current = Date.now();
-      })
-      .catch(console.error);
-  }, [subjectId, sessionType, topicId, questionCount, difficulty]);
+    handleFiltersChange(EMPTY_FILTERS);
+  }, [handleFiltersChange]);
 
   const hasActiveFilters =
     filters.topicIds.length > 0 ||
@@ -1960,7 +1943,8 @@ function MatchingQuestion({
           const used = usedFor(pr.left);
           const userAnswer = p[pr.left] || "";
           const correctAnswer = correctMap.get(pr.left);
-          const isCorrectPair = userAnswer === correctAnswer;
+          const isCorrectPair =
+            feedback?.isCorrect || userAnswer === correctAnswer;
           return (
             <div key={pr.left} className="flex items-center gap-4">
               <span className="flex-1 text-sm font-medium p-3 rounded-xl bg-zinc-50 dark:bg-surface-800">
