@@ -88,6 +88,7 @@ export async function initListeningSession(
     }
 
     const question = await fetchQuestion(prisma, firstId);
+    if (!question) throw new Error("Question not found in DB");
     return { questionId: firstId, content: question.content };
   }
 
