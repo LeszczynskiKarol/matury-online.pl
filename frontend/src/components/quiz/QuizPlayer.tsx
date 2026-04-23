@@ -2696,6 +2696,34 @@ function WiazkaQuestion({
 
 function FeedbackBlock({ feedback }: { feedback: any }) {
   if (!feedback) return null;
+
+  // "Pokaż odpowiedź" — neutralny styl, bez oceny
+  if (feedback.revealed) {
+    return (
+      <div className="mt-6 p-4 rounded-2xl animate-slide-up bg-sky-50 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-800/30">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-lg">💡</span>
+          <span className="font-display font-semibold text-sm">
+            Poprawna odpowiedź
+          </span>
+        </div>
+        {feedback.correctAnswer && (
+          <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
+            {typeof feedback.correctAnswer === "string"
+              ? feedback.correctAnswer
+              : JSON.stringify(feedback.correctAnswer, null, 2)}
+          </p>
+        )}
+        {feedback.explanation && feedback.explanation.length > 10 && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
+            <ChemText text={feedback.explanation} />
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // Normalny feedback po sprawdzeniu
   return (
     <div
       className={`mt-6 p-4 rounded-2xl animate-slide-up ${feedback.isCorrect ? "bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30"}`}
@@ -2707,7 +2735,11 @@ function FeedbackBlock({ feedback }: { feedback: any }) {
             {feedback.isCorrect ? "Poprawnie!" : "Niepoprawnie"}
           </span>
         </div>
-        <span className="xp-badge animate-xp-pop">+{feedback.xpEarned} XP</span>
+        {feedback.xpEarned > 0 && feedback.isCorrect && (
+          <span className="xp-badge animate-xp-pop">
+            +{feedback.xpEarned} XP
+          </span>
+        )}
       </div>
       {feedback.explanation &&
         !feedback.explanation.startsWith("Typ dopasowania") &&
@@ -2716,7 +2748,6 @@ function FeedbackBlock({ feedback }: { feedback: any }) {
             <ChemText text={feedback.explanation} />
           </p>
         )}
-
       {feedback.gamification?.leveledUp && (
         <div className="mt-3 p-3 rounded-xl bg-navy-50 dark:bg-navy-900/20 border border-navy-200 dark:border-navy-800/30 animate-scale-in">
           <span className="font-display font-bold text-sm">
