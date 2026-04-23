@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { admin } from "../../lib/api";
 import { ListeningLab } from "./ListeningLab";
 import { ClaudeMonitor } from "./ClaudeMonitor";
+import { AdminQuestionLog } from "./AdminQuestionLog";
 
 type Tab =
   | "dashboard"
@@ -9,17 +10,19 @@ type Tab =
   | "users"
   | "subjects"
   | "listening"
+  | "question-log"
   | "claude";
 
 export function AdminPanel() {
   const [tab, setTab] = useState<Tab>("dashboard");
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "dashboard", label: "Dashboard", icon: "📊" },
+    { id: "dashboard", label: "", icon: "📊" },
     { id: "questions", label: "Pytania", icon: "❓" },
-    { id: "users", label: "Użytkownicy", icon: "👥" },
+    { id: "users", label: "Userzy", icon: "👥" },
     { id: "subjects", label: "Przedmioty", icon: "📚" },
     { id: "claude", label: "Claude API", icon: "🤖" },
+    { id: "question-log", label: "Log pytań", icon: "📜" },
     { id: "listening", label: "Listening Lab", icon: "🎧" },
   ];
 
@@ -49,6 +52,8 @@ export function AdminPanel() {
       {tab === "users" && <AdminUsers />}
       {tab === "subjects" && <AdminSubjects />}
       {tab === "claude" && <ClaudeMonitor />}
+      {tab === "question-log" && <AdminQuestionLog />}
+
       {tab === "listening" && <ListeningLab />}
     </div>
   );

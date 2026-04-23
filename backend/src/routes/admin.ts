@@ -414,4 +414,73 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     }
     return { seeded: c };
   });
+  app.get(
+    "/question-log",
+    {
+      preHandler: [app.authenticate, app.requireAdmin],
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            userId: { type: "string" },
+            subjectId: { type: "string" },
+            limit: { type: "number", default: 100 },
+            before: { type: "string" }, // ISO date cursor for "load more"
+          },
+        },
+      },
+    },
+    async (req) => {
+      const { userId, subjectId, limit = 100, before } = req.query as any;
+
+      const where: any = {};
+      if (userId) where.userId = userId;
+      if (subjectId) where.question = { subjectId };
+      if (before) where.createdAt = { lt: new Date(before) };
+
+      const answers = await app.prisma.answer.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        select: {
+          id: true,
+          questionId: true,
+          sessionId: true,
+          isCorrect: true,
+          score: true,
+          xpEarned: true,
+          timeSpentMs: true,
+          response: true,
+          createdAt: true,
+          user: {
+            select: { id: true, name: true, email: true, role: true },
+          },
+          session: {
+            select: {
+              id: true,
+              type: true,
+              subjectId: true,
+              startedAt: true,
+              subject: { select: { name: true, icon: true, slug: true } },
+            },
+          },
+          question: {
+            select: {
+              id: true,
+              type: true,
+              difficulty: true,
+              points: true,
+              source: true,
+              content: true,
+              topic: { select: { id: true, name: true, slug: true } },
+            },
+          },
+        },
+      });
+
+      const hasMore = answers.length === limit;
+
+      return { answers, hasMore };
+    },
+  );
 };

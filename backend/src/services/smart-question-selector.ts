@@ -1,6 +1,13 @@
 // ============================================================================
 // Smart Question Selector — Scoring-based selection with diversity guarantees
-// Adapted from maturapolski's intelligent selection algorithm
+// v2 — fixes after question-log analysis (April 2026)
+//
+// CHANGELOG v2:
+// 1. Hard-exclude questions answered/skipped < 1h ago (was: soft penalty only)
+// 2. Skip-rate per type — deprioritize types user consistently skips
+// 3. Quadratic topic penalty — prevents "Język w użyciu" flooding
+// 4. OPEN questions capped at 2 per session
+// 5. Stronger recency penalty curve for < 1h
 // ============================================================================
 
 import { PrismaClient } from "@prisma/client";
@@ -26,9 +33,9 @@ interface SelectionParams {
   types?: string[];
   difficulties?: number[];
   sources?: string[];
-  exclude?: string[]; // IDs to hard-exclude (already loaded in frontend)
+  exclude?: string[];
   count: number;
-  context?: "SESSION" | "POOL"; // SESSION = initial load, POOL = live filter / skip refill
+  context?: "SESSION" | "POOL";
 }
 
 interface ScoredQuestion {
@@ -44,10 +51,14 @@ const QUESTION_SELECT = {
   topicId: true,
   content: true,
   source: true,
-  topic: { select: { id: true, name: true, slug: true, parentId: true } }, // ← dodaj parentId
+  topic: { select: { id: true, name: true, slug: true, parentId: true } },
   totalAttempts: true,
   correctCount: true,
 } as const;
+
+// ── Tuning constants ───────────────────────────────────────────────────────
+const HARD_EXCLUDE_MS = 60 * 60 * 1000; // 1 hour — zero chance of repeat
+const HISTORY_WINDOW = 300; // answers to load (was 200)
 
 // ────────────────────────────────────────────────────────────────────────────
 // MAIN ENTRY POINT
@@ -79,17 +90,16 @@ export async function selectSmartQuestions(
   if (sources?.length) where.source = { in: sources };
   if (exclude.length > 0) where.id = { notIn: exclude };
 
-  // Total matching (before user-history filtering)
   const total = await prisma.question.count({ where });
 
-  // ── 2. Load user history (last 200 answers for this subject) ─────────
+  // ── 2. Load user history ─────────────────────────────────────────────
   const recentAnswers = await prisma.answer.findMany({
     where: {
       userId,
       question: { subjectId },
     },
     orderBy: { createdAt: "desc" },
-    take: 200,
+    take: HISTORY_WINDOW,
     select: {
       questionId: true,
       createdAt: true,
@@ -100,7 +110,7 @@ export async function selectSmartQuestions(
 
   const answeredIds = new Set(recentAnswers.map((a) => a.questionId));
 
-  // Map: questionId → { lastAnswered, wasCorrect, answerCount }
+  // Map: questionId → history entry
   const historyMap = new Map<
     string,
     {
@@ -124,30 +134,36 @@ export async function selectSmartQuestions(
     }
   }
 
-  // ── 3. Load candidates — prefer unanswered, backfill with answered ───
-  // First: unanswered questions
+  // ── 2b. HARD-EXCLUDE: pytania z ostatniej godziny ────────────────────
+  const hardExcludeCutoff = Date.now() - HARD_EXCLUDE_MS;
+  const recentHardExclude: string[] = [];
+  for (const ans of recentAnswers) {
+    if (ans.createdAt.getTime() > hardExcludeCutoff) {
+      recentHardExclude.push(ans.questionId);
+    }
+  }
+  const fullExclude = [...new Set([...exclude, ...recentHardExclude])];
+
+  // ── 3. Load candidates ───────────────────────────────────────────────
+  // Fresh (never answered)
   const freshWhere = {
     ...where,
-    ...(answeredIds.size > 0
-      ? {
-          id: {
-            notIn: [...(exclude || []), ...answeredIds],
-          },
-        }
-      : {}),
+    id: {
+      notIn: [...fullExclude, ...answeredIds],
+    },
   };
 
   let candidates = await prisma.question.findMany({
     where: freshWhere,
     select: QUESTION_SELECT,
-    take: Math.min(count * 5, 200), // oversample
+    take: Math.min(count * 5, 200),
     orderBy: { totalAttempts: "asc" },
   });
 
-  // If not enough fresh questions, backfill with already-answered ones
+  // Backfill with answered (but NOT hard-excluded)
   if (candidates.length < count) {
     const freshIds = new Set(candidates.map((q) => q.id));
-    const backfillExclude = [...exclude, ...Array.from(freshIds)];
+    const backfillExclude = [...fullExclude, ...Array.from(freshIds)];
 
     const backfill = await prisma.question.findMany({
       where: {
@@ -168,12 +184,15 @@ export async function selectSmartQuestions(
     return { questions: [], total };
   }
 
+  // ── 3b. Compute skip-rate per question type ──────────────────────────
+  const skipRateByType = computeSkipRates(recentAnswers, candidates);
+
   // ── 4. Score each candidate ──────────────────────────────────────────
   const scored = candidates.map((q) =>
-    scoreQuestion(q, historyMap, answeredIds),
+    scoreQuestion(q, historyMap, answeredIds, skipRateByType),
   );
 
-  // ── 5. Diversity-aware selection (round-robin + scoring) ─────────────
+  // ── 5. Diversity-aware selection ─────────────────────────────────────
   const selected = diverseSelect(scored, count);
 
   return {
@@ -183,7 +202,46 @@ export async function selectSmartQuestions(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// SCORING — assigns a numeric score to each candidate
+// SKIP-RATE COMPUTATION — behavioural signal per question type
+// ────────────────────────────────────────────────────────────────────────────
+
+function computeSkipRates(
+  recentAnswers: {
+    questionId: string;
+    isCorrect: boolean | null;
+    score: number | null;
+  }[],
+  candidates: CandidateQuestion[],
+): Map<string, number> {
+  // Build questionId → type map from candidates
+  const typeMap = new Map<string, string>();
+  for (const c of candidates) typeMap.set(c.id, c.type);
+
+  const typeStats = new Map<string, { total: number; skips: number }>();
+
+  for (const ans of recentAnswers) {
+    const qType = typeMap.get(ans.questionId);
+    if (!qType) continue; // question not in current candidate pool, skip
+    const s = typeStats.get(qType) || { total: 0, skips: 0 };
+    s.total++;
+    if (ans.isCorrect === null && (ans.score === 0 || ans.score === null)) {
+      s.skips++;
+    }
+    typeStats.set(qType, s);
+  }
+
+  const result = new Map<string, number>();
+  for (const [type, stats] of typeStats) {
+    if (stats.total >= 3) {
+      // minimum 3 attempts to form a pattern
+      result.set(type, stats.skips / stats.total);
+    }
+  }
+  return result;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// SCORING
 // ────────────────────────────────────────────────────────────────────────────
 
 function scoreQuestion(
@@ -198,59 +256,80 @@ function scoreQuestion(
     }
   >,
   answeredIds: Set<string>,
+  skipRateByType: Map<string, number>,
 ): ScoredQuestion {
   let score = 1000;
 
-  // ── Freshness bonus (never answered = huge bonus) ────────────────────
+  // ── Freshness bonus ──────────────────────────────────────────────────
   if (!answeredIds.has(q.id)) {
     score += 500;
   } else {
     const history = historyMap.get(q.id);
     if (history) {
-      const daysSince =
-        (Date.now() - history.lastAnswered.getTime()) / 86_400_000;
+      const hoursSince =
+        (Date.now() - history.lastAnswered.getTime()) / 3_600_000;
+      const daysSince = hoursSince / 24;
 
+      // Very recent (< 6h) — strong penalty (covers the 1h hard-exclude gap)
+      if (hoursSince < 6) {
+        score -= 600;
+      } else if (daysSince < 2) {
+        score -= 300;
+      }
+
+      // Old enough to revisit (> 7 days)
       if (daysSince > 7) {
         score += Math.min(400, Math.floor((daysSince - 7) * 40));
       }
 
-      if (daysSince < 2) {
-        score -= 300;
-      }
-
-      // Skipnięte pytania — DODATKOWA kara
+      // Skipped questions — extra penalty
       if (history.wasSkipped) {
-        score -= 400; // silniejsza kara niż zwykłe "odpowiadane niedawno"
+        score -= 400;
       }
 
+      // Wrong answer review window (1h-1d after mistake → slight bonus)
       if (
         !history.wasCorrect &&
         !history.wasSkipped &&
-        daysSince > 0.04 &&
+        hoursSince > 1 &&
         daysSince < 1
       ) {
         score += Math.floor(200 * (1 - Math.exp(-daysSince * 4)));
       }
 
+      // Seen too many times
       if (history.answerCount > 3) {
         score -= history.answerCount * 50;
       }
     }
   }
 
+  // ── Global popularity ────────────────────────────────────────────────
   if (q.totalAttempts === 0) {
     score += 200;
   } else if (q.totalAttempts < 5) {
     score += 100;
   }
 
+  // ── Type skip-rate penalty (behavioural) ─────────────────────────────
+  const typeSkipRate = skipRateByType.get(q.type) || 0;
+  if (typeSkipRate > 0.7) {
+    // User skips >70% of this type → heavy penalty
+    score -= 500;
+  } else if (typeSkipRate > 0.5) {
+    score -= 250;
+  } else if (typeSkipRate > 0.3) {
+    score -= 100;
+  }
+
+  // ── Random jitter ────────────────────────────────────────────────────
   score += Math.floor(Math.random() * 120) - 60;
 
   return { question: q, score };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// DIVERSE SELECT — picks top-scored questions with topic/type diversity
+// DIVERSE SELECT
 // ────────────────────────────────────────────────────────────────────────────
 
 function diverseSelect(
@@ -263,7 +342,7 @@ function diverseSelect(
   const topicCounts = new Map<string, number>();
   const typeCounts = new Map<string, number>();
   const workCounts = new Map<string, number>();
-  const epochCounts = new Map<string, number>(); // ← NOWE: parent topic = epoka
+  const epochCounts = new Map<string, number>();
 
   for (const candidate of scored) {
     if (selected.length >= count) break;
@@ -273,35 +352,39 @@ function diverseSelect(
     const typeCount = typeCounts.get(q.type) || 0;
     const work = (q.content as any)?.work || "__none__";
     const workCount = workCounts.get(work) || 0;
-
-    // Parent topic = epoch grouping (Romantyzm, Pozytywizm, etc.)
     const epochKey = (q.topic as any)?.parentId || q.topicId;
     const epochCount = epochCounts.get(epochKey) || 0;
 
     let adjustedScore = candidate.score;
 
-    // Penalize same topic (lektura) — max 2
-    if (topicCount >= 2) {
-      adjustedScore -= topicCount * 200;
+    // ── Topic penalty — QUADRATIC (was linear) ─────────────────────────
+    // 0 → 0, 1 → -100, 2 → -400, 3 → -900, 4 → -1600
+    if (topicCount >= 1) {
+      adjustedScore -= topicCount * topicCount * 100;
     }
 
-    // Penalize same type — max 3
+    // ── Type penalty — stricter, with OPEN cap ─────────────────────────
     if (typeCount >= 3) {
-      adjustedScore -= typeCount * 100;
+      adjustedScore -= typeCount * 150;
+    }
+    // Hard cap: max 2 OPEN/ESSAY questions per session
+    if ((q.type === "OPEN" || q.type === "ESSAY") && typeCount >= 2) {
+      adjustedScore -= 2000; // effectively blocks 3rd+ OPEN
     }
 
-    // Penalize same literary work — max 1
+    // ── Literary work — max 1 ──────────────────────────────────────────
     if (work !== "__none__" && workCount >= 1) {
       adjustedScore -= workCount * 300;
     }
 
-    // ── NOWE: Penalize same epoch — max 3 per epoch ───────────────────
+    // ── Epoch diversity ────────────────────────────────────────────────
     if (epochCount >= 3) {
       adjustedScore -= (epochCount - 2) * 250;
     } else if (epochCount === 0) {
-      adjustedScore += 150; // bonus za nową epokę
+      adjustedScore += 150;
     }
 
+    // Skip if score tanked and we have alternatives
     if (adjustedScore < 0 && scored.length - selected.length > count * 0.5) {
       continue;
     }

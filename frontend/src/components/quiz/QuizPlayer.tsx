@@ -193,15 +193,12 @@ export function QuizPlayer({
 
   const handleAdminSelectQuestion = useCallback(
     (question: any) => {
-      // Admin wybrał pytanie z wyszukiwarki — wstrzyknij je jako bieżące
       answeredIds.current.add(question.id);
       setQuestions((prev) => {
         const newList = [...prev];
-        // Wstaw pytanie zaraz za bieżącym indeksem
         newList.splice(currentIndex + 1, 0, question);
         return newList;
       });
-      // Przeskocz na nowo wstawione pytanie
       setCurrentIndex((i) => i + 1);
       setResponse(null);
       setFeedbackData(null);
@@ -730,10 +727,7 @@ export function QuizPlayer({
       </div>
 
       {isAdmin && (
-        <AdminQuestionSearch
-          subjectId={subjectId}
-          onSelectQuestion={handleAdminSelectQuestion}
-        />
+        <AdminQuestionSearch onSelectQuestion={handleAdminSelectQuestion} />
       )}
 
       {/* ═══ LIVE FILTER BAR ═══ */}
