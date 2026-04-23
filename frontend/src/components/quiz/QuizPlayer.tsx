@@ -125,6 +125,10 @@ export function QuizPlayer({
   );
   const [poolTotal, setPoolTotal] = useState<number | undefined>();
   const [loadingMore, setLoadingMore] = useState(false);
+  const [aiError, setAiError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const answeredIds = useRef<Set<string>>(new Set());
   const startTime = useRef(Date.now());
 
@@ -173,15 +177,27 @@ export function QuizPlayer({
           return;
         } catch (err: any) {
           if (err.code === "AI_CREDITS_EXHAUSTED") {
-            alert("Wykorzystano pulę kredytów AI w tym miesiącu.");
+            setAiError({
+              title: "Brak kredytów AI",
+              message:
+                "Wykorzystano pulę kredytów AI w tym miesiącu. Tryb słuchania oraz ocena pytań otwartych wymagają kredytów AI. Możesz dokupić nieprzepadające kredyty dodatkowe.",
+            });
             return;
           }
           if (err.code === "PREMIUM_REQUIRED") {
-            alert("Dostęp do funkcji AI wymaga subskrypcji Premium.");
+            setAiError({
+              title: "Wymagana subskrypcja Premium",
+              message:
+                "Tryb słuchania i ocena AI są dostępne wyłącznie dla użytkowników Premium.",
+            });
             return;
           }
           console.error("Listening start error:", err);
-          alert("Błąd generowania słuchania. Spróbuj ponownie.");
+          setAiError({
+            title: "Błąd generowania",
+            message:
+              "Nie udało się wygenerować nagrania. Spróbuj ponownie za chwilę.",
+          });
           return;
         }
       }
@@ -243,11 +259,22 @@ export function QuizPlayer({
         startTime.current = Date.now();
       } catch (err: any) {
         if (err.code === "AI_CREDITS_EXHAUSTED") {
-          alert("Wykorzystano pulę kredytów AI w tym miesiącu.");
+          setAiError({
+            title: "Brak kredytów AI",
+            message:
+              "Wykorzystano pulę kredytów AI. Możesz dokupić nieprzepadające kredyty dodatkowe.",
+          });
         } else if (err.code === "PREMIUM_REQUIRED") {
-          alert("Dostęp do serwisu wymaga subskrypcji Premium.");
+          setAiError({
+            title: "Wymagany Premium",
+            message: "Dostęp do serwisu wymaga aktywnej subskrypcji Premium.",
+          });
         } else if (err.code === "DAILY_LIMIT") {
-          alert("Osiągnięto dzienny limit pytań (5). Przejdź na Premium.");
+          setAiError({
+            title: "Dzienny limit osiągnięty",
+            message:
+              "Wykorzystano 5 darmowych pytań na dziś. Odblokuj pełny dostęp z subskrypcją Premium.",
+          });
         }
       } finally {
         setLoadingMore(false);
@@ -344,14 +371,17 @@ export function QuizPlayer({
       setPhase("feedback");
     } catch (err: any) {
       if (err.code === "AI_CREDITS_EXHAUSTED") {
-        alert(
-          "Wykorzystano pulę kredytów AI w tym miesiącu. Pula odnowi się z nowym okresem rozliczeniowym.",
-        );
+        setAiError({
+          title: "Brak kredytów AI",
+          message:
+            "Wykorzystano pulę kredytów AI. Ocena tego pytania wymaga kredytów. Możesz dokupić nieprzepadające kredyty dodatkowe.",
+        });
       } else if (err.code === "PREMIUM_REQUIRED") {
-        alert("Dostęp do funkcji AI wymaga subskrypcji Premium.");
-      } else if (err.code === "PREMIUM_REQUIRED") {
-        alert("Dostęp do zadań wymaga aktywnej subskrypcji Premium.");
-        window.location.href = "/dashboard/subskrypcja";
+        setAiError({
+          title: "Wymagany Premium",
+          message:
+            "Ocena pytań otwartych przez AI jest dostępna wyłącznie dla użytkowników Premium.",
+        });
       }
     } finally {
       setSubmitting(false);
@@ -390,7 +420,10 @@ export function QuizPlayer({
         );
         const data = await res.json();
         if (data.error) {
-          alert(data.error);
+          setAiError({
+            title: "Błąd generowania",
+            message: data.error,
+          });
           return;
         }
         setQuestions((prev) => [...prev, data.question]);
@@ -402,7 +435,11 @@ export function QuizPlayer({
         startTime.current = Date.now();
       } catch (err) {
         console.error("Listening next error:", err);
-        alert("Błąd generowania kolejnego nagrania.");
+        setAiError({
+          title: "Błąd połączenia",
+          message:
+            "Nie udało się wygenerować kolejnego nagrania. Spróbuj ponownie.",
+        });
       } finally {
         setLoadingMore(false);
       }
@@ -515,7 +552,7 @@ export function QuizPlayer({
               🤖 AI generuje pierwsze nagranie...
             </p>
             <p className="text-xs text-zinc-500 max-w-sm text-center">
-              Claude pisze transkrypt, Google TTS syntezuje głos — zajmie ~8-12
+              Claude pisze transkrypt, Google TTS syntezuje głos — zajmie ~20-30
               sekund. Kolejne nagrania pobiorą się w tle (zero czekania).
             </p>
           </>
@@ -631,6 +668,7 @@ export function QuizPlayer({
         filterOptions={filterOptions}
         poolTotal={poolTotal}
         loading={loadingMore}
+        isListeningOnly={isListeningOnly}
       />
 
       {/* Topic & meta */}
@@ -752,6 +790,75 @@ export function QuizPlayer({
           </div>
         </div>
       )}
+      {/* ═══ AI ERROR MODAL — overlay, nie blokuje widoku ═══ */}
+      {aiError && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => setAiError(null)}
+        >
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative w-full max-w-md rounded-3xl bg-white dark:bg-surface-900 border border-zinc-200 dark:border-zinc-700 shadow-2xl p-8 text-center animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setAiError(null)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-surface-800 transition-all"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+            <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-amber-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                />
+              </svg>
+            </div>
+            <h2 className="font-display font-bold text-xl mb-2">
+              {aiError.title}
+            </h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 leading-relaxed">
+              {aiError.message}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setAiError(null)}
+                className="flex-1 px-5 py-3 rounded-2xl text-sm font-semibold bg-zinc-100 dark:bg-surface-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-surface-700 transition-all"
+              >
+                Zamknij
+              </button>
+              <a
+                href="/dashboard/subskrypcja"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 px-5 py-3 rounded-2xl text-sm font-semibold bg-gradient-to-r from-brand-500 to-navy-500 text-white shadow-lg shadow-brand-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-center"
+              >
+                Dokup kredyty AI
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -769,6 +876,7 @@ function LiveFilterBar({
   filterOptions,
   poolTotal,
   loading,
+  isListeningOnly,
 }: {
   filters: LiveFilters;
   onFiltersChange: (f: LiveFilters) => void;
@@ -778,6 +886,7 @@ function LiveFilterBar({
   filterOptions: FilterOptions | null;
   poolTotal: number | undefined;
   loading: boolean;
+  isListeningOnly?: boolean;
 }) {
   const hasActive =
     filters.topicIds.length > 0 ||
@@ -879,27 +988,31 @@ function LiveFilterBar({
       >
         <div className="p-5 rounded-2xl bg-white/90 dark:bg-surface-800/90 backdrop-blur-lg border border-zinc-200 dark:border-zinc-700 shadow-lg shadow-zinc-200/50 dark:shadow-black/20 space-y-4">
           {/* Topics */}
-          {filterOptions.topics.length > 1 && (
+          {filterOptions.topics.filter(
+            (t) => isListeningOnly || t.questionCount > 0,
+          ).length > 1 && (
             <FRow label="Temat" color="indigo">
               <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
-                {filterOptions.topics.map((t) => (
-                  <Pill
-                    key={t.id}
-                    active={filters.topicIds.includes(t.id)}
-                    accent="indigo"
-                    onClick={() =>
-                      onFiltersChange({
-                        ...filters,
-                        topicIds: tog(filters.topicIds, t.id),
-                      })
-                    }
-                  >
-                    {t.name.replace(/^[IVXLCDM]+\.\s*/, "")}
-                    <span className="opacity-40 text-[9px] ml-0.5">
-                      {t.questionCount}
-                    </span>
-                  </Pill>
-                ))}
+                {filterOptions.topics
+                  .filter((t) => isListeningOnly || t.questionCount > 0)
+                  .map((t) => (
+                    <Pill
+                      key={t.id}
+                      active={filters.topicIds.includes(t.id)}
+                      accent="indigo"
+                      onClick={() =>
+                        onFiltersChange({
+                          ...filters,
+                          topicIds: tog(filters.topicIds, t.id),
+                        })
+                      }
+                    >
+                      {t.name.replace(/^[IVXLCDM]+\.\s*/, "")}
+                      <span className="opacity-40 text-[9px] ml-0.5">
+                        {t.questionCount}
+                      </span>
+                    </Pill>
+                  ))}
               </div>
             </FRow>
           )}

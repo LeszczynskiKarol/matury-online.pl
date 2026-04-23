@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  dashboard as dashboardApi,
-  subjects as subjectsApi,
-} from "../../lib/api";
+import { dashboard as dashboardApi } from "../../lib/api";
 
 interface DashboardData {
   user: any;
@@ -37,7 +34,6 @@ export function DashboardHome() {
     today,
     weeklyActivity,
     recentSessions,
-    dueReviews,
     recentAchievements,
   } = data;
   const todayProgress =
@@ -47,6 +43,32 @@ export function DashboardHome() {
           Math.round((today.questionsCompleted / today.targetQuestions) * 100),
         )
       : 0;
+
+  // ── DEBUG — usuń po naprawieniu ─────────────
+  console.log("=== DASHBOARD DEBUG ===");
+  console.log(
+    "recentSessions:",
+    JSON.stringify(
+      recentSessions.map((s: any) => ({
+        slug: s.subject.slug,
+        completedAt: s.completedAt,
+      })),
+      null,
+      2,
+    ),
+  );
+  console.log(
+    "subjectProgress slugs:",
+    subjectProgress.map((sp: any) => sp.subject.slug),
+  );
+  console.log(
+    "subjectProgress lastSessionAt:",
+    subjectProgress.map((sp: any) => ({
+      slug: sp.subject.slug,
+      lastSessionAt: sp.lastSessionAt,
+    })),
+  );
+  // ── /DEBUG ──────────────────────────────────
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -95,7 +117,7 @@ export function DashboardHome() {
         <StatCard
           icon="📝"
           label="Dziś"
-          value={`${today.questionsCompleted}/${today.targetQuestions}`}
+          value={`${today.questionsCompleted}`}
           sub={
             <div className="mt-2 progress-bar">
               <div
@@ -171,7 +193,21 @@ export function DashboardHome() {
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 gap-4">
-              {subjectProgress.map((sp: any) => (
+              {(() => {
+                // Buduj kolejność z recentSessions (posortowane completedAt DESC z backendu)
+                const orderMap = new Map<string, number>();
+                recentSessions.forEach((s: any) => {
+                  if (!orderMap.has(s.subject.slug)) {
+                    orderMap.set(s.subject.slug, orderMap.size);
+                  }
+                });
+                return [...subjectProgress].sort((a, b) => {
+                  const aO = orderMap.get(a.subject.slug) ?? 999;
+                  const bO = orderMap.get(b.subject.slug) ?? 999;
+                  if (aO !== bO) return aO - bO;
+                  return b.questionsAnswered - a.questionsAnswered;
+                });
+              })().map((sp: any) => (
                 <SubjectProgressCard key={sp.subject.slug} data={sp} />
               ))}
             </div>
@@ -307,10 +343,12 @@ function StatCard({
 
 function SubjectProgressCard({ data }: { data: any }) {
   const accuracy = data.questionsAnswered > 0 ? Math.round(data.accuracy) : 0;
-  const xpProgress = data.xp; // simplified
 
   return (
-    <a href={`/przedmiot/${data.subject.slug}`} className="subject-card block">
+    <a
+      href={`/dashboard/sesja?przedmiot=${data.subject.slug}`}
+      className="subject-card block"
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <span className="text-2xl">{data.subject.icon}</span>

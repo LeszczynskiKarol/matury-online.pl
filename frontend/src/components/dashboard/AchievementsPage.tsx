@@ -71,10 +71,15 @@ export function AchievementsPage() {
                   className="p-3 rounded-xl bg-zinc-50 dark:bg-surface-800 text-center"
                 >
                   <span className="text-xl">{sp.subject.icon}</span>
-                  <div className="font-display font-bold text-sm mt-1">
+                  <div className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 mt-1">
+                    {sp.subject.name}
+                  </div>
+                  <div className="font-display font-bold text-sm">
                     Poziom {sp.level}
                   </div>
-                  <div className="text-[10px] text-zinc-500">{sp.xp} XP</div>
+                  <div className="text-[10px] text-zinc-500">
+                    {sp.xp} XP
+                  </div>{" "}
                 </div>
               ))}
             </div>

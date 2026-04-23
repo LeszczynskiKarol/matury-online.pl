@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { subjects as subjectsApi, stripe as stripeApi } from "../../lib/api";
+import {
+  subjects as subjectsApi,
+  stripe as stripeApi,
+  dashboard as dashboardApi,
+} from "../../lib/api";
 import { QuizPlayer } from "./QuizPlayer";
 
 interface SessionCategory {
@@ -192,7 +196,31 @@ export function SessionSetup() {
   }, []);
 
   useEffect(() => {
-    subjectsApi.list().then(setAllSubjects).catch(console.error);
+    Promise.all([subjectsApi.list(), dashboardApi.main().catch(() => null)])
+      .then(([subjects, dash]) => {
+        // Sort subjects by most recent session
+        if (dash?.recentSessions?.length) {
+          const orderMap = new Map<string, number>();
+          dash.recentSessions.forEach((s: any) => {
+            if (!orderMap.has(s.subject.slug)) {
+              orderMap.set(s.subject.slug, orderMap.size);
+            }
+          });
+          subjects.sort((a: any, b: any) => {
+            const aO = orderMap.get(a.slug) ?? 999;
+            const bO = orderMap.get(b.slug) ?? 999;
+            return aO - bO;
+          });
+        }
+        setAllSubjects(subjects);
+        const params = new URLSearchParams(window.location.search);
+        const preselect = params.get("przedmiot");
+        if (preselect) {
+          const match = subjects.find((s: any) => s.slug === preselect);
+          if (match) setSelectedSubject(match);
+        }
+      })
+      .catch(console.error);
   }, []);
 
   const difficultyRange =
@@ -257,18 +285,25 @@ export function SessionSetup() {
             >
               Wszystkie tematy
             </button>
-            {selectedSubject.topics.map((t: any) => (
-              <button
-                key={t.id}
-                onClick={() => setSelectedTopic(t.id)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedTopic === t.id ? "bg-navy-500 text-white" : "bg-zinc-100 dark:bg-surface-800 text-zinc-600 dark:text-zinc-400"}`}
-              >
-                {t.name}
-                <span className="ml-1 text-xs opacity-60">
-                  ({t.questionCount})
-                </span>
-              </button>
-            ))}
+            {selectedSubject.topics
+              .filter(
+                (t: any) =>
+                  (sessionCategory?.types?.length === 1 &&
+                    sessionCategory.types[0] === "LISTENING") ||
+                  t.questionCount > 0,
+              )
+              .map((t: any) => (
+                <button
+                  key={t.id}
+                  onClick={() => setSelectedTopic(t.id)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedTopic === t.id ? "bg-navy-500 text-white" : "bg-zinc-100 dark:bg-surface-800 text-zinc-600 dark:text-zinc-400"}`}
+                >
+                  {t.name}
+                  <span className="ml-1 text-xs opacity-60">
+                    ({t.questionCount})
+                  </span>
+                </button>
+              ))}
           </div>
         </div>
       )}
