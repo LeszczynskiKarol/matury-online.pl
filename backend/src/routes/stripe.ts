@@ -56,7 +56,13 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
   // ── Mobile return endpoint ───────────────────────────────────────────────
   app.get("/mobile-return", async (req, reply) => {
     const { status } = req.query as { status?: string };
-    reply.type("text/html").send(mobileReturnHtml(status || "success"));
+    const deepLink = `matury-online://subscription?payment=${status || "success"}`;
+    // Redirect via HTML — Chrome Custom Tab odpali intent, Android otworzy apkę
+    reply.type("text/html").send(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<meta http-equiv="refresh" content="0;url=${deepLink}">
+<script>window.location.href="${deepLink}";</script>
+</head><body></body></html>`);
   });
 
   // ── Status ───────────────────────────────────────────────────────────────
@@ -312,11 +318,9 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
           user.subscriptionEnd > now);
 
       if (!isPremium)
-        return reply
-          .code(403)
-          .send({
-            error: "Kredyty AI dostępne tylko dla użytkowników Premium.",
-          });
+        return reply.code(403).send({
+          error: "Kredyty AI dostępne tylko dla użytkowników Premium.",
+        });
 
       let customerId = user.stripeCustomerId;
       if (!customerId) {
