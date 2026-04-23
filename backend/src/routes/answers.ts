@@ -165,6 +165,111 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           isCorrect = score >= 1.0;
           break;
         }
+        case "ERROR_FIND": {
+          // response is step id (number or string), correctErrorStep is number
+          const userStep =
+            typeof response === "string" ? parseInt(response, 10) : response;
+          const correctStep = content.correctErrorStep;
+          isCorrect = userStep === correctStep;
+          score = isCorrect ? 1.0 : 0.0;
+          break;
+        }
+        case "PROOF_ORDER": {
+          const correctOrd = content.correctOrder as string[];
+          const userOrd = response as string[];
+          if (correctOrd && userOrd) {
+            let correct = 0;
+            correctOrd.forEach((v, i) => {
+              if (v === userOrd[i]) correct++;
+            });
+            score = correct / correctOrd.length;
+            isCorrect = score >= 1.0;
+          }
+          break;
+        }
+        case "CLOZE": {
+          const blanksObj = content.blanks as Record<
+            string,
+            { acceptedAnswers: string[] }
+          >;
+          const userCloze = response as Record<string, string>;
+          const keys = Object.keys(blanksObj);
+          let correct = 0;
+          for (const k of keys) {
+            const userVal = (userCloze[k] || "").trim().toLowerCase();
+            if (
+              blanksObj[k].acceptedAnswers.some(
+                (a: string) => a.toLowerCase().trim() === userVal,
+              )
+            )
+              correct++;
+          }
+          score = keys.length > 0 ? correct / keys.length : 0;
+          isCorrect = score >= 1.0;
+          break;
+        }
+        case "GRAPH_INTERPRET":
+        case "TABLE_DATA": {
+          const subs = content.subQuestions as {
+            id: string;
+            acceptedAnswers?: string[];
+          }[];
+          const userSubs = response as Record<string, string>;
+          if (subs?.length) {
+            let correct = 0;
+            for (const sq of subs) {
+              const uv = (userSubs[sq.id] || "").trim().toLowerCase();
+              if (
+                sq.acceptedAnswers?.some(
+                  (a: string) => a.toLowerCase().trim() === uv,
+                )
+              )
+                correct++;
+            }
+            score = correct / subs.length;
+            isCorrect = score >= 1.0;
+          }
+          break;
+        }
+        case "WIAZKA": {
+          // Complex — multiple sub-questions, partial grading
+          const wSubs = content.subQuestions as any[];
+          const wResp = response as Record<string, any>;
+          let earned = 0,
+            max = 0;
+          for (const sq of wSubs) {
+            const pts = sq.points || 1;
+            max += pts;
+            if (sq.type === "CLOSED" && wResp[sq.id] === sq.correctAnswer)
+              earned += pts;
+            else if (
+              sq.type === "TRUE_FALSE" &&
+              sq.statements &&
+              Array.isArray(wResp[sq.id])
+            ) {
+              const allOk = sq.statements.every(
+                (st: any, i: number) => wResp[sq.id][i] === st.isTrue,
+              );
+              if (allOk) earned += pts;
+            } else if (
+              (sq.type === "OPEN" || sq.type === "FILL_IN") &&
+              sq.acceptedAnswers
+            ) {
+              const uv = (typeof wResp[sq.id] === "string" ? wResp[sq.id] : "")
+                .trim()
+                .toLowerCase();
+              if (
+                sq.acceptedAnswers.some(
+                  (a: string) => a.toLowerCase().trim() === uv,
+                )
+              )
+                earned += pts;
+            }
+          }
+          score = max > 0 ? earned / max : 0;
+          isCorrect = earned === max;
+          break;
+        }
         case "OPEN": {
           // AI grading — check credits first
           const { requireAiCredits } =
