@@ -1781,7 +1781,9 @@ function FillInQuestion({
           return (
             <div key={b.id}>
               <label className="block text-sm font-medium mb-1.5">
-                Luka {i + 1}
+                {b.label || b.hint || b.baseWord
+                  ? `${i + 1}. ${b.label || b.hint || b.baseWord}`
+                  : `Luka ${i + 1}`}
               </label>
               <input
                 type="text"
