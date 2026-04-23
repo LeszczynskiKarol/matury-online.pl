@@ -1,6 +1,5 @@
 // ============================================================================
-// Stripe Routes — Subscriptions (49 PLN/mo) & One-time (59 PLN / 30 days)
-// + Cancellation/resume + daily limit check
+// Stripe Routes — z obsługą mobile return
 // ============================================================================
 
 import { FastifyPluginAsync } from "fastify";
@@ -20,58 +19,90 @@ const CREDIT_PACKAGES: Record<string, { priceId: string; credits: number }> = {
   credits_1200: { priceId: PRICES.CREDITS_1200, credits: 1200 },
 };
 
+// ── Mobile return page HTML ────────────────────────────────────────────────
+function mobileReturnHtml(status: string) {
+  const isSuccess = status === "success";
+  return `<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${isSuccess ? "Płatność zakończona" : "Płatność anulowana"}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #050514; color: #f4f4f5; padding: 24px; }
+    .card { text-align: center; max-width: 360px; }
+    .emoji { font-size: 64px; margin-bottom: 16px; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    p { font-size: 14px; color: #a1a1aa; line-height: 1.6; margin-bottom: 24px; }
+    .hint { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 16px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #22c55e; font-size: 13px; font-weight: 600; }
+    .hint.cancel { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="emoji">${isSuccess ? "🎉" : "😕"}</div>
+    <h1>${isSuccess ? "Płatność zakończona!" : "Płatność anulowana"}</h1>
+    <p>${isSuccess ? "Twoje konto zostało zaktualizowane do Premium. Wróć do aplikacji, aby kontynuować naukę." : "Płatność nie została zrealizowana. Wróć do aplikacji i spróbuj ponownie."}</p>
+    <div class="hint ${isSuccess ? "" : "cancel"}">
+      ← Zamknij to okno, aby wrócić do aplikacji
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 export const stripeRoutes: FastifyPluginAsync = async (app) => {
-  // ── Check if user has premium access ─────────────────────────────────────
-  app.get(
-    "/status",
-    {
-      preHandler: [app.authenticate],
-    },
-    async (req) => {
-      const user = await app.prisma.user.findUniqueOrThrow({
-        where: { id: req.user.userId },
-        select: {
-          subscriptionStatus: true,
-          subscriptionEnd: true,
-          stripeSubscriptionId: true,
-        },
-      });
+  // ── Mobile return endpoint ───────────────────────────────────────────────
+  app.get("/mobile-return", async (req, reply) => {
+    const { status } = req.query as { status?: string };
+    reply.type("text/html").send(mobileReturnHtml(status || "success"));
+  });
 
-      const now = new Date();
-      const isPremium =
-        user.subscriptionStatus === "ACTIVE" ||
-        (user.subscriptionStatus === "ONE_TIME" &&
-          user.subscriptionEnd &&
-          user.subscriptionEnd > now) ||
-        (user.subscriptionStatus === "CANCELLED" &&
-          user.subscriptionEnd &&
-          user.subscriptionEnd > now);
+  // ── Status ───────────────────────────────────────────────────────────────
+  app.get("/status", { preHandler: [app.authenticate] }, async (req) => {
+    const user = await app.prisma.user.findUniqueOrThrow({
+      where: { id: req.user.userId },
+      select: {
+        subscriptionStatus: true,
+        subscriptionEnd: true,
+        stripeSubscriptionId: true,
+      },
+    });
 
-      // Daily question count for free users
-      return {
-        isPremium,
-        subscriptionStatus: user.subscriptionStatus,
-        subscriptionEnd: user.subscriptionEnd,
-        willExpire:
-          user.subscriptionStatus === "CANCELLED" && user.subscriptionEnd
-            ? user.subscriptionEnd.toISOString()
-            : null,
-        canResume:
-          user.subscriptionStatus === "CANCELLED" &&
-          user.subscriptionEnd &&
-          user.subscriptionEnd > now,
-        canCancel:
-          user.subscriptionStatus === "ACTIVE" && !!user.stripeSubscriptionId,
-      };
-    },
-  );
+    const now = new Date();
+    const isPremium =
+      user.subscriptionStatus === "ACTIVE" ||
+      (user.subscriptionStatus === "ONE_TIME" &&
+        user.subscriptionEnd &&
+        user.subscriptionEnd > now) ||
+      (user.subscriptionStatus === "CANCELLED" &&
+        user.subscriptionEnd &&
+        user.subscriptionEnd > now);
+
+    return {
+      isPremium,
+      subscriptionStatus: user.subscriptionStatus,
+      subscriptionEnd: user.subscriptionEnd,
+      willExpire:
+        user.subscriptionStatus === "CANCELLED" && user.subscriptionEnd
+          ? user.subscriptionEnd.toISOString()
+          : null,
+      canResume:
+        user.subscriptionStatus === "CANCELLED" &&
+        user.subscriptionEnd &&
+        user.subscriptionEnd > now,
+      canCancel:
+        user.subscriptionStatus === "ACTIVE" && !!user.stripeSubscriptionId,
+    };
+  });
 
   app.get("/credits", { preHandler: [app.authenticate] }, async (req) => {
     const { checkAiCredits } = await import("../services/ai-credits.js");
     return checkAiCredits(app.prisma, req.user.userId);
   });
 
-  // ── Create checkout session ──────────────────────────────────────────────
+  // ── Checkout — supports source: 'mobile' ────────────────────────────────
   app.post(
     "/checkout",
     {
@@ -82,19 +113,22 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
           required: ["plan"],
           properties: {
             plan: { type: "string", enum: ["subscription", "one_time"] },
+            source: { type: "string" }, // 'mobile' | undefined
           },
         },
       },
     },
     async (req, reply) => {
       const userId = req.user.userId;
-      const { plan } = req.body as { plan: "subscription" | "one_time" };
+      const { plan, source } = req.body as {
+        plan: "subscription" | "one_time";
+        source?: string;
+      };
 
       const user = await app.prisma.user.findUniqueOrThrow({
         where: { id: userId },
       });
 
-      // Get or create Stripe customer
       let customerId = user.stripeCustomerId;
       if (!customerId) {
         const customer = await app.stripe.customers.create({
@@ -110,7 +144,6 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
 
       const isSubscription = plan === "subscription";
 
-      // Prevent duplicate subscriptions
       if (plan === "subscription" && user.stripeSubscriptionId) {
         const existingSub = await app.stripe.subscriptions
           .retrieve(user.stripeSubscriptionId)
@@ -125,6 +158,17 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      // ── Determine return URLs based on source ────────────────────────────
+      const isMobile = source === "mobile";
+      const baseUrl = process.env.FRONTEND_URL!;
+
+      const successUrl = isMobile
+        ? `${baseUrl}/api/stripe/mobile-return?status=success`
+        : `${baseUrl}/dashboard/subskrypcja?payment=success`;
+      const cancelUrl = isMobile
+        ? `${baseUrl}/api/stripe/mobile-return?status=cancelled`
+        : `${baseUrl}/dashboard/subskrypcja?payment=cancelled`;
+
       const session = await app.stripe.checkout.sessions.create({
         customer: customerId,
         mode: isSubscription ? "subscription" : "payment",
@@ -137,8 +181,8 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
             quantity: 1,
           },
         ],
-        success_url: `${process.env.FRONTEND_URL}/dashboard/subskrypcja?payment=success`,
-        cancel_url: `${process.env.FRONTEND_URL}/dashboard/subskrypcja?payment=cancelled`,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
         metadata: { userId, plan },
         locale: "pl",
         allow_promotion_codes: true,
@@ -148,12 +192,10 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  // ── Cancel subscription (at period end — fair to customer) ───────────────
+  // ── Cancel ───────────────────────────────────────────────────────────────
   app.post(
     "/cancel",
-    {
-      preHandler: [app.authenticate],
-    },
+    { preHandler: [app.authenticate] },
     async (req, reply) => {
       const user = await app.prisma.user.findUniqueOrThrow({
         where: { id: req.user.userId },
@@ -166,12 +208,9 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "Brak aktywnej subskrypcji do anulowania" });
       }
 
-      // Cancel at period end — user keeps access until end of paid period
       const sub = await app.stripe.subscriptions.update(
         user.stripeSubscriptionId,
-        {
-          cancel_at_period_end: true,
-        },
+        { cancel_at_period_end: true },
       );
 
       await app.prisma.user.update({
@@ -190,12 +229,10 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  // ── Resume cancelled subscription (before period end) ────────────────────
+  // ── Resume ───────────────────────────────────────────────────────────────
   app.post(
     "/resume",
-    {
-      preHandler: [app.authenticate],
-    },
+    { preHandler: [app.authenticate] },
     async (req, reply) => {
       const user = await app.prisma.user.findUniqueOrThrow({
         where: { id: req.user.userId },
@@ -206,9 +243,8 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
         },
       });
 
-      if (!user.stripeSubscriptionId) {
+      if (!user.stripeSubscriptionId)
         return reply.code(400).send({ error: "Brak subskrypcji" });
-      }
 
       const now = new Date();
       if (
@@ -221,11 +257,9 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "Subskrypcja nie może zostać wznowiona" });
       }
 
-      // Remove cancel_at_period_end — reactivates the subscription
       await app.stripe.subscriptions.update(user.stripeSubscriptionId, {
         cancel_at_period_end: false,
       });
-
       await app.prisma.user.update({
         where: { id: req.user.userId },
         data: { subscriptionStatus: "ACTIVE" },
@@ -235,7 +269,7 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  // ── Buy AI credits ───────────────────────────────────────────────────────
+  // ── Buy credits ──────────────────────────────────────────────────────────
   app.post(
     "/buy-credits",
     {
@@ -249,18 +283,21 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
               type: "string",
               enum: ["credits_200", "credits_500", "credits_1200"],
             },
+            source: { type: "string" },
           },
         },
       },
     },
     async (req, reply) => {
       const userId = req.user.userId;
-      const { package: pkg } = req.body as { package: string };
+      const { package: pkg, source } = req.body as {
+        package: string;
+        source?: string;
+      };
 
       const pack = CREDIT_PACKAGES[pkg];
       if (!pack) return reply.code(400).send({ error: "Invalid package" });
 
-      // Must be premium to buy credits
       const user = await app.prisma.user.findUniqueOrThrow({
         where: { id: userId },
       });
@@ -274,11 +311,12 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
           user.subscriptionEnd &&
           user.subscriptionEnd > now);
 
-      if (!isPremium) {
-        return reply.code(403).send({
-          error: "Kredyty AI dostępne tylko dla użytkowników Premium.",
-        });
-      }
+      if (!isPremium)
+        return reply
+          .code(403)
+          .send({
+            error: "Kredyty AI dostępne tylko dla użytkowników Premium.",
+          });
 
       let customerId = user.stripeCustomerId;
       if (!customerId) {
@@ -293,13 +331,20 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
+      const isMobile = source === "mobile";
+      const baseUrl = process.env.FRONTEND_URL!;
+
       const session = await app.stripe.checkout.sessions.create({
         customer: customerId,
         mode: "payment",
         payment_method_types: ["card", "revolut_pay", "blik"],
         line_items: [{ price: pack.priceId, quantity: 1 }],
-        success_url: `${process.env.FRONTEND_URL}/dashboard/subskrypcja?credits=success&package=${pkg}`,
-        cancel_url: `${process.env.FRONTEND_URL}/dashboard/subskrypcja?credits=cancelled`,
+        success_url: isMobile
+          ? `${baseUrl}/api/stripe/mobile-return?status=success`
+          : `${baseUrl}/dashboard/subskrypcja?credits=success&package=${pkg}`,
+        cancel_url: isMobile
+          ? `${baseUrl}/api/stripe/mobile-return?status=cancelled`
+          : `${baseUrl}/dashboard/subskrypcja?credits=cancelled`,
         metadata: {
           userId,
           type: "credits",
@@ -313,174 +358,136 @@ export const stripeRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
-  // ── Customer portal (manage payment methods etc.) ────────────────────────
+  // ── Portal ───────────────────────────────────────────────────────────────
   app.post(
     "/portal",
-    {
-      preHandler: [app.authenticate],
-    },
+    { preHandler: [app.authenticate] },
     async (req, reply) => {
       const user = await app.prisma.user.findUniqueOrThrow({
         where: { id: req.user.userId },
         select: { stripeCustomerId: true },
       });
-
-      if (!user.stripeCustomerId) {
+      if (!user.stripeCustomerId)
         return reply.code(400).send({ error: "No subscription found" });
-      }
 
       const session = await app.stripe.billingPortal.sessions.create({
         customer: user.stripeCustomerId,
         return_url: `${process.env.FRONTEND_URL}/dashboard/subskrypcja`,
       });
-
       return { url: session.url };
     },
   );
 
-  // ── Stripe Webhook ───────────────────────────────────────────────────────
-  app.post(
-    "/webhook",
-    {
-      config: {
-        rawBody: true,
-      },
-    },
-    async (req, reply) => {
-      const sig = req.headers["stripe-signature"] as string;
-      let event: Stripe.Event;
+  // ── Webhook ──────────────────────────────────────────────────────────────
+  app.post("/webhook", { config: { rawBody: true } }, async (req, reply) => {
+    const sig = req.headers["stripe-signature"] as string;
+    let event: Stripe.Event;
 
-      try {
-        event = app.stripe.webhooks.constructEvent(
-          (req as any).rawBody,
-          sig,
-          process.env.STRIPE_WEBHOOK_SECRET!,
-        );
-      } catch (err: any) {
-        app.log.error(`Webhook signature verification failed: ${err.message}`);
-        return reply.code(400).send({ error: "Invalid signature" });
+    try {
+      event = app.stripe.webhooks.constructEvent(
+        (req as any).rawBody,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET!,
+      );
+    } catch (err: any) {
+      app.log.error(`Webhook signature verification failed: ${err.message}`);
+      return reply.code(400).send({ error: "Invalid signature" });
+    }
+
+    app.log.info(`Stripe webhook: ${event.type}`);
+
+    switch (event.type) {
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        const sub = event.data.object as Stripe.Subscription;
+        const customerId = sub.customer as string;
+        const status = sub.cancel_at_period_end
+          ? ("CANCELLED" as const)
+          : mapSubscriptionStatus(sub.status);
+
+        await app.prisma.user.updateMany({
+          where: { stripeCustomerId: customerId },
+          data: {
+            stripeSubscriptionId: sub.id,
+            subscriptionStatus: status,
+            subscriptionEnd: new Date(
+              ((sub as any).current_period_end ??
+                (sub.items?.data?.[0] as any)?.current_period_end ??
+                Math.floor(Date.now() / 1000) + 30 * 86400) * 1000,
+            ),
+          },
+        });
+
+        const users = await app.prisma.user.findMany({
+          where: { stripeCustomerId: customerId },
+          select: { id: true },
+        });
+        const { resetAiCredits } = await import("../services/ai-credits.js");
+        for (const u of users) await resetAiCredits(app.prisma, u.id);
+        break;
       }
 
-      app.log.info(`Stripe webhook: ${event.type}`);
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        await app.prisma.user.updateMany({
+          where: { stripeCustomerId: sub.customer as string },
+          data: { subscriptionStatus: "EXPIRED", stripeSubscriptionId: null },
+        });
+        break;
+      }
 
-      switch (event.type) {
-        // ── Subscription created/updated ─────────────────────────────────
-        case "customer.subscription.created":
-        case "customer.subscription.updated": {
-          const sub = event.data.object as Stripe.Subscription;
-          const customerId = sub.customer as string;
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.mode === "payment" && session.payment_status === "paid") {
+          const userId = session.metadata?.userId;
+          if (!userId) break;
 
-          // If cancel_at_period_end is true, mark as CANCELLED but keep subscriptionEnd
-          const status = sub.cancel_at_period_end
-            ? ("CANCELLED" as const)
-            : mapSubscriptionStatus(sub.status);
-
-          await app.prisma.user.updateMany({
-            where: { stripeCustomerId: customerId },
-            data: {
-              stripeSubscriptionId: sub.id,
-              subscriptionStatus: status,
-              subscriptionEnd: new Date(
-                ((sub as any).current_period_end ??
-                  (sub.items?.data?.[0] as any)?.current_period_end ??
-                  Math.floor(Date.now() / 1000) + 30 * 86400) * 1000,
-              ),
-            },
-          });
-
-          // Reset AI credits on subscription renewal
-          const users = await app.prisma.user.findMany({
-            where: { stripeCustomerId: customerId },
-            select: { id: true },
-          });
-          const { resetAiCredits } = await import("../services/ai-credits.js");
-          for (const u of users) {
-            await resetAiCredits(app.prisma, u.id);
-          }
-
-          break;
-        }
-
-        // ── Subscription deleted (period ended after cancellation) ───────
-        case "customer.subscription.deleted": {
-          const sub = event.data.object as Stripe.Subscription;
-          const customerId = sub.customer as string;
-
-          await app.prisma.user.updateMany({
-            where: { stripeCustomerId: customerId },
-            data: {
-              subscriptionStatus: "EXPIRED",
-              stripeSubscriptionId: null,
-            },
-          });
-          break;
-        }
-
-        // ── One-time payment succeeded ───────────────────────────────────
-        case "checkout.session.completed": {
-          const session = event.data.object as Stripe.Checkout.Session;
-          if (session.mode === "payment" && session.payment_status === "paid") {
-            const userId = session.metadata?.userId;
-            if (!userId) break;
-
-            // Credit package purchase
-            if (session.metadata?.type === "credits") {
-              const credits = parseInt(session.metadata.credits || "0");
-              if (credits > 0) {
-                await app.prisma.user.update({
-                  where: { id: userId },
-                  data: { aiCreditsRemaining: { increment: credits } },
-                });
-                app.log.info(
-                  `💰 Added ${credits} AI credits to user ${userId}`,
-                );
-              }
-              break;
+          if (session.metadata?.type === "credits") {
+            const credits = parseInt(session.metadata.credits || "0");
+            if (credits > 0) {
+              await app.prisma.user.update({
+                where: { id: userId },
+                data: { aiCreditsRemaining: { increment: credits } },
+              });
+              app.log.info(`💰 Added ${credits} AI credits to user ${userId}`);
             }
-
-            // One-time subscription purchase (existing logic)
-            const user = await app.prisma.user.findUnique({
-              where: { id: userId },
-            });
-            const now = new Date();
-            const currentEnd =
-              user?.subscriptionEnd && user.subscriptionEnd > now
-                ? user.subscriptionEnd
-                : now;
-            const endDate = new Date(currentEnd);
-            endDate.setDate(endDate.getDate() + 30);
-
-            await app.prisma.user.update({
-              where: { id: userId },
-              data: {
-                subscriptionStatus: "ONE_TIME",
-                subscriptionEnd: endDate,
-              },
-            });
-
-            const { grantInitialCredits } =
-              await import("../services/ai-credits.js");
-            await grantInitialCredits(app.prisma, userId);
+            break;
           }
-          break;
-        }
 
-        // ── Invoice payment failed ───────────────────────────────────────
-        case "invoice.payment_failed": {
-          const invoice = event.data.object as Stripe.Invoice;
-          const customerId = invoice.customer as string;
-
-          await app.prisma.user.updateMany({
-            where: { stripeCustomerId: customerId },
-            data: { subscriptionStatus: "PAST_DUE" },
+          const user = await app.prisma.user.findUnique({
+            where: { id: userId },
           });
-          break;
+          const now = new Date();
+          const currentEnd =
+            user?.subscriptionEnd && user.subscriptionEnd > now
+              ? user.subscriptionEnd
+              : now;
+          const endDate = new Date(currentEnd);
+          endDate.setDate(endDate.getDate() + 30);
+
+          await app.prisma.user.update({
+            where: { id: userId },
+            data: { subscriptionStatus: "ONE_TIME", subscriptionEnd: endDate },
+          });
+          const { grantInitialCredits } =
+            await import("../services/ai-credits.js");
+          await grantInitialCredits(app.prisma, userId);
         }
+        break;
       }
 
-      return { received: true };
-    },
-  );
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        await app.prisma.user.updateMany({
+          where: { stripeCustomerId: invoice.customer as string },
+          data: { subscriptionStatus: "PAST_DUE" },
+        });
+        break;
+      }
+    }
+
+    return { received: true };
+  });
 };
 
 function mapSubscriptionStatus(
