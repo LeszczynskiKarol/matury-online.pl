@@ -16,6 +16,45 @@ import {
 } from "./BiologyQuestions";
 import { ChemText } from "./Chem";
 
+function getCorrectAnswerLocal(type: string, content: any): any {
+  switch (type) {
+    case "CLOSED":
+      return content.correctAnswer;
+    case "MULTI_SELECT":
+      return content.correctAnswers;
+    case "TRUE_FALSE":
+      return content.statements?.map((s: any) => s.isTrue);
+    case "FILL_IN":
+      return content.blanks?.map((b: any) => b.acceptedAnswers?.[0]);
+    case "MATCHING":
+      return content.pairs;
+    case "ORDERING":
+      return content.correctOrder;
+    case "ERROR_FIND":
+      return content.correctErrorStep;
+    case "CLOZE":
+      return Object.fromEntries(
+        Object.entries(content.blanks || {}).map(([k, b]: [string, any]) => [
+          k,
+          b.acceptedAnswers?.[0],
+        ]),
+      );
+    case "PROOF_ORDER":
+      return content.correctOrder;
+    case "GRAPH_INTERPRET":
+    case "TABLE_DATA":
+      return content.subQuestions?.map((sq: any) => sq.acceptedAnswers?.[0]);
+    case "WIAZKA":
+      return content.subQuestions?.map((sq: any) => ({
+        id: sq.id,
+        type: sq.type,
+        correctAnswer: sq.correctAnswer || sq.acceptedAnswers?.[0],
+      }));
+    default:
+      return null;
+  }
+}
+
 interface Question {
   id: string;
   type: string;
@@ -806,20 +845,47 @@ export function QuizPlayer({
           )}
           <div className="flex gap-3">
             {phase === "question" && (
-              <button
-                onClick={submitAnswer}
-                disabled={response === null || submitting}
-                className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {submitting ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Sprawdzam...
-                  </span>
-                ) : (
-                  "Sprawdź odpowiedź"
+              <>
+                {response === null && (
+                  <button
+                    onClick={() => {
+                      const content = currentQuestion.content;
+                      const correct = getCorrectAnswerLocal(
+                        currentQuestion.type,
+                        content,
+                      );
+                      setFeedbackData({
+                        isCorrect: false,
+                        score: 0,
+                        xpEarned: 0,
+                        explanation:
+                          currentQuestion.content.explanation ||
+                          content.explanation,
+                        correctAnswer: correct,
+                        revealed: true,
+                      });
+                      setPhase("feedback");
+                    }}
+                    className="px-4 py-2.5 rounded-2xl text-sm font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-surface-800 hover:bg-zinc-200 dark:hover:bg-surface-700 transition-all"
+                  >
+                    Pokaż odpowiedź
+                  </button>
                 )}
-              </button>
+                <button
+                  onClick={submitAnswer}
+                  disabled={response === null || submitting}
+                  className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Sprawdzam...
+                    </span>
+                  ) : (
+                    "Sprawdź odpowiedź"
+                  )}
+                </button>
+              </>
             )}
             {phase === "feedback" && (
               <button onClick={nextQuestion} className="btn-primary">
@@ -2032,36 +2098,48 @@ function ClozeQuestion({
   const ans = (response as Record<string, string>) || {};
   const isA = feedback !== null;
   const tmpl = () =>
-    content.template.split(/(\{\{[^}]+\}\})/g).map((p: string, i: number) => {
-      const m = p.match(/\{\{(\w+)\}\}/);
-      if (!m)
+    content.template
+      .split(/(\{\{[^}]+\}\}|\(\d+\))/g)
+      .map((p: string, i: number) => {
+        const m = p.match(/\{\{(\w+)\}\}/) || p.match(/\((\d+)\)/);
+        if (!m)
+          return (
+            <span key={i}>
+              <ChemText text={p} />
+            </span>
+          );
+        // Map (1) → "b1", (2) → "b2" etc; {{b1}} stays "b1"
+        const rawId = m[1];
+        const id = /^\d+$/.test(rawId) ? `b${rawId}` : rawId;
+        const b = content.blanks[id] || content.blanks[rawId];
+        if (!m)
+          return (
+            <span key={i}>
+              <ChemText text={p} />
+            </span>
+          );
+
+        const ok =
+          isA &&
+          b?.acceptedAnswers?.some(
+            (a: string) =>
+              a.toLowerCase().trim() ===
+              (ans[id] || ans[rawId] || "").toLowerCase().trim(),
+          );
         return (
-          <span key={i}>
-            <ChemText text={p} />
-          </span>
+          <input
+            key={i}
+            type="text"
+            value={ans[id] || ans[rawId] || ""}
+            onChange={(e) =>
+              !disabled && onChange({ ...ans, [id]: e.target.value })
+            }
+            disabled={disabled}
+            placeholder="..."
+            className={`inline-block w-28 mx-1 px-2 py-1 text-sm text-center border-b-2 bg-transparent outline-none transition-all ${isA ? (ok ? "border-brand-500 text-brand-600" : "border-red-500 text-red-600") : "border-zinc-300 dark:border-zinc-600 focus:border-navy-500"}`}
+          />
         );
-      const id = m[1];
-      const b = content.blanks[id];
-      const ok =
-        isA &&
-        b?.acceptedAnswers?.some(
-          (a: string) =>
-            a.toLowerCase().trim() === (ans[id] || "").toLowerCase().trim(),
-        );
-      return (
-        <input
-          key={i}
-          type="text"
-          value={ans[id] || ""}
-          onChange={(e) =>
-            !disabled && onChange({ ...ans, [id]: e.target.value })
-          }
-          disabled={disabled}
-          placeholder="..."
-          className={`inline-block w-28 mx-1 px-2 py-1 text-sm text-center border-b-2 bg-transparent outline-none transition-all ${isA ? (ok ? "border-brand-500 text-brand-600" : "border-red-500 text-red-600") : "border-zinc-300 dark:border-zinc-600 focus:border-navy-500"}`}
-        />
-      );
-    });
+      });
   return (
     <div>
       {content.instruction && (

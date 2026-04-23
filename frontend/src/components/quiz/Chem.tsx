@@ -25,17 +25,27 @@ export function Chem({
 }
 
 /**
- * Renderuje tekst mieszający prozę z wyrażeniami między $...$.
- * Dla tekstów pytań gdzie wzór jest wtopiony w zdanie:
- *   "Stała dysocjacji $\\ce{CH3COOH}$ wynosi $K_a = 1{,}8\\cdot10^{-5}$."
+ * Renderuje tekst mieszający prozę z wyrażeniami między $...$ (LaTeX)
+ * oraz `...` (inline code, np. =LICZ.JEŻELI()).
  */
 export function ChemText({ text }: { text: string }) {
-  const parts = text.split(/(\$[^$]+\$)/g);
+  // Split łapie zarówno $...$ (LaTeX) jak i `...` (inline code)
+  const parts = text.split(/(\$[^$]+\$|`[^`]+`)/g);
   return (
     <>
       {parts.map((part, i) => {
         if (part.startsWith("$") && part.endsWith("$") && part.length > 2) {
           return <InlineMath key={i} math={part.slice(1, -1)} />;
+        }
+        if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
+          return (
+            <code
+              key={i}
+              className="px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[0.85em] font-mono text-pink-600 dark:text-pink-400"
+            >
+              {part.slice(1, -1)}
+            </code>
+          );
         }
         return <span key={i}>{part}</span>;
       })}
