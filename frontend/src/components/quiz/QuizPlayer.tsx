@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { MathGraph } from "./MathGraph";
+import { AdminQuestionSearch } from "./AdminQuestionSearch";
+import { auth } from "../../lib/api";
 import {
   answers as answersApi,
   sessions as sessionsApi,
@@ -120,6 +122,7 @@ export function QuizPlayer({
   const [totalXp, setTotalXp] = useState(0);
   const [filters, setFilters] = useState<LiveFilters>(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(
     null,
   );
@@ -139,6 +142,35 @@ export function QuizPlayer({
       .then(setFilterOptions)
       .catch(console.error);
   }, [subjectId]);
+
+  useEffect(() => {
+    auth
+      .me()
+      .then((user) => {
+        if (user?.role === "ADMIN") setIsAdmin(true);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleAdminSelectQuestion = useCallback(
+    (question: any) => {
+      // Admin wybrał pytanie z wyszukiwarki — wstrzyknij je jako bieżące
+      answeredIds.current.add(question.id);
+      setQuestions((prev) => {
+        const newList = [...prev];
+        // Wstaw pytanie zaraz za bieżącym indeksem
+        newList.splice(currentIndex + 1, 0, question);
+        return newList;
+      });
+      // Przeskocz na nowo wstawione pytanie
+      setCurrentIndex((i) => i + 1);
+      setResponse(null);
+      setFeedbackData(null);
+      setPhase("question");
+      startTime.current = Date.now();
+    },
+    [currentIndex],
+  );
 
   // Create session on mount
   useEffect(() => {
@@ -657,6 +689,13 @@ export function QuizPlayer({
           />
         </div>
       </div>
+
+      {isAdmin && (
+        <AdminQuestionSearch
+          subjectId={subjectId}
+          onSelectQuestion={handleAdminSelectQuestion}
+        />
+      )}
 
       {/* ═══ LIVE FILTER BAR ═══ */}
       <LiveFilterBar

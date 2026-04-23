@@ -63,8 +63,7 @@ const faq = [
     a: 'Matura 2026 rozpoczyna się 4 maja 2026 (poniedziałek) egzaminem z języka polskiego na poziomie podstawowym. Następne dni to matematyka (5 maja) i języki obce (6-7 maja). Egzaminy rozszerzone odbywają się w drugiej połowie miesiąca. Licznik na naszej stronie pokazuje dokładnie ile dni, godzin i minut zostało.' },
   { q: 'Czy można zdać maturę bez korepetycji, tylko z matury-online.pl?',
     a: 'Zdecydowanie tak — platforma jest zaprojektowana jako kompletny substytut korepetycji. Adaptacyjny system trudności pełni rolę nauczyciela, który dobiera zadania pod Twój poziom. AI ocenia wypracowania tak, jak robiłby to prywatny egzaminator. Spaced Repetition pilnuje powtórek. Koszt 49 zł miesięcznie vs 400-600 zł za 4 godziny korepetycji tygodniowo to oszczędność ponad 8000 zł rocznie.' },
-  { q: 'Jak przygotować się do matury w 2-3 miesiące?',
-    a: 'Plan intensywny: (1) Test diagnostyczny na początku — identyfikuje luki. (2) 30-45 minut dziennie z platformy — adaptacyjny algorytm automatycznie skupi się na słabych tematach. (3) Jedno wypracowanie tygodniowo per przedmiot rozszerzony — AI ocena pokaże co poprawiać. (4) Codzienne powtórki Spaced Repetition — 10 minut. (5) Ostatni tydzień — pełne arkusze maturalne w trybie exam simulation.' },
+  
   { q: 'Czym różni się matura podstawowa (PP) od rozszerzonej (PR)?',
     a: 'Podstawowa jest wymagana do zdania matury (30% próg), rozszerzona liczy się do rekrutacji na studia. PP obejmuje poziom szkoły średniej, PR wykracza poza program (materiał uzupełniający, trudniejsze obliczenia, głębsza analiza). Na platformie każdy przedmiot ma filtry pozwalające uczyć się tylko PP, tylko PR albo mix. Zadania są odpowiednio oznaczone.' },
   { q: 'Jakie są typy zadań na prawdziwej maturze i czy platforma je pokrywa?',
@@ -965,7 +964,7 @@ const productSchema = {
 <!-- ══════════════════════════════════════════════════════════════════════ -->
 <footer class="border-t border-zinc-200 dark:border-zinc-800 py-12 bg-white dark:bg-surface-950">
   <div class="max-w-6xl mx-auto px-6">
-    <div class="grid md:grid-cols-5 gap-8 mb-8">
+    <div class="grid md:grid-cols-6 gap-8 mb-8">
       <div class="md:col-span-2">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center">
@@ -980,26 +979,37 @@ const productSchema = {
           matury-online.pl · polska platforma EdTech
         </p>
       </div>
-      <div>
+                  <div>
         <h4 class="font-display font-semibold text-sm mb-4">Przedmioty</h4>
         <ul class="space-y-2 text-sm text-zinc-500">
-          {subjects.slice(0, 6).map((s) => (
-            <li><a href={`/przedmiot/${s.slug}`} class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">{s.short}</a></li>
-          ))}
-          <li><a href="/przedmioty" class="text-brand-500 hover:text-brand-600 transition">Wszystkie przedmioty →</a></li>
+          <li><a href="/przedmiot/polski" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polski</a></li>
+          <li><a href="/przedmiot/matematyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Matematyka</a></li>
+          <li><a href="/przedmiot/angielski" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Angielski</a></li>
+          <li><a href="/przedmiot/biologia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Biologia</a></li>
+          <li><a href="/przedmiot/chemia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Chemia</a></li>
         </ul>
       </div>
       <div>
-        <h4 class="font-display font-semibold text-sm mb-4">Platforma</h4>
+        <h4 class="font-display font-semibold text-sm mb-4">&nbsp;</h4>
         <ul class="space-y-2 text-sm text-zinc-500">
-          <li><a href="#zadania" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Typy zadań</a></li>
-          <li><a href="#funkcje" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Funkcje</a></li>
-          <li><a href="#cennik" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Cennik</a></li>
-          <li><a href="#faq" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">FAQ</a></li>
-          <li><a href="/quiz-diagnostyczny" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Test diagnostyczny</a></li>
-          <li><a href="/blog" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Blog</a></li>
+          <li><a href="/przedmiot/fizyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Fizyka</a></li>
+          <li><a href="/przedmiot/historia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Historia</a></li>
+          <li><a href="/przedmiot/geografia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Geografia</a></li>
+          <li><a href="/przedmiot/wos" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">WOS</a></li>
+          <li><a href="/przedmiot/informatyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Informatyka</a></li>
         </ul>
       </div>
+      <div>
+        <h4 class="font-display font-semibold text-sm mb-4">&nbsp;</h4>
+        <ul class="space-y-2 text-sm text-zinc-500">
+          <li><a href="/przedmiot/fizyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Fizyka</a></li>
+          <li><a href="/przedmiot/historia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Historia</a></li>
+          <li><a href="/przedmiot/geografia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Geografia</a></li>
+          <li><a href="/przedmiot/wos" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">WOS</a></li>
+          <li><a href="/przedmiot/informatyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Informatyka</a></li>
+        </ul>
+      </div>
+      
       <div>
         <h4 class="font-display font-semibold text-sm mb-4">Prawne</h4>
         <ul class="space-y-2 text-sm text-zinc-500">

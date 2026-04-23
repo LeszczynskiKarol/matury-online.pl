@@ -41,7 +41,7 @@ const faq = [
   { q: 'Czy platforma ma krzyżówki genetyczne z tabelą Punnetta?', a: 'Tak — to jeden z unikalnych typów zadań. Dostajesz krzyżówkę z genotypami rodziców, wypełniasz tabelę Punnetta i obliczasz prawdopodobieństwo fenotypów potomstwa. AI sprawdza poprawność tabeli, genotypów i obliczeń.' },
   { q: 'Jak działa zadanie "projekt doświadczenia"?', a: 'To format typowy dla matury z biologii: dostajesz problem badawczy, a Twoim zadaniem jest sformułować hipotezę, zaplanować próbę kontrolną i badawczą, wskazać zmienną zależną i niezależną, opisać oczekiwane wyniki. AI ocenia kompletność i poprawność merytoryczną.' },
   { q: 'Ile pytań z biologii jest na platformie?', a: `Aktualnie ${totalQuestions}+ pytań w 5 działach: genetyka i ewolucja (80), fizjologia człowieka (80), różnorodność organizmów (65), biologia środowiska (60), biologia komórki (55). Kolejne 8 działów jest aktywnie rozbudowywanych.` },
-  { q: 'Jak przygotować się do matury z biologii w 3 miesiące?', a: '(1) Test diagnostyczny — system znajdzie luki. (2) 30-45 min dziennie — algorytm skupi się na najsłabszych działach. (3) Krzyżówki genetyczne i projekty doświadczeń ćwicz osobno — to najtrudniejsze zadania. (4) Spaced Repetition na definicje i procesy — 10 min dziennie. (5) Ostatni tydzień: pełne arkusze z czasem.' },
+  
 ];
 
 const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) };
@@ -404,14 +404,73 @@ const otherSubjects = [
 <!-- FOOTER -->
 <footer class="border-t border-zinc-200 dark:border-zinc-800 py-12 bg-white dark:bg-surface-950">
   <div class="max-w-6xl mx-auto px-6">
-    <div class="grid md:grid-cols-4 gap-8 mb-8">
-      <div class="md:col-span-2"><div class="flex items-center gap-3 mb-4"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center"><span class="text-white font-display font-bold text-sm">M</span></div><span class="font-display font-bold">Matury Online</span></div><p class="text-sm text-zinc-500 mb-4 max-w-sm">Platforma do nauki biologii przed maturą 2026. Genetyka, fizjologia, ekologia — krzyżówki, doświadczenia, schematy z oceną AI.</p></div>
-      <div><h4 class="font-display font-semibold text-sm mb-4">Przedmioty</h4><ul class="space-y-2 text-sm text-zinc-500"><li><span class="text-zinc-900 dark:text-zinc-100 font-medium">Biologia</span></li>{otherSubjects.slice(0,5).map(s=><li><a href={`/przedmiot/${s.slug}`} class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">{s.name}</a></li>)}<li><a href="/" class="text-brand-500 hover:text-brand-600 transition">Wszystkie →</a></li></ul></div>
-      <div><h4 class="font-display font-semibold text-sm mb-4">Prawne</h4><ul class="space-y-2 text-sm text-zinc-500"><li><a href="/terms-of-service" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Regulamin</a></li><li><a href="/privacy-policy" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polityka prywatności</a></li><li><button type="button" onclick="window.openConsentSettings && window.openConsentSettings()" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Cookies</button></li><li><a href="/kontakt" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Kontakt</a></li></ul></div>
+    <div class="grid md:grid-cols-6 gap-8 mb-8">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center">
+            <span class="text-white font-display font-bold text-sm">M</span>
+          </div>
+          <span class="font-display font-bold">Matury Online</span>
+        </div>
+        <p class="text-sm text-zinc-500 mb-4 max-w-sm">
+          Inteligentna platforma do nauki przed maturą 2026. Wszystkie popularne przedmioty, 5000+ pytań, AI ocena wypracowań, nieograniczone słuchanie angielskiego generowane na żywo.
+        </p>
+        <p class="text-xs text-zinc-400">
+          matury-online.pl · polska platforma EdTech
+        </p>
+      </div>
+                  <div>
+        <h4 class="font-display font-semibold text-sm mb-4">Przedmioty</h4>
+        <ul class="space-y-2 text-sm text-zinc-500">
+          <li><a href="/przedmiot/polski" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polski</a></li>
+          <li><a href="/przedmiot/matematyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Matematyka</a></li>
+          <li><a href="/przedmiot/angielski" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Angielski</a></li>
+          <li><a href="/przedmiot/biologia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Biologia</a></li>
+          <li><a href="/przedmiot/chemia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Chemia</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-sm mb-4">&nbsp;</h4>
+        <ul class="space-y-2 text-sm text-zinc-500">
+          <li><a href="/przedmiot/fizyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Fizyka</a></li>
+          <li><a href="/przedmiot/historia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Historia</a></li>
+          <li><a href="/przedmiot/geografia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Geografia</a></li>
+          <li><a href="/przedmiot/wos" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">WOS</a></li>
+          <li><a href="/przedmiot/informatyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Informatyka</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-display font-semibold text-sm mb-4">&nbsp;</h4>
+        <ul class="space-y-2 text-sm text-zinc-500">
+          <li><a href="/przedmiot/fizyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Fizyka</a></li>
+          <li><a href="/przedmiot/historia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Historia</a></li>
+          <li><a href="/przedmiot/geografia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Geografia</a></li>
+          <li><a href="/przedmiot/wos" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">WOS</a></li>
+          <li><a href="/przedmiot/informatyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Informatyka</a></li>
+        </ul>
+      </div>
+      
+      <div>
+        <h4 class="font-display font-semibold text-sm mb-4">Prawne</h4>
+        <ul class="space-y-2 text-sm text-zinc-500">
+          <li><a href="/terms-of-service" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Regulamin</a></li>
+          <li><a href="/privacy-policy" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polityka prywatności</a></li>
+          <li>          
+          <button
+            type="button"
+            onclick="window.openConsentSettings && window.openConsentSettings()"
+            class="hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+          >
+            Cookies
+          </button>
+          </li>
+          <li><a href="/kontakt" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Kontakt</a></li>
+        </ul>
+      </div>
     </div>
     <div class="border-t border-zinc-200 dark:border-zinc-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p class="text-sm text-zinc-500">© 2026 matury-online.pl · <a href="https://karol-leszczynski.pl" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">karol-leszczynski.pl</a></p>
-      <p class="text-xs text-zinc-400">Matura z biologii 2026 · Genetyka · Fizjologia · Ekologia · AI</p>
+      <p class="text-sm text-zinc-500">© 2026 matury-online.pl · Realizacja: <a href="https://karol-leszczynski.pl" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">karol-leszczynski.pl</a></p>
+      <p class="text-xs text-zinc-400">Matura 2026 · Platforma EdTech · Polski produkt</p>
     </div>
   </div>
 </footer>

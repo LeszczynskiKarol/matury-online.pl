@@ -1,200 +1,105 @@
 // ============================================================================
-// Live Listening Session — generates questions ON DEMAND during user sessions
-// backend/src/services/listening-session.service.ts
+// Listening Session Service v2 — unseen queue + AI prefetch
 //
 // Flow:
-//  1. User starts session → first listening Q generated immediately (~8-12s)
-//  2. User listens + answers (~2-3 min)
-//  3. WHILE user works → next Q pre-generated in background
-//  4. User clicks "next" → Q already ready, zero wait
+//   1. On /start: query DB for LISTENING questions user never answered
+//   2. Serve from unseen queue first (instant, no AI cost)
+//   3. When user reaches second-to-last unseen → fire background AI generation
+//   4. When queue empty → generate synchronously (20-30s wait)
 //
-// Integration: called from session routes, NOT admin panel
+// backend/src/services/listening-session.service.ts
 // ============================================================================
 
 import { PrismaClient } from "@prisma/client";
-import { claudeCall } from "./claude-monitor.js";
-import {
-  VOICES,
-  type VoiceName,
-  generateAudioForSegments,
-} from "./tts.service.js";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { randomUUID } from "crypto";
 
-const s3 = new S3Client({
-  region: process.env.S3_AUDIO_REGION || "eu-north-1",
-});
-const S3_BUCKET = process.env.S3_BUCKET_AUDIO || "matury-online-audio";
-const CDN_BASE =
-  process.env.CDN_AUDIO_URL ||
-  `https://${S3_BUCKET}.s3.${process.env.S3_AUDIO_REGION || "eu-north-1"}.amazonaws.com`;
+// ── In-memory state per session ───────────────────────────────────────────
 
-// ── In-memory prefetch cache ─────────────────────────────────────────────
-// Key: sessionId, Value: Promise that resolves to a generated question
-const prefetchCache = new Map<string, Promise<GeneratedListening>>();
-
-interface GeneratedListening {
-  questionId: string;
-  content: any;
-  audioUrl: string;
+interface SessionState {
+  unseenQueue: string[]; // question IDs not yet shown
+  shownIds: Set<string>; // IDs already shown this session
+  prefetchPromise: Promise<string | null> | null;
+  subjectId: string;
+  topicId: string;
+  difficulty: number;
+  userId: string;
 }
 
-// ── Difficulty / pattern mapping ─────────────────────────────────────────
+const sessions = new Map<string, SessionState>();
 
-type ListeningPattern =
-  | "short_dialogue"
-  | "monologue_tf"
-  | "interview_mcq"
-  | "gap_fill"
-  | "extended_mixed";
+// ── Public API ────────────────────────────────────────────────────────────
 
-function pickPattern(difficulty: number): ListeningPattern {
-  if (difficulty <= 2)
-    return Math.random() > 0.5 ? "short_dialogue" : "monologue_tf";
-  if (difficulty <= 3)
-    return Math.random() > 0.5 ? "monologue_tf" : "interview_mcq";
-  if (difficulty <= 4)
-    return Math.random() > 0.5 ? "interview_mcq" : "gap_fill";
-  return Math.random() > 0.5 ? "gap_fill" : "extended_mixed";
-}
-
-function pickTopic(difficulty: number): string {
-  const easy = [
-    "booking a hotel room",
-    "ordering food at a restaurant",
-    "asking for directions",
-    "shopping for clothes",
-    "planning a weekend trip",
-    "talking about hobbies",
-    "making a doctor's appointment",
-    "discussing school subjects",
-    "phone conversation with a friend",
-    "buying train tickets",
-    "weather forecast",
-    "daily routine description",
-  ];
-  const hard = [
-    "artificial intelligence in education",
-    "climate change solutions",
-    "remote work culture",
-    "social media's impact on mental health",
-    "renewable energy debate",
-    "genetic engineering ethics",
-    "future of space exploration",
-    "digital privacy concerns",
-    "immigration policy",
-    "housing crisis in major cities",
-    "media literacy and fake news",
-    "sustainable fashion",
-  ];
-  return difficulty <= 3
-    ? easy[Math.floor(Math.random() * easy.length)]
-    : hard[Math.floor(Math.random() * hard.length)];
-}
-
-// ── Core: generate one listening question ────────────────────────────────
-
-async function generateOne(
+/**
+ * Initialize listening session: load unseen queue from DB.
+ * Returns first question (from DB if available, or AI-generated).
+ */
+export async function initListeningSession(
   prisma: PrismaClient,
   params: {
+    sessionId: string;
     subjectId: string;
     topicId: string;
     difficulty: number;
     userId: string;
   },
-): Promise<GeneratedListening> {
-  const pattern = pickPattern(params.difficulty);
-  const topic = pickTopic(params.difficulty);
-  const level = params.difficulty <= 3 ? "PP" : "PR";
+): Promise<{ questionId: string; content: any }> {
+  const { sessionId, subjectId, topicId, difficulty, userId } = params;
 
-  // 1. Claude generates content
-  const prompt = buildPrompt(pattern, level, topic);
+  // 1. Find all unseen LISTENING questions for this user
+  const unseenQuestions = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT q.id
+    FROM "Question" q
+    WHERE q."subjectId" = ${subjectId}
+      AND q."topicId" = ${topicId}
+      AND q.type = 'LISTENING'
+      AND q."isActive" = true
+      AND q.content->>'audioUrl' IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM "Answer" a
+        WHERE a."questionId" = q.id AND a."userId" = ${userId}
+      )
+    ORDER BY RANDOM()
+  `;
 
-  const result = await claudeCall({
-    caller: "listening-generator",
-    model: "claude-sonnet-4-6",
-    messages: [{ role: "user", content: prompt }],
-    userId: params.userId,
-    metadata: { pattern, topic, level },
-  });
-  const raw = result.text;
-
-  const parsed = JSON.parse(
-    raw
-      .replace(/```json\s*/g, "")
-      .replace(/```\s*/g, "")
-      .trim(),
+  const unseenIds = unseenQuestions.map((q) => q.id);
+  console.log(
+    `🎧 Listening session ${sessionId}: ${unseenIds.length} unseen questions in DB`,
   );
 
-  // 2. Parse segments
-  const segments = parseSegments(
-    parsed.transcript,
-    parsed.speakers || [],
-    level,
-  );
-
-  // 3. Generate audio
-  const { buffer, durationMs } = await generateAudioForSegments(segments);
-
-  // 4. Upload to S3
-  const s3Key = `listening/live_${randomUUID()}.mp3`;
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: s3Key,
-      Body: buffer,
-      ContentType: "audio/mpeg",
-      CacheControl: "public, max-age=31536000",
-    }),
-  );
-  const audioUrl = `${CDN_BASE}/${s3Key}`;
-
-  // 5. Build content
-  const content = {
-    listeningType: parsed.listeningType || "dialogue",
-    transcript: parsed.transcript,
-    segments,
-    audioUrl,
-    audioDurationMs: durationMs,
-    maxPlays: level === "PR" && pattern === "extended_mixed" ? 1 : 2,
-    contextPL: parsed.contextPL,
-    question:
-      parsed.question || "Listen to the recording and answer the questions.",
-    subQuestions: parsed.subQuestions,
+  // 2. Initialize session state
+  const state: SessionState = {
+    unseenQueue: unseenIds,
+    shownIds: new Set(),
+    prefetchPromise: null,
+    subjectId,
+    topicId,
+    difficulty,
+    userId,
   };
+  sessions.set(sessionId, state);
 
-  // 6. Save to DB (becomes part of question pool for future reuse too)
-  const question = await prisma.question.create({
-    data: {
-      subjectId: params.subjectId,
-      topicId: params.topicId,
-      type: "LISTENING",
-      difficulty: params.difficulty,
-      points: content.subQuestions.reduce(
-        (s: number, q: any) => s + (q.points || 1),
-        0,
-      ),
-      content: content as any,
-      explanation: `[Live generated] ${parsed.title || topic}`,
-      source: level,
-      isActive: true,
-    },
-  });
+  // 3. Return first question
+  if (unseenIds.length > 0) {
+    const firstId = unseenIds.shift()!;
+    state.shownIds.add(firstId);
 
-  if (!audioUrl) {
-    throw new Error("Audio generation failed — question not ready");
+    // If only 1 left after taking this one → prefetch in background
+    if (unseenIds.length <= 1) {
+      triggerPrefetch(prisma, sessionId, state);
+    }
+
+    const question = await fetchQuestion(prisma, firstId);
+    return { questionId: firstId, content: question.content };
   }
 
-  await prisma.topic.update({
-    where: { id: params.topicId },
-    data: { questionCount: { increment: 1 } },
-  });
-
-  return { questionId: question.id, content, audioUrl };
+  // 4. No unseen questions at all → generate synchronously
+  console.log(`🧠 No unseen listening questions, generating new...`);
+  return await generateNewQuestion(prisma, state);
 }
 
-// ── Public API: get next listening question for session ───────────────────
-
+/**
+ * Get next listening question for session.
+ * Serves from unseen queue, or uses prefetched, or generates live.
+ */
 export async function getNextListeningQuestion(
   prisma: PrismaClient,
   params: {
@@ -204,215 +109,154 @@ export async function getNextListeningQuestion(
     difficulty: number;
     userId: string;
   },
-): Promise<GeneratedListening> {
-  const cacheKey = params.sessionId;
+): Promise<{ questionId: string; content: any }> {
+  const { sessionId } = params;
+  let state = sessions.get(sessionId);
 
-  // Check if we have a prefetched question ready
-  if (prefetchCache.has(cacheKey)) {
-    const prefetched = prefetchCache.get(cacheKey)!;
-    prefetchCache.delete(cacheKey);
-
-    // Start prefetching the NEXT one immediately
-    triggerPrefetch(prisma, params);
-
-    return await prefetched;
+  // Session not found (e.g. server restart) — reinitialize
+  if (!state) {
+    return initListeningSession(prisma, params);
   }
 
-  // No prefetch available — generate now + start prefetching next
-  const result = await generateOne(prisma, params);
+  // 1. Try unseen queue first (instant!)
+  while (state.unseenQueue.length > 0) {
+    const nextId = state.unseenQueue.shift()!;
 
-  // Prefetch next in background
-  triggerPrefetch(prisma, params);
+    // Skip if somehow already shown
+    if (state.shownIds.has(nextId)) continue;
+    state.shownIds.add(nextId);
+
+    // Verify question still exists and has audio
+    const q = await fetchQuestion(prisma, nextId);
+    if (!q || !(q.content as any)?.audioUrl) continue;
+
+    console.log(
+      `🎧 Serving unseen question ${nextId} (${state.unseenQueue.length} remaining in queue)`,
+    );
+
+    // Prefetch when second-to-last
+    if (state.unseenQueue.length <= 1 && !state.prefetchPromise) {
+      triggerPrefetch(prisma, sessionId, state);
+    }
+
+    return { questionId: nextId, content: q.content };
+  }
+
+  // 2. Queue empty — check if prefetch completed
+  if (state.prefetchPromise) {
+    console.log(`⏳ Waiting for prefetched question...`);
+    const prefetchedId = await state.prefetchPromise;
+    state.prefetchPromise = null;
+
+    if (prefetchedId && !state.shownIds.has(prefetchedId)) {
+      state.shownIds.add(prefetchedId);
+      const q = await fetchQuestion(prisma, prefetchedId);
+      if (q && (q.content as any)?.audioUrl) {
+        // Start another prefetch for the NEXT one
+        triggerPrefetch(prisma, sessionId, state);
+        return { questionId: prefetchedId, content: q.content };
+      }
+    }
+  }
+
+  // 3. Nothing available — generate synchronously
+  console.log(`🧠 Generating listening question synchronously...`);
+  const result = await generateNewQuestion(prisma, state);
+
+  // Immediately start prefetching the next one
+  triggerPrefetch(prisma, sessionId, state);
 
   return result;
 }
 
-// ── Prefetch: generate next question in background ───────────────────────
+/**
+ * Cleanup session state.
+ */
+export function cleanupPrefetch(sessionId: string): void {
+  sessions.delete(sessionId);
+}
 
-async function triggerPrefetch(
-  prisma: PrismaClient,
-  params: {
-    sessionId: string;
-    subjectId: string;
-    topicId: string;
-    difficulty: number;
-    userId: string;
-  },
-) {
-  if (prefetchCache.has(params.sessionId)) return;
+// ── Internal helpers ──────────────────────────────────────────────────────
 
-  // Don't prefetch if user is low on credits — they might not afford next Q
-  try {
-    const { checkAiCredits } = await import("./ai-credits.js");
-    const { remaining } = await checkAiCredits(prisma, params.userId);
-    if (remaining < 5) return; // threshold: don't waste generation on near-empty accounts
-  } catch {
-    return; // if check fails, skip prefetch safely
-  }
-
-  const promise = generateOne(prisma, {
-    subjectId: params.subjectId,
-    topicId: params.topicId,
-    difficulty: params.difficulty,
-    userId: params.userId,
-  }).catch((err) => {
-    console.error(
-      `Prefetch failed for session ${params.sessionId}:`,
-      err.message,
-    );
-    prefetchCache.delete(params.sessionId);
-    throw err;
+async function fetchQuestion(prisma: PrismaClient, id: string) {
+  return prisma.question.findUnique({
+    where: { id },
+    select: { id: true, content: true, difficulty: true },
   });
-
-  prefetchCache.set(params.sessionId, promise);
 }
 
-// ── Cleanup: remove stale prefetches ─────────────────────────────────────
+function triggerPrefetch(
+  prisma: PrismaClient,
+  sessionId: string,
+  state: SessionState,
+): void {
+  if (state.prefetchPromise) return; // already prefetching
 
-export function cleanupPrefetch(sessionId: string) {
-  prefetchCache.delete(sessionId);
+  console.log(`🔮 Prefetching next listening question in background...`);
+
+  state.prefetchPromise = (async () => {
+    try {
+      const result = await generateNewQuestion(prisma, state);
+      console.log(`✅ Prefetch complete: ${result.questionId}`);
+      return result.questionId;
+    } catch (err: any) {
+      console.error(`❌ Prefetch failed: ${err.message}`);
+      return null;
+    }
+  })();
 }
 
-// ── Prompt builder ───────────────────────────────────────────────────────
+async function generateNewQuestion(
+  prisma: PrismaClient,
+  state: SessionState,
+): Promise<{ questionId: string; content: any }> {
+  const { generateListeningQuestion } =
+    await import("./listening-generator.js");
 
-function buildPrompt(
-  pattern: ListeningPattern,
-  level: string,
-  topic: string,
-): string {
-  const levelDesc =
-    level === "PP"
-      ? "B1/B1+ (basic matura). Simple, clear language. Moderate speed."
-      : "B2/C1 (advanced matura). Complex vocabulary, nuanced arguments.";
-
-  const patterns: Record<string, string> = {
-    short_dialogue: `SHORT DIALOGUE (4-8 exchanges, 30-60 seconds read aloud). Two speakers in everyday situation. Generate 1 multiple-choice question (A-D).`,
-    monologue_tf: `MONOLOGUE (1-2 minutes, 150-250 words). One speaker. Generate 3-4 TRUE/FALSE statements. Include tricky paraphrases.`,
-    interview_mcq: `INTERVIEW (2-3 minutes, 250-400 words). Two speakers. Generate 3-4 multiple-choice questions (A-D). Test: main idea, details, attitude.`,
-    gap_fill: `ACADEMIC RECORDING (2-3 minutes, 300-450 words). One speaker (lecturer/reporter). Generate 4-5 FILL_IN questions — specific words, numbers, key terms.`,
-    extended_mixed: `COMPLEX RECORDING (3-4 minutes, 400-600 words). 2-3 speakers. Generate 5-6 MIXED questions: 2 MCQ + 2 TRUE_FALSE + 1-2 FILL_IN.`,
-  };
-
-  return `You are an expert English matura exam creator for Polish students.
-
-LEVEL: ${levelDesc}
-TOPIC: ${topic}
-FORMAT: ${patterns[pattern]}
-
-RULES:
-1. Natural spoken English — contractions, fillers (well, actually, you know), appropriate for the level.
-2. For dialogues: mark speakers as [Speaker Name].
-3. MCQ correct answers: distribute across A/B/C/D — NOT always A.
-4. Questions answerable ONLY from the recording, not general knowledge.
-5. Content relevant to 18-year-olds.
-
-STRICT JSON SCHEMA — every field is REQUIRED exactly as shown:
-- subQuestions[].id: STRING like "a", "b", "c" (NOT numbers)
-- subQuestions[].text: STRING (the question text)  
-- subQuestions[].type: "CLOSED" | "TRUE_FALSE" | "FILL_IN"
-- subQuestions[].points: NUMBER
-- subQuestions[].options[].id: "A", "B", "C", "D" (NOT "letter", NOT lowercase)
-- subQuestions[].correctAnswer: "A" | "B" | "C" | "D"
-- DO NOT use "letter" field — use "id"
-- DO NOT use "question" field in subQuestions — use "text"
-- DO NOT use numeric ids — use string letters
-
-RESPOND WITH ONLY THIS JSON (no markdown, no backticks):
-{
-  "title": "<short title>",
-  "listeningType": "<monologue|dialogue|interview|announcement|news_report>",
-  "transcript": "<full transcript with [Speaker] labels if dialogue>",
-  "speakers": [{"id":"1","name":"<name>","gender":"female|male"}],
-  "contextPL": "<1 sentence in Polish: what student will hear>",
-  "question": "<instruction in English>",
-  "subQuestions": [
-    {"id":"a","text":"<question>","type":"CLOSED","points":1,"options":[{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}],"correctAnswer":"<A|B|C|D>"},
-    {"id":"b","text":"<question>","type":"TRUE_FALSE","points":2,"statements":[{"text":"...","isTrue":true},{"text":"...","isTrue":false}]},
-    {"id":"c","text":"<question>","type":"FILL_IN","points":1,"acceptedAnswers":["answer1","answer2"]}
-  ],
-  "difficulty": <1-5>,
-  "estimatedDurationSec": <number>
-}`;
-}
-
-// ── Segment parser ───────────────────────────────────────────────────────
-
-function parseSegments(transcript: string, speakers: any[], level: string) {
-  const speed = level === "PP" ? 0.92 : 1.0;
-  const maleVoices: VoiceName[] = [VOICES.BRITISH_MALE, VOICES.BRITISH_MALE_2];
-  const femaleVoices: VoiceName[] = [
-    VOICES.BRITISH_FEMALE,
-    VOICES.BRITISH_FEMALE_2,
+  // Pick random pattern and topic
+  const patterns = [
+    "short_dialogue",
+    "short_dialogue",
+    "monologue_tf",
+    "monologue_tf",
+    "interview_mcq",
+    "gap_fill",
+  ] as const;
+  const topics = [
+    "booking a hotel",
+    "shopping for clothes",
+    "visiting a doctor",
+    "planning a trip",
+    "discussing school",
+    "talking about hobbies",
+    "at the airport",
+    "job interview basics",
+    "sports event",
+    "cooking a recipe",
+    "public transport",
+    "social media",
+    "environmental awareness",
+    "movie review",
+    "daily routine",
   ];
 
-  const voiceMap = new Map<string, VoiceName>();
-  let mi = 0,
-    fi = 0;
-  for (const sp of speakers) {
-    const v =
-      sp.gender === "male" ? maleVoices[mi++ % 2] : femaleVoices[fi++ % 2];
-    voiceMap.set(sp.name, v);
-    voiceMap.set(`Speaker ${sp.id}`, v);
-  }
+  const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+  const topic = topics[Math.floor(Math.random() * topics.length)];
+  const level = state.difficulty <= 3 ? "PP" : "PR";
 
-  const defaultVoice = speakers[0]
-    ? voiceMap.get(speakers[0].name) || VOICES.BRITISH_FEMALE
-    : VOICES.BRITISH_FEMALE;
+  const questionId = await generateListeningQuestion(prisma, {
+    subjectId: state.subjectId,
+    topicId: state.topicId,
+    pattern: pattern as any,
+    level: level as any,
+    topic,
+    difficulty: state.difficulty,
+  });
 
-  const regex = /\[([^\]]+)\]\s*/g;
-  const hasLabels = regex.test(transcript);
-  regex.lastIndex = 0;
+  state.shownIds.add(questionId);
 
-  if (!hasLabels) {
-    const sentences = transcript.match(/[^.!?]+[.!?]+/g) || [transcript];
-    const segs = [];
-    for (let i = 0; i < sentences.length; i += 3) {
-      const chunk = sentences
-        .slice(i, i + 3)
-        .join(" ")
-        .trim();
-      if (chunk)
-        segs.push({
-          speaker: speakers[0]?.name || "Narrator",
-          text: chunk,
-          voice: defaultVoice,
-          speed,
-          pauseAfterMs: 500,
-        });
-    }
-    return segs;
-  }
+  const question = await fetchQuestion(prisma, questionId);
+  if (!question) throw new Error("Generated question not found in DB");
 
-  const segments: any[] = [];
-  let lastIndex = 0;
-  let currentSpeaker = speakers[0]?.name || "Speaker 1";
-  let match;
-
-  while ((match = regex.exec(transcript)) !== null) {
-    if (match.index > lastIndex) {
-      const text = transcript.slice(lastIndex, match.index).trim();
-      if (text)
-        segments.push({
-          speaker: currentSpeaker,
-          text,
-          voice: voiceMap.get(currentSpeaker) || defaultVoice,
-          speed,
-          pauseAfterMs: 700,
-        });
-    }
-    currentSpeaker = match[1].trim();
-    lastIndex = match.index + match[0].length;
-  }
-
-  const remaining = transcript.slice(lastIndex).trim();
-  if (remaining)
-    segments.push({
-      speaker: currentSpeaker,
-      text: remaining,
-      voice: voiceMap.get(currentSpeaker) || defaultVoice,
-      speed,
-      pauseAfterMs: 300,
-    });
-
-  return segments;
+  return { questionId, content: question.content };
 }
