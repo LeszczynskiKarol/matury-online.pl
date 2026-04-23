@@ -1,0 +1,379 @@
+---
+
+import Base from '../../../layouts/Base.astro';
+import { ThemeToggle } from '../../../components/ui/ThemeToggle';
+
+const topics = [
+  { name: 'Kartografia i GIS', icon: '🗺️', questions: 20, subtopics: ['Skala mapy', 'Odwzorowania kartograficzne', 'Mapa topograficzna', 'Profil terenu', 'GPS i GIS', 'Współrzędne geograficzne'] },
+  { name: 'Astronomia i ruchy Ziemi', icon: '🌍', questions: 24, subtopics: ['Ruch obrotowy', 'Ruch obiegowy', 'Pory roku', 'Strefy oświetlenia', 'Czas strefowy', 'Zaćmienia'] },
+  { name: 'Litosfera i geologia', icon: '🪨', questions: 32, subtopics: ['Budowa Ziemi', 'Minerały i skały', 'Tektonika płyt', 'Wulkanizm', 'Trzęsienia ziemi', 'Rzeźba terenu', 'Procesy egzogeniczne'] },
+  { name: 'Atmosfera i klimat', icon: '🌤️', questions: 30, subtopics: ['Budowa atmosfery', 'Ciśnienie atmosferyczne', 'Wiatry', 'Fronty atmosferyczne', 'Strefy klimatyczne', 'Klimatogramy', 'Zmiany klimatu'] },
+  { name: 'Hydrosfera', icon: '💧', questions: 24, subtopics: ['Obieg wody', 'Rzeki i jeziora', 'Wody podziemne', 'Morza i oceany', 'Prądy morskie', 'Lodowce'] },
+  { name: 'Pedosfera i biosfera', icon: '🌱', questions: 18, subtopics: ['Typy gleb', 'Procesy glebotwórcze', 'Strefy roślinne', 'Biomy', 'Ochrona przyrody'] },
+  { name: 'Środowisko przyrodnicze Polski', icon: '🇵🇱', questions: 30, subtopics: ['Ukształtowanie terenu', 'Klimat Polski', 'Rzeki i jeziora Polski', 'Gleby Polski', 'Parki narodowe', 'Regiony fizycznogeograficzne'] },
+  { name: 'Demografia i urbanizacja', icon: '👥', questions: 24, subtopics: ['Przyrost naturalny', 'Migracje', 'Struktura wieku', 'Piramida ludności', 'Urbanizacja', 'Aglomeracje'] },
+  { name: 'Rolnictwo', icon: '🌾', questions: 30, subtopics: ['Warunki rozwoju rolnictwa', 'Typy rolnictwa', 'Uprawy', 'Hodowla', 'Rolnictwo w Polsce', 'Bezpieczeństwo żywnościowe'] },
+  { name: 'Przemysł i energetyka', icon: '🏭', questions: 24, subtopics: ['Czynniki lokalizacji', 'Okręgi przemysłowe', 'Surowce mineralne', 'Energetyka konwencjonalna', 'OZE', 'Przemysł w Polsce'] },
+  { name: 'Usługi i transport', icon: '🚂', questions: 22, subtopics: ['Rodzaje usług', 'Turystyka', 'Transport drogowy', 'Transport kolejowy', 'Transport morski', 'Transport lotniczy'] },
+  { name: 'Globalizacja i problemy świata', icon: '🌐', questions: 22, subtopics: ['Globalizacja', 'Organizacje międzynarodowe', 'Kraje rozwinięte i rozwijające się', 'Konflikty', 'Problemy demograficzne', 'Zrównoważony rozwój'] },
+];
+
+const totalQuestions = topics.reduce((s, t) => s + t.questions, 0); // 300
+
+const questionTypes = [
+  { icon: '◉', name: 'Zamknięte A–D', desc: 'Pytania o fakty, procesy, lokalizacje' },
+  { icon: '☑', name: 'Wielokrotne', desc: 'Wskaż wszystkie poprawne odpowiedzi' },
+  { icon: '⚖', name: 'Prawda / Fałsz', desc: 'Oceń prawdziwość stwierdzeń geograficznych' },
+  { icon: '📈', name: 'Interpretuj wykres', desc: 'Klimatogramy, diagramy, wykresy demograficzne' },
+  { icon: '▦', name: 'Tabela danych', desc: 'Analiza danych statystycznych — PKB, ludność, produkcja' },
+  { icon: '🗺️', name: 'Analiza mapy', desc: 'Odczytaj dane z mapy topograficznej, tematycznej, konturowej' },
+  { icon: '⇄', name: 'Dopasuj pary', desc: 'Połącz obiekty z lokalizacjami, procesy z przyczynami' },
+  { icon: '✎', name: 'Otwarte', desc: 'Opisz proces, wyjaśnij zależność — ocena AI', badge: 'AI' },
+];
+
+const faq = [
+  { q: 'Jakie działy geografii są na maturze 2026?', a: `Matura z geografii obejmuje 12 działów: kartografia i GIS, astronomia, litosfera, atmosfera i klimat, hydrosfera, pedosfera i biosfera, środowisko przyrodnicze Polski, demografia, rolnictwo, przemysł i energetyka, usługi i transport, globalizacja. Platforma pokrywa wszystkie — łącznie ${totalQuestions}+ pytań.` },
+  { q: 'Czy matura z geografii jest tylko na poziomie rozszerzonym?', a: 'Tak. Geografia od 2023 roku jest dostępna wyłącznie jako przedmiot dodatkowy na poziomie rozszerzonym (PR). Nie ma matury z geografii na poziomie podstawowym. Egzamin trwa 180 minut i składa się z zadań zamkniętych i otwartych — łącznie do 60 punktów.' },
+  { q: 'Ile pytań z geografii jest na platformie?', a: `${totalQuestions}+ pytań na 12 działów. Największe zestawy: litosfera i geologia (${topics[2].questions}), atmosfera i klimat (${topics[3].questions}), środowisko Polski (${topics[6].questions}), rolnictwo (${topics[8].questions}). Baza regularnie rozbudowywana.` },
+  { q: 'Czy są pytania z mapą i klimatogramem?', a: 'Tak. Mamy zadania z interpretacją map topograficznych, tematycznych i konturowych — odczytywanie skali, profilu terenu, współrzędnych. Klimatogramy to osobna kategoria: rozpoznawanie stref klimatycznych, odczytywanie temperatur i opadów, porównywanie stacji.' },
+  { q: 'Jak przygotować się do matury z geografii w 3 miesiące?', a: '(1) Test diagnostyczny — system znajdzie luki w 12 działach. (2) 30 min dziennie — algorytm adaptacyjny skupia się na najsłabszych tematach. (3) Mapy i klimatogramy ćwicz osobno — to najczęstsze zadania. (4) Spaced Repetition na definicje i fakty — 10 min dziennie. (5) Ostatni tydzień: pełne arkusze z czasem.' },
+  { q: 'Czy AI ocenia zadania otwarte z geografii?', a: 'Tak. AI analizuje odpowiedzi opisowe — sprawdza poprawność merytoryczną, kompletność argumentacji i użycie terminologii geograficznej. Przy błędzie wskazuje co poprawić i pokazuje wzorcową odpowiedź.' },
+];
+
+const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) };
+
+const otherSubjects = [
+  { slug: 'polski', name: 'Polski', icon: '📚' }, { slug: 'matematyka', name: 'Matematyka', icon: '📐' },
+  { slug: 'angielski', name: 'Angielski', icon: '🇬🇧' }, { slug: 'biologia', name: 'Biologia', icon: '🧬' },
+  { slug: 'chemia', name: 'Chemia', icon: '⚗️' }, { slug: 'fizyka', name: 'Fizyka', icon: '⚛️' },
+  { slug: 'historia', name: 'Historia', icon: '🏛️' }, { slug: 'wos', name: 'WOS', icon: '⚖️' },
+];
+---
+<Base title="Matura z Geografii 2026 — Mapy, Klimat, Demografia, Zadania AI | Matury Online">
+<!-- NAV -->
+<nav class="fixed top-0 w-full z-50 border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-surface-950/80 backdrop-blur-xl">
+  <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+    <a href="/" class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center shadow-lg shadow-brand-500/20"><span class="text-white font-display font-bold text-lg">M</span></div><span class="font-display font-bold text-xl hidden sm:block">Matury Online</span></a>
+    <div class="hidden md:flex items-center gap-7">
+      <a href="#dzialy" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Działy</a>
+      <a href="#typy-zadan" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Typy zadań</a>
+      <a href="#cennik" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Cennik</a>
+      <a href="#faq" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">FAQ</a>
+    </div>
+    <div class="flex items-center gap-3"><ThemeToggle client:load /><a href="/auth/login" class="btn-ghost text-sm py-2 px-4 hidden sm:inline-flex">Zaloguj się</a><a href="/auth/register" class="btn-primary text-sm py-2 px-5">Rozpocznij naukę</a></div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="relative pt-32 pb-16 md:pt-40 md:pb-20 overflow-hidden">
+  <div class="absolute inset-0 -z-10">
+    <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-sky-500/10 dark:bg-sky-500/5 rounded-full blur-[120px]"></div>
+    <div class="absolute bottom-0 left-0 w-[500px] h-[500px] bg-cyan-500/10 dark:bg-cyan-500/5 rounded-full blur-[100px]"></div>
+  </div>
+  <div class="max-w-6xl mx-auto px-6 text-center">
+    <div class="animate-fade-in"><a href="/" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-sm font-medium mb-6 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition">← Wszystkie przedmioty</a></div>
+    <div class="animate-fade-in">
+      <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-sky-100 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400 text-sm font-semibold mb-8">
+        <span class="text-2xl">🌍</span> Geografia · PR · {totalQuestions}+ pytań
+      </div>
+    </div>
+    <h1 class="font-display font-extrabold text-5xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tight mb-6 animate-slide-up">
+      Matura z geografii<br/><span class="bg-gradient-to-r from-sky-500 to-cyan-500 bg-clip-text text-transparent">od map po globalizację</span>
+    </h1>
+    <p class="max-w-2xl mx-auto text-lg md:text-xl text-zinc-600 dark:text-zinc-400 mb-10 animate-slide-up" style="animation-delay: 100ms">
+      <strong class="text-zinc-900 dark:text-zinc-100">12 działów</strong> — kartografia, geologia, klimat, hydrologia, demografia, rolnictwo, przemysł, transport, globalizacja. Zadania z <strong class="text-zinc-900 dark:text-zinc-100">mapami, klimatogramami, wykresami</strong> i odpowiedzi otwarte oceniane przez AI.
+    </p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style="animation-delay: 200ms">
+      <a href="/auth/register" class="btn-primary text-base py-4 px-8">Zacznij ćwiczyć geografię — 49 zł/mies.<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></a>
+    </div>
+    <div class="flex flex-wrap justify-center gap-8 md:gap-16 mt-16 animate-fade-in" style="animation-delay: 400ms">
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">12</div><div class="text-sm text-zinc-500 mt-1">działów</div></div>
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">{totalQuestions}+</div><div class="text-sm text-zinc-500 mt-1">pytań</div></div>
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">8</div><div class="text-sm text-zinc-500 mt-1">typów zadań</div></div>
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">PR</div><div class="text-sm text-zinc-500 mt-1">rozszerzony</div></div>
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">AI</div><div class="text-sm text-zinc-500 mt-1">ocena otwartych</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- COUNTDOWN -->
+<section class="py-12 bg-gradient-to-r from-sky-500 to-cyan-500">
+  <div class="max-w-5xl mx-auto px-6 text-center">
+    <p class="text-white/80 text-sm font-semibold uppercase tracking-widest mb-3">⏰ Matura z geografii — maj 2026 (termin rozszerzeń)</p>
+    <h2 class="font-display font-bold text-2xl md:text-3xl text-white mb-6">Do sesji maturalnej zostało:</h2>
+    <div class="grid grid-cols-4 gap-3 md:gap-6 max-w-2xl mx-auto">
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6"><div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-days>--</div><div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">dni</div></div>
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6"><div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-hours>--</div><div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">godzin</div></div>
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6"><div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-minutes>--</div><div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">minut</div></div>
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6"><div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-seconds>--</div><div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">sekund</div></div>
+    </div>
+    <p class="text-white/80 text-sm mt-6">Geografia to <strong class="text-white">tylko poziom rozszerzony</strong>. Egzamin: 180 minut, do 60 punktów.</p>
+    <a href="/auth/register" class="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-2xl bg-white text-sky-600 font-display font-semibold text-sm hover:bg-white/90 transition-all">Zacznij przygotowania →</a>
+  </div>
+</section>
+<script is:inline>
+(function(){var t=new Date('2026-05-18T09:00:00').getTime();function k(){var d=Math.max(0,t-Date.now()),D=Math.floor(d/864e5),H=Math.floor(d%864e5/36e5),M=Math.floor(d%36e5/6e4),S=Math.floor(d%6e4/1e3),e;e=document.querySelector('[data-countdown-days]');if(e)e.textContent=D;e=document.querySelector('[data-countdown-hours]');if(e)e.textContent=H;e=document.querySelector('[data-countdown-minutes]');if(e)e.textContent=M;e=document.querySelector('[data-countdown-seconds]');if(e)e.textContent=S}k();setInterval(k,1e3)})();
+</script>
+
+<!-- DZIAŁY -->
+<section id="dzialy" class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">12 działów — pełny zakres matury z geografii</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">Geografia fizyczna, społeczno-ekonomiczna i Polska — wszystko, co CKE wymaga na rozszerzeniu.</p>
+    </div>
+
+    <!-- 3 bloki tematyczne -->
+    <div class="mb-8">
+      <h3 class="font-display font-semibold text-lg mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center text-sm">🌏</span>
+        Geografia fizyczna
+      </h3>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {topics.slice(0, 6).map((topic) => (
+          <div class="glass-card p-5 hover:border-sky-500/20 transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xl">{topic.icon}</span>
+                <h4 class="font-display font-bold text-sm">{topic.name}</h4>
+              </div>
+              <span class="text-xs font-semibold text-sky-600 dark:text-sky-400">{topic.questions}</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              {topic.subtopics.map((sub) => (
+                <span class="px-2 py-1 rounded-lg bg-zinc-50 dark:bg-surface-800 text-[10px] font-medium">{sub}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="mb-8">
+      <h3 class="font-display font-semibold text-lg mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center text-sm">🇵🇱</span>
+        Polska
+      </h3>
+      <div class="glass-card p-5 hover:border-sky-500/20 transition-all">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">{topics[6].icon}</span>
+            <h4 class="font-display font-bold text-sm">{topics[6].name}</h4>
+          </div>
+          <span class="text-xs font-semibold text-sky-600 dark:text-sky-400">{topics[6].questions}</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          {topics[6].subtopics.map((sub) => (
+            <span class="px-2 py-1 rounded-lg bg-zinc-50 dark:bg-surface-800 text-[10px] font-medium">{sub}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="font-display font-semibold text-lg mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center text-sm">👥</span>
+        Geografia społeczno-ekonomiczna
+      </h3>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {topics.slice(7).map((topic) => (
+          <div class="glass-card p-5 hover:border-sky-500/20 transition-all">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xl">{topic.icon}</span>
+                <h4 class="font-display font-bold text-sm">{topic.name}</h4>
+              </div>
+              <span class="text-xs font-semibold text-sky-600 dark:text-sky-400">{topic.questions}</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              {topic.subtopics.map((sub) => (
+                <span class="px-2 py-1 rounded-lg bg-zinc-50 dark:bg-surface-800 text-[10px] font-medium">{sub}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TYPY ZADAŃ -->
+<section id="typy-zadan" class="py-20">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Typy zadań maturalnych z geografii</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">Mapy, klimatogramy, wykresy demograficzne, tabele statystyczne — formaty identyczne z arkuszem CKE.</p>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {questionTypes.map((t) => (
+        <div class="glass-card p-5 relative group hover:border-sky-500/30 transition-all">
+          {t.badge && <span class="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[9px] font-bold bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400">{t.badge}</span>}
+          <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">{t.icon}</div>
+          <h3 class="font-display font-bold text-sm mb-1">{t.name}</h3>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">{t.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- AI GRADING DEMO — GEOGRAFIA -->
+<section class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 text-xs font-semibold mb-4">🤖 OCENA AI</div>
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">AI ocenia odpowiedzi opisowe z geografii</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">Sprawdza poprawność merytoryczną, kompletność i terminologię geograficzną.</p>
+    </div>
+    <div class="max-w-4xl mx-auto glass-card p-8">
+      <div class="mb-6 pb-6 border-b border-zinc-200 dark:border-zinc-700">
+        <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Zadanie otwarte · Geografia PR · Atmosfera i klimat</div>
+        <p class="font-display text-lg font-semibold">Wyjaśnij, dlaczego na zachodnim wybrzeżu Ameryki Południowej (np. Atacama) panuje klimat skrajnie suchy, mimo położenia nad oceanem. Uwzględnij co najmniej dwa czynniki.</p>
+      </div>
+      <div class="mb-6 p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30">
+        <div class="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-2">Twoja odpowiedź</div>
+        <p class="text-sm text-zinc-700 dark:text-zinc-300">Pustynia Atacama jest sucha, ponieważ wzdłuż zachodniego wybrzeża płynie zimny Prąd Peruwiański (Humboldta), który schładza dolne warstwy powietrza i hamuje konwekcję — powietrze nie unosi się, więc nie tworzą się chmury deszczowe. Drugi czynnik to bariera Andów, które blokują wilgotne masy powietrza od strony Amazonii (efekt cienia opadowego).</p>
+      </div>
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Ocena AI</div>
+          <div class="flex items-baseline gap-1"><span class="font-display font-extrabold text-3xl text-green-500">3</span><span class="text-zinc-500 text-sm">/ 3 pkt</span></div>
+        </div>
+        <div class="space-y-2">
+          <div class="flex items-center gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-900/10">
+            <span class="w-6 h-6 rounded-full bg-green-500 text-white text-xs flex items-center justify-center font-bold">✓</span>
+            <div class="flex-1"><span class="text-sm font-medium">Czynnik 1: Prąd Peruwiański</span><span class="text-xs text-zinc-500 ml-2">Poprawnie wyjaśniony mechanizm schładzania i hamowania konwekcji</span></div>
+            <span class="text-xs font-bold text-green-600">1 pkt</span>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-900/10">
+            <span class="w-6 h-6 rounded-full bg-green-500 text-white text-xs flex items-center justify-center font-bold">✓</span>
+            <div class="flex-1"><span class="text-sm font-medium">Czynnik 2: Cień opadowy Andów</span><span class="text-xs text-zinc-500 ml-2">Prawidłowo wskazana bariera orograficzna</span></div>
+            <span class="text-xs font-bold text-green-600">1 pkt</span>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-900/10">
+            <span class="w-6 h-6 rounded-full bg-green-500 text-white text-xs flex items-center justify-center font-bold">✓</span>
+            <div class="flex-1"><span class="text-sm font-medium">Terminologia i spójność</span><span class="text-xs text-zinc-500 ml-2">Poprawne użycie terminów: konwekcja, cień opadowy, Prąd Humboldta</span></div>
+            <span class="text-xs font-bold text-green-600">1 pkt</span>
+          </div>
+        </div>
+      </div>
+      <div class="p-4 rounded-2xl bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30">
+        <div class="font-display font-semibold text-sm mb-1">✅ Odpowiedź wzorcowa</div>
+        <p class="text-xs text-zinc-600 dark:text-zinc-400">Kompletna odpowiedź z dwoma trafnymi czynnikami. Opcjonalnie można było wspomnieć o stałym wyżu subtropikalnym (zstępujące prądy powietrzne w strefie zwrotnikowej).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="py-20">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14"><h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Narzędzia do nauki geografii</h2></div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[
+        { icon: '🗺️', title: 'Zadania z mapami', desc: 'Mapa topograficzna, konturowa, tematyczna — odczytywanie skali, profilu, współrzędnych. Jak na maturze.' },
+        { icon: '🌤️', title: 'Klimatogramy', desc: 'Rozpoznawanie stref klimatycznych, odczyt temperatur i opadów, porównywanie stacji meteorologicznych.' },
+        { icon: '🤖', title: 'AI ocenia otwarte', desc: 'Odpowiedzi opisowe sprawdzane pod kątem merytoryki, kompletności i terminologii geograficznej.' },
+        { icon: '🎯', title: 'Adaptacyjna trudność', desc: 'System Elo utrzymuje ~70% poprawnych odpowiedzi. Nie za łatwo, nie za trudno.' },
+        { icon: '🧠', title: 'Spaced Repetition', desc: 'Definicje, procesy, fakty — algorytm SM-2 przypomina w optymalnym momencie.' },
+        { icon: '📊', title: 'Dashboard per dział', desc: 'Celność osobno dla fizycznej, społeczno-ekonomicznej i Polski. Widzisz gdzie masz luki.' },
+      ].map((f) => (
+        <div class="glass-card p-8"><div class="text-4xl mb-4">{f.icon}</div><h3 class="font-display font-bold text-lg mb-2">{f.title}</h3><p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">{f.desc}</p></div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="cennik" class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Jedna cena — geografia + 9 innych przedmiotów</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg">Subskrypcja daje pełny dostęp do wszystkich 10 przedmiotów maturalnych.</p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="glass-card p-8 ring-2 ring-sky-500 relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-sky-500 text-white text-xs font-bold px-4 py-1 rounded-full">POLECANY</div>
+        <h3 class="font-display font-bold text-lg mb-1">Subskrypcja miesięczna</h3>
+        <p class="text-sm text-zinc-500 mb-6">Wszystkie przedmioty, bez limitów</p>
+        <div class="flex items-baseline gap-1 mb-6"><span class="font-display font-extrabold text-5xl">49</span><span class="text-zinc-500">zł/mies.</span></div>
+        <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+          <li class="flex items-start gap-2"><span class="text-sky-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">Geografia + 9 innych</strong></li>
+          <li class="flex items-start gap-2"><span class="text-sky-500 mt-0.5">✓</span> AI ocena zadań otwartych</li>
+          <li class="flex items-start gap-2"><span class="text-sky-500 mt-0.5">✓</span> {totalQuestions}+ pytań z geografii</li>
+          <li class="flex items-start gap-2"><span class="text-sky-500 mt-0.5">✓</span> Spaced Repetition + adaptacja</li>
+          <li class="flex items-start gap-2"><span class="text-sky-500 mt-0.5">✓</span> 600 kredytów AI / miesiąc</li>
+          <li class="flex items-start gap-2"><span class="text-sky-500 mt-0.5">✓</span> Anulujesz kiedy chcesz</li>
+        </ul>
+        <a href="/auth/register?plan=subscription" class="btn-primary w-full">Rozpocznij subskrypcję</a>
+      </div>
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-lg mb-1">Dostęp jednorazowy</h3>
+        <p class="text-sm text-zinc-500 mb-6">30 dni pełnego dostępu</p>
+        <div class="flex items-baseline gap-1 mb-6"><span class="font-display font-extrabold text-5xl">59</span><span class="text-zinc-500">zł / 30 dni</span></div>
+        <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+          <li class="flex items-start gap-2"><span class="text-sky-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">Identyczny dostęp</strong></li>
+          <li class="flex items-start gap-2"><span class="text-sky-500 mt-0.5">✓</span> Bez automatycznego odnowienia</li>
+          <li class="flex items-start gap-2"><span class="text-sky-500 mt-0.5">✓</span> BLIK, karta, Revolut Pay</li>
+        </ul>
+        <a href="/auth/register?plan=one_time" class="btn-outline w-full">Kup dostęp 59 zł</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="py-20">
+  <div class="max-w-3xl mx-auto px-6">
+    <h2 class="font-display font-bold text-3xl md:text-4xl text-center mb-4">FAQ — Matura z geografii 2026</h2>
+    <p class="text-center text-zinc-600 dark:text-zinc-400 mb-14">Najczęstsze pytania o przygotowanie do matury z geografii</p>
+    <div class="space-y-3">
+      {faq.map((item) => (
+        <details class="glass-card group">
+          <summary class="flex items-center justify-between p-6 cursor-pointer font-display font-semibold select-none gap-4"><span>{item.q}</span><svg class="w-5 h-5 text-zinc-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></summary>
+          <div class="px-6 pb-6 text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">{item.a}</div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- INNE PRZEDMIOTY -->
+<section class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-10"><h2 class="font-display font-bold text-2xl md:text-3xl mb-3">Zdajesz też inne przedmioty?</h2><p class="text-zinc-600 dark:text-zinc-400">Jedna subskrypcja — wszystkie odblokowane</p></div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {otherSubjects.map((s) => (
+        <a href={`/przedmiot/${s.slug}`} class="glass-card p-4 text-center group hover:border-sky-500/30 transition-all block"><div class="text-3xl mb-2 group-hover:scale-110 transition-transform">{s.icon}</div><div class="font-display font-semibold text-sm">{s.name}</div></a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="py-20 relative overflow-hidden">
+  <div class="absolute inset-0 -z-10"><div class="absolute inset-0 bg-gradient-to-br from-sky-500/10 via-cyan-500/5 to-transparent"></div></div>
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <div class="text-5xl mb-6">🌍</div>
+    <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Geografia to przedmiot rozszerzony — każdy punkt się liczy</h2>
+    <p class="text-zinc-600 dark:text-zinc-400 text-lg mb-8 max-w-2xl mx-auto">12 działów to dużo materiału. Algorytm adaptacyjny skupi się na Twoich najsłabszych tematach, a AI sprawdzi każdą odpowiedź otwartą.</p>
+    <a href="/auth/register" class="btn-primary text-base py-4 px-8">Rozpocznij naukę geografii — 49 zł/mies.<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="border-t border-zinc-200 dark:border-zinc-800 py-12 bg-white dark:bg-surface-950">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="grid md:grid-cols-4 gap-8 mb-8">
+      <div class="md:col-span-2"><div class="flex items-center gap-3 mb-4"><div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center"><span class="text-white font-display font-bold text-sm">M</span></div><span class="font-display font-bold">Matury Online</span></div><p class="text-sm text-zinc-500 mb-4 max-w-sm">Platforma do nauki geografii przed maturą 2026. {totalQuestions}+ pytań, 12 działów, mapy, klimatogramy, ocena AI.</p></div>
+      <div><h4 class="font-display font-semibold text-sm mb-4">Przedmioty</h4><ul class="space-y-2 text-sm text-zinc-500"><li><span class="text-zinc-900 dark:text-zinc-100 font-medium">Geografia</span></li>{otherSubjects.slice(0,5).map(s=><li><a href={`/przedmiot/${s.slug}`} class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">{s.name}</a></li>)}<li><a href="/" class="text-brand-500 hover:text-brand-600 transition">Wszystkie →</a></li></ul></div>
+      <div><h4 class="font-display font-semibold text-sm mb-4">Prawne</h4><ul class="space-y-2 text-sm text-zinc-500"><li><a href="/terms-of-service" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Regulamin</a></li><li><a href="/privacy-policy" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polityka prywatności</a></li><li><button type="button" onclick="window.openConsentSettings && window.openConsentSettings()" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Cookies</button></li><li><a href="/kontakt" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Kontakt</a></li></ul></div>
+    </div>
+    <div class="border-t border-zinc-200 dark:border-zinc-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-sm text-zinc-500">© 2026 matury-online.pl · <a href="https://karol-leszczynski.pl" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">karol-leszczynski.pl</a></p>
+      <p class="text-xs text-zinc-400">Matura z geografii 2026 · Mapy · Klimat · Demografia · AI</p>
+    </div>
+  </div>
+</footer>
+<script type="application/ld+json" set:html={JSON.stringify(faqSchema)}></script>
+</Base>

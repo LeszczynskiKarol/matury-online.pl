@@ -5,14 +5,14 @@ interface Props {
   title: string;
   description?: string;
   ogImage?: string;
-  noindex?: boolean;   // ← NOWE: dla stron prawnych, zapleczowych itp.
+  noindex?: boolean;   
 }
 
 const {
   title,
   description = 'Matury Online — inteligentna platforma do nauki przed maturą z AI. Testy, wypracowania, statystyki i gamifikacja.',
   ogImage,
-  noindex = false,     // ← NOWE: domyślnie indeksowane
+  noindex = false,     
 } = Astro.props;
 
 const GA_ID = "G-SQ1CESHFJ0";

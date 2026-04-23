@@ -4,13 +4,14 @@ import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 interface Props {
   title: string;
+  noindex?: boolean;   
 }
 
-const { title } = Astro.props;
+const { title, noindex } = Astro.props;
 const currentPath = Astro.url.pathname;
 ---
 
-<Base title={`${title} — Matury Online`}>
+<Base title={`${title} — Matury Online`} noindex={true}>
   <div class="flex min-h-screen">
     <!-- Sidebar -->
     <aside class="hidden lg:flex lg:flex-col lg:w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-surface-900">
