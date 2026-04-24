@@ -67,6 +67,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       isActive,
       limit = 50,
       id,
+
       search,
       offset = 0,
     } = req.query as any;
