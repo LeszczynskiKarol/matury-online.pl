@@ -3,6 +3,10 @@ node_modules/
 */node_modules/
 package-lock.json
 
+backend/scripts/
+*backend/scripts/
+*/backend/scripts/
+
 start-app.ps1
 stop-app.ps1
 
@@ -68,3 +72,5 @@ coverage/
 backend/prisma/seed-exercises.ts
 
 backend/tts-key.json
+
+scripts/.sync-env

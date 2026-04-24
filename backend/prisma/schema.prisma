@@ -578,3 +578,13 @@ model ClaudeApiLog {
   @@index([createdAt])
   @@index([userId])
 }
+
+model QuestionView {
+  userId       String
+  questionId   String
+  viewCount    Int      @default(1)
+  lastViewedAt DateTime @default(now())
+
+  @@id([userId, questionId])
+  @@index([questionId])
+}

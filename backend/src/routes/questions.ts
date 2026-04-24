@@ -127,16 +127,15 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
         const userId = req.user?.userId;
         let viewCounts: Record<string, number> = {};
         if (userId && sorted.length > 0) {
-          const counts = await app.prisma.answer.groupBy({
-            by: ["questionId"],
+          const views = await app.prisma.questionView.findMany({
             where: {
               userId,
               questionId: { in: sorted.map((q: any) => q.id) },
             },
-            _count: { id: true },
+            select: { questionId: true, viewCount: true },
           });
-          for (const c of counts) {
-            viewCounts[c.questionId] = c._count.id;
+          for (const v of views) {
+            viewCounts[v.questionId] = v.viewCount;
           }
         }
 
@@ -393,4 +392,15 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
       return { ok: true };
     },
   );
+
+  app.post("/:id/view", { preHandler: [app.authenticate] }, async (req) => {
+    const userId = req.user.userId;
+    const { id } = req.params as { id: string };
+    const view = await app.prisma.questionView.upsert({
+      where: { userId_questionId: { userId, questionId: id } },
+      update: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
+      create: { userId, questionId: id, viewCount: 1 },
+    });
+    return { ok: true, viewCount: view.viewCount };
+  });
 };

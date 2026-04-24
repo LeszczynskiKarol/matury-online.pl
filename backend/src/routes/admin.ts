@@ -66,11 +66,13 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       difficulty,
       isActive,
       limit = 50,
+      id,
       search,
       offset = 0,
     } = req.query as any;
     const where: any = {};
     if (subjectId) where.subjectId = subjectId;
+    if (id) where.id = id;
     if (topicId) where.topicId = topicId;
     if (type) where.type = type;
     if (difficulty) where.difficulty = parseInt(difficulty);

@@ -139,6 +139,32 @@ function getCorrectAnswerLocal(type: string, content: any): any {
           .join(", ") ||
         null
       );
+    case "CROSS_PUNNETT":
+      return (
+        content.questions
+          ?.map(
+            (q: any) =>
+              `${q.label}: ${q.acceptedAnswers?.[0]}${q.unit ? ` ${q.unit}` : ""}`,
+          )
+          .join("\n") || null
+      );
+
+    case "CALCULATION":
+      return `${content.answer?.expectedValue} ${content.answer?.unit || ""}${content.answer?.tolerance ? ` (±${content.answer.tolerance})` : ""}`;
+
+    case "DIAGRAM_LABEL":
+      return (
+        content.labels
+          ?.map((l: any) => `${l.id}. ${l.question}: ${l.acceptedAnswers?.[0]}`)
+          .join("\n") || null
+      );
+
+    case "EXPERIMENT_DESIGN":
+      return (
+        content.fields
+          ?.map((f: any) => `${f.label}: ${f.sampleAnswer || "(otwarte)"}`)
+          .join("\n") || null
+      );
     default:
       return null;
   }
@@ -728,6 +754,29 @@ export function QuizPlayer({
     }
     setPhase("summary");
   }, [sessionId, questionTypes]);
+
+  // Track question view — fires every time question is displayed
+  useEffect(() => {
+    if (!currentQuestion || phase === "loading") return;
+    fetch(
+      `${import.meta.env.PUBLIC_API_URL || "/api"}/questions/${currentQuestion.id}/view`,
+      { method: "POST", credentials: "include" },
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        // Aktualizuj viewCount w lokalnym state żeby badge się odświeżył
+        if (data?.viewCount !== undefined) {
+          setQuestions((prev) =>
+            prev.map((q) =>
+              q.id === currentQuestion.id
+                ? { ...q, myViewCount: data.viewCount }
+                : q,
+            ),
+          );
+        }
+      })
+      .catch(() => {});
+  }, [currentQuestion?.id, phase]);
 
   // ── Loading ─────────────────────────────────────────────────────────
   if (phase === "loading") {
@@ -2787,32 +2836,57 @@ function WiazkaQuestion({
               </div>
             )}
             {sq.type === "OPEN" && (
-              <textarea
-                value={ans[sq.id] || ""}
-                onChange={(e) => set(sq.id, e.target.value)}
-                disabled={disabled}
-                rows={3}
-                className="input resize-none text-sm"
-                placeholder="Odpowiedź..."
-              />
+              <>
+                <textarea
+                  value={ans[sq.id] || ""}
+                  onChange={(e) => set(sq.id, e.target.value)}
+                  disabled={disabled}
+                  rows={3}
+                  className="input resize-none text-sm"
+                  placeholder="Odpowiedź..."
+                />
+                {isA && sq.sampleAnswer && (
+                  <div className="mt-2 p-3 rounded-xl bg-sky-50 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-800/30">
+                    <p className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider mb-1">
+                      Wzorcowa odpowiedź:
+                    </p>
+                    <p className="text-xs text-zinc-700 dark:text-zinc-300">
+                      {sq.sampleAnswer}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
             {sq.type === "CLOSED" && sq.options && (
               <div className="space-y-2">
-                {sq.options.map((o: any) => (
-                  <button
-                    key={o.id}
-                    onClick={() => !disabled && set(sq.id, o.id)}
-                    disabled={disabled}
-                    className={`option-card w-full text-left text-sm ${ans[sq.id] === o.id ? "selected" : ""}`}
-                  >
-                    <span className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-surface-700 flex items-center justify-center text-xs font-bold">
-                      {o.id}
-                    </span>
-                    <span>
-                      <ChemText text={o.text} />
-                    </span>
-                  </button>
-                ))}
+                {sq.options.map((o: any) => {
+                  const userPicked = ans[sq.id] === o.id;
+                  const isCorrectOpt = o.id === sq.correctAnswer;
+                  let cls = "option-card w-full text-left text-sm";
+                  if (!isA && userPicked) cls += " selected";
+                  if (isA && isCorrectOpt) cls += " correct";
+                  if (isA && userPicked && !isCorrectOpt) cls += " wrong";
+                  return (
+                    <button
+                      key={o.id}
+                      onClick={() => !disabled && set(sq.id, o.id)}
+                      disabled={disabled}
+                      className={cls}
+                    >
+                      <span className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-surface-700 flex items-center justify-center text-xs font-bold">
+                        {o.id}
+                      </span>
+                      <span>
+                        <ChemText text={o.text} />
+                      </span>
+                      {isA && isCorrectOpt && (
+                        <span className="ml-auto text-brand-500 font-bold">
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}{" "}
             {sq.type === "FILL_IN" && sq.template && (
