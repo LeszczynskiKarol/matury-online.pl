@@ -81,7 +81,7 @@ export function AdminQuestionSearch({
           // BRAK subjectId → szuka GLOBALNIE po wszystkich przedmiotach
         };
 
-        if (searchById || /^[a-f0-9-]{8,}$/i.test(searchQuery.trim())) {
+        if (searchById || /^c[a-z0-9]{20,}$/i.test(searchQuery.trim())) {
           params.id = searchQuery.trim();
         } else {
           params.search = searchQuery.trim();
