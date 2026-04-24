@@ -3085,14 +3085,38 @@ function FeedbackBlock({ feedback }: { feedback: any }) {
   );
 }
 function DifficultyDots({ level }: { level: number }) {
+  const labels = ["", "Łatwe", "Podstawa", "Średnie", "Trudne", "Ekspert"];
+  const colors = [
+    "",
+    "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400",
+    "text-sky-600 bg-sky-100 dark:bg-sky-900/20 dark:text-sky-400",
+    "text-amber-600 bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400",
+    "text-orange-600 bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400",
+    "text-red-600 bg-red-100 dark:bg-red-900/20 dark:text-red-400",
+  ];
+  const dotColors = [
+    "",
+    "bg-emerald-500",
+    "bg-sky-500",
+    "bg-amber-500",
+    "bg-orange-500",
+    "bg-red-500",
+  ];
+
   return (
-    <div className="flex gap-1" title={`Trudność: ${level}/5`}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div
-          key={i}
-          className={`diff-dot ${i <= level ? "active" : "inactive"}`}
-        />
-      ))}
-    </div>
+    <span
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-semibold ${colors[level]}`}
+      title={`Trudność: ${level}/5`}
+    >
+      <span className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <span
+            key={i}
+            className={`w-1.5 h-1.5 rounded-full ${i <= level ? dotColors[level] : "bg-zinc-300 dark:bg-zinc-600"}`}
+          />
+        ))}
+      </span>
+      {labels[level]}
+    </span>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   subjects as subjectsApi,
   stripe as stripeApi,
@@ -188,6 +188,20 @@ export function SessionSetup() {
     useState<SessionCategory | null>(null);
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
 
+  const sectionRefs = {
+    topic: useRef<HTMLDivElement>(null),
+    level: useRef<HTMLDivElement>(null),
+    category: useRef<HTMLDivElement>(null),
+    count: useRef<HTMLDivElement>(null),
+    start: useRef<HTMLDivElement>(null),
+  };
+
+  const scrollTo = (ref: React.RefObject<HTMLDivElement | null>) => {
+    setTimeout(() => {
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
+
   useEffect(() => {
     stripeApi
       .status()
@@ -259,6 +273,7 @@ export function SessionSetup() {
                 setSelectedSubject(s);
                 setSelectedTopic(undefined);
                 setSessionCategory(null);
+                scrollTo(sectionRefs.topic);
               }}
               className={`subject-card p-4 text-center text-sm ${selectedSubject?.id === s.id ? "ring-2 ring-brand-500" : ""}`}
             >
@@ -274,13 +289,17 @@ export function SessionSetup() {
 
       {/* 2. Topic selection */}
       {selectedSubject && selectedSubject.topics?.length > 0 && (
-        <div className="animate-slide-up">
+        <div ref={sectionRefs.topic} className="animate-slide-up">
           <h2 className="font-display font-semibold text-sm mb-3">
             2. Wybierz temat (opcjonalnie)
           </h2>
+
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => setSelectedTopic(undefined)}
+              onClick={() => {
+                setSelectedTopic(undefined);
+                scrollTo(sectionRefs.level);
+              }}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${!selectedTopic ? "bg-navy-500 text-white" : "bg-zinc-100 dark:bg-surface-800 text-zinc-600 dark:text-zinc-400"}`}
             >
               Wszystkie tematy
@@ -295,7 +314,10 @@ export function SessionSetup() {
               .map((t: any) => (
                 <button
                   key={t.id}
-                  onClick={() => setSelectedTopic(t.id)}
+                  onClick={() => {
+                    setSelectedTopic(t.id);
+                    scrollTo(sectionRefs.level);
+                  }}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${selectedTopic === t.id ? "bg-navy-500 text-white" : "bg-zinc-100 dark:bg-surface-800 text-zinc-600 dark:text-zinc-400"}`}
                 >
                   {t.name}
@@ -310,7 +332,11 @@ export function SessionSetup() {
 
       {/* 3. Matura level */}
       {selectedSubject && (
-        <div className="animate-slide-up" style={{ animationDelay: "50ms" }}>
+        <div
+          ref={sectionRefs.level}
+          className="animate-slide-up"
+          style={{ animationDelay: "50ms" }}
+        >
           <h2 className="font-display font-semibold text-sm mb-3">
             3. Poziom matury
           </h2>
@@ -337,7 +363,10 @@ export function SessionSetup() {
             ].map((opt) => (
               <button
                 key={opt.val}
-                onClick={() => setMaturaLevel(opt.val)}
+                onClick={() => {
+                  setMaturaLevel(opt.val);
+                  scrollTo(sectionRefs.category);
+                }}
                 className={`flex-1 option-card flex-col items-center text-center ${maturaLevel === opt.val ? "selected" : ""}`}
               >
                 <span className="text-2xl mb-1">{opt.icon}</span>
@@ -353,13 +382,20 @@ export function SessionSetup() {
 
       {/* 4. Session category */}
       {selectedSubject && getCategories(selectedSubject.slug).length > 0 && (
-        <div className="animate-slide-up" style={{ animationDelay: "100ms" }}>
+        <div
+          ref={sectionRefs.category}
+          className="animate-slide-up"
+          style={{ animationDelay: "100ms" }}
+        >
           <h2 className="font-display font-semibold text-sm mb-3">
             4. Kategoria pytań
           </h2>
           <div className="grid sm:grid-cols-2 gap-3">
             <button
-              onClick={() => setSessionCategory(null)}
+              onClick={() => {
+                setSessionCategory(null);
+                scrollTo(sectionRefs.count);
+              }}
               className={`option-card ${!sessionCategory ? "selected" : ""}`}
             >
               <span className="text-2xl">📚</span>
@@ -375,7 +411,10 @@ export function SessionSetup() {
             {getCategories(selectedSubject.slug).map((cat) => (
               <button
                 key={cat.label}
-                onClick={() => setSessionCategory(cat)}
+                onClick={() => {
+                  setSessionCategory(cat);
+                  scrollTo(sectionRefs.count);
+                }}
                 className={`option-card ${sessionCategory?.label === cat.label ? "selected" : ""}`}
               >
                 <span className="text-2xl">{cat.icon}</span>
@@ -393,7 +432,11 @@ export function SessionSetup() {
 
       {/* 5. Question count */}
       {selectedSubject && (
-        <div className="animate-slide-up" style={{ animationDelay: "200ms" }}>
+        <div
+          ref={sectionRefs.count}
+          className="animate-slide-up"
+          style={{ animationDelay: "200ms" }}
+        >
           <h2 className="font-display font-semibold text-sm mb-3">
             5. Liczba pytań
           </h2>
@@ -401,7 +444,10 @@ export function SessionSetup() {
             {[5, 10, 15, 20, 30].map((n) => (
               <button
                 key={n}
-                onClick={() => setQuestionCount(n)}
+                onClick={() => {
+                  setQuestionCount(n);
+                  scrollTo(sectionRefs.start);
+                }}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${questionCount === n ? "bg-brand-500 text-white" : "bg-zinc-100 dark:bg-surface-800"}`}
               >
                 {n}
@@ -414,6 +460,7 @@ export function SessionSetup() {
       {/* Start */}
       {selectedSubject && (
         <div
+          ref={sectionRefs.start}
           className="pt-4 animate-slide-up"
           style={{ animationDelay: "300ms" }}
         >
