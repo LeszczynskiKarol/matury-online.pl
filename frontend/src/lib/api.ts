@@ -279,8 +279,47 @@ export const questions = {
 // ── Gamification ─────────────────────────────────────────────────────────
 
 export const gamification = {
-  achievements: () =>
-    request<{ earned: any[]; locked: any[] }>("/gamification/achievements"),
+  // Badges (replaces old achievements)
+  badges: () =>
+    request<{
+      earned: any[];
+      locked: any[];
+      stats: { total: number; earned: number; byTier: Record<string, number> };
+    }>("/gamification/badges"),
+
+  // Legacy alias
+  achievements: () => gamification.badges(),
+
+  // Dynamic labels
+  labels: () =>
+    request<{
+      active: { id: string; text: string; color: string; category: string }[];
+      all: {
+        id: string;
+        text: string;
+        color: string;
+        category: string;
+        isActive: boolean;
+      }[];
+    }>("/gamification/labels"),
+
+  // Title info
+  title: () => request<any>("/gamification/title"),
+
+  // Profile card (title + labels + showcase)
+  profile: () => request<any>("/gamification/profile"),
+
+  // Set showcase badges (max 3)
+  setShowcase: (badgeIds: string[]) =>
+    request<{ ok: boolean; showcaseBadgeIds: string[] }>(
+      "/gamification/showcase",
+      {
+        method: "POST",
+        body: JSON.stringify({ badgeIds }),
+      },
+    ),
+
+  // Existing
   level: () => request<any>("/gamification/level"),
   leaderboard: (subjectId?: string) => {
     const qs = subjectId ? `?subjectId=${subjectId}` : "";
