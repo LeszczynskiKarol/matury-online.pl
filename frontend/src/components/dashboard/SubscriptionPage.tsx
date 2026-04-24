@@ -744,6 +744,36 @@ export function SubscriptionPage() {
           </button>
         </div>
       )}
+      {/* Delete account */}
+      <div className="text-center pt-8 border-t border-zinc-200 dark:border-zinc-800 mt-8">
+        <button
+          onClick={() => {
+            if (
+              !confirm(
+                "Czy na pewno chcesz usunąć konto? Ta operacja jest NIEODWRACALNA — wszystkie dane, postępy i subskrypcja zostaną trwale usunięte.",
+              )
+            )
+              return;
+            if (
+              !confirm(
+                "Ostatnie ostrzeżenie: klikając OK usuwasz konto bezpowrotnie.",
+              )
+            )
+              return;
+            fetch("/api/auth/account", {
+              method: "DELETE",
+              credentials: "include",
+            })
+              .then((r) => {
+                if (r.ok) window.location.href = "/auth/login";
+              })
+              .catch(() => alert("Błąd podczas usuwania konta"));
+          }}
+          className="text-sm text-red-500 hover:text-red-600 hover:underline"
+        >
+          Usuń konto
+        </button>
+      </div>
     </div>
   );
 }

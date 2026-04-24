@@ -14,6 +14,32 @@ interface SessionCategory {
 }
 
 const SUBJECT_CATEGORIES: Record<string, SessionCategory[]> = {
+  informatyka: [
+    {
+      label: "Pisanie",
+      icon: "✎",
+      types: ["OPEN"],
+      desc: "Algorytmy, pseudokod, wyjaśnienia",
+    },
+    {
+      label: "Testy i quizy",
+      icon: "◉",
+      types: ["CLOSED", "MULTI_SELECT", "TRUE_FALSE", "FILL_IN", "MATCHING"],
+      desc: "Zamknięte, uzupełnianie, dopasowania",
+    },
+    {
+      label: "Obliczenia",
+      icon: "🧮",
+      types: ["CALCULATION"],
+      desc: "Systemy liczbowe, złożoność, obliczenia",
+    },
+    {
+      label: "Dane i wykresy",
+      icon: "🗺",
+      types: ["TABLE_DATA", "GRAPH_INTERPRET"],
+      desc: "Tabele, wykresy, analiza danych",
+    },
+  ],
   polski: [
     {
       label: "Pisanie",

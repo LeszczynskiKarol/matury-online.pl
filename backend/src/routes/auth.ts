@@ -631,4 +631,58 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post("/logout", async (_req, reply) => {
     reply.clearCookie("token", { path: "/" }).send({ ok: true });
   });
+
+  // ── Delete account ─────────────────────────────────────────────────────
+  app.delete(
+    "/account",
+    { preHandler: [app.authenticate] },
+    async (req, reply) => {
+      const userId = req.user.userId;
+
+      // Cancel Stripe subscription if active
+      const user = await app.prisma.user.findUnique({
+        where: { id: userId },
+        select: { stripeCustomerId: true, subscriptionStatus: true },
+      });
+
+      if (user?.stripeCustomerId) {
+        try {
+          const Stripe = (await import("stripe")).default;
+          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+          const subs = await stripe.subscriptions.list({
+            customer: user.stripeCustomerId,
+            status: "active",
+          });
+          for (const sub of subs.data) {
+            await stripe.subscriptions.cancel(sub.id);
+          }
+        } catch (err) {
+          app.log.error(
+            { err },
+            "Failed to cancel Stripe subscription during account deletion",
+          );
+        }
+      }
+
+      // Delete user and cascade
+      await app.prisma.$transaction([
+        app.prisma.answer.deleteMany({ where: { userId } }),
+        app.prisma.studySession.deleteMany({ where: { userId } }),
+        app.prisma.dailyGoal.deleteMany({ where: { userId } }),
+        app.prisma.passwordReset.deleteMany({ where: { userId } }),
+        app.prisma.userAchievement.deleteMany({ where: { userId } }),
+        app.prisma.subjectProgress.deleteMany({ where: { userId } }),
+        app.prisma.userSubject.deleteMany({ where: { userId } }),
+        app.prisma.reviewCard.deleteMany({ where: { userId } }),
+        app.prisma.notification.deleteMany({ where: { userId } }),
+        app.prisma.essaySubmission.deleteMany({ where: { userId } }),
+        app.prisma.emailLog.deleteMany({ where: { userId } }),
+        app.prisma.questionView.deleteMany({ where: { userId } }),
+        app.prisma.essayTopicSuggestion.deleteMany({ where: { userId } }),
+        app.prisma.user.delete({ where: { id: userId } }),
+      ]);
+
+      reply.clearCookie("token", { path: "/" }).send({ deleted: true });
+    },
+  );
 };

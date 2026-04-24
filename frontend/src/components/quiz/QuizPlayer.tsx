@@ -1793,7 +1793,9 @@ function ClosedQuestion({
           return (
             <button
               key={o.id}
-              onClick={() => !disabled && onChange(o.id)}
+              onClick={() =>
+                !disabled && onChange(response === o.id ? null : o.id)
+              }
               disabled={disabled}
               className={c + " w-full text-left"}
             >
