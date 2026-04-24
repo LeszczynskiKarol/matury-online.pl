@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { admin } from "../../lib/api";
 import { ListeningLab } from "./ListeningLab";
 import { ClaudeMonitor } from "./ClaudeMonitor";
+import { AdminExport } from "./AdminExport";
 import { AdminQuestionLog } from "./AdminQuestionLog";
 
 type Tab =
@@ -11,7 +12,8 @@ type Tab =
   | "subjects"
   | "listening"
   | "question-log"
-  | "claude";
+  | "claude"
+  | "export";
 
 export function AdminPanel() {
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -22,6 +24,7 @@ export function AdminPanel() {
     { id: "users", label: "Userzy", icon: "👥" },
     { id: "subjects", label: "Przedmioty", icon: "📚" },
     { id: "claude", label: "Claude API", icon: "🤖" },
+    { id: "export", label: "Eksport", icon: "📥" },
     { id: "question-log", label: "Log pytań", icon: "📜" },
     { id: "listening", label: "Listening Lab", icon: "🎧" },
   ];
@@ -53,7 +56,7 @@ export function AdminPanel() {
       {tab === "subjects" && <AdminSubjects />}
       {tab === "claude" && <ClaudeMonitor />}
       {tab === "question-log" && <AdminQuestionLog />}
-
+      {tab === "export" && <AdminExport />}
       {tab === "listening" && <ListeningLab />}
     </div>
   );

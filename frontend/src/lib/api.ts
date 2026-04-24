@@ -148,12 +148,15 @@ export const answers = {
 
 // ── Essays ───────────────────────────────────────────────────────────────
 
+// ── Essays ───────────────────────────────────────────────────────────────
+
 export const essays = {
   submit: (data: {
     subjectId: string;
     topicId: string;
     prompt: string;
     content: string;
+    level?: "podstawowy" | "rozszerzony";
     timeSpentMs?: number;
   }) =>
     request<any>("/essays/submit", {
@@ -161,8 +164,26 @@ export const essays = {
       body: JSON.stringify(data),
     }),
 
-  history: (params?: { subjectId?: string; limit?: number }) => {
-    const qs = new URLSearchParams(params as any).toString();
+  suggestTopic: (data: {
+    subjectId: string;
+    topicId?: string;
+    level?: "podstawowy" | "rozszerzony";
+  }) =>
+    request<{ topic: string; hints: string[] }>("/essays/suggest-topic", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  history: (params?: {
+    subjectId?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(params || {}).filter(([, v]) => v !== undefined),
+      ) as Record<string, string>,
+    ).toString();
     return request<any[]>(`/essays/history?${qs}`);
   },
 

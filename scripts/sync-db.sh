@@ -129,9 +129,9 @@ createdb $LOCAL_PSQL_ARGS "$LOCAL_DB_NAME"
 echo -e "      ${GREEN}Local DB recreated${NC}"
 
 # ── Step 5: Dump remote → restore local ─────────────────────────────────────
-echo -e "${CYAN}[5/5] Syncing data (pg_dump → psql)...${NC}"
-echo -e "      This may take a minute..."
+echo -e "${CYAN}[5/6] Downloading database dump...${NC}"
 
+DUMP_FILE="/tmp/matury_sync_$$.sql"
 START_TIME=$(date +%s)
 
 ssh -i "$SSH_KEY_PATH" \
@@ -139,7 +139,17 @@ ssh -i "$SSH_KEY_PATH" \
   -o ConnectTimeout=10 \
   "ubuntu@${REMOTE_HOST}" \
   "pg_dump '${REMOTE_DB_URL}' --no-owner --no-acl --clean --if-exists" \
-  | psql $LOCAL_PSQL_ARGS -d "$LOCAL_DB_NAME" --quiet 2>/dev/null
+  > "$DUMP_FILE"
+
+DUMP_SIZE=$(du -h "$DUMP_FILE" 2>/dev/null | cut -f1)
+echo -e "      ${GREEN}Downloaded: ${DUMP_SIZE}${NC}"
+
+# ── Step 6: Restore locally ──────────────────────────────────────────────────
+echo -e "${CYAN}[6/6] Restoring to local database...${NC}"
+
+psql $LOCAL_PSQL_ARGS -d "$LOCAL_DB_NAME" -f "$DUMP_FILE" --quiet 2>/dev/null
+
+rm -f "$DUMP_FILE"
 
 END_TIME=$(date +%s)
 ELAPSED=$((END_TIME - START_TIME))
@@ -148,6 +158,31 @@ echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║   ✓ Database synced in ${ELAPSED}s              ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════╝${NC}"
+echo ""
+
+# ── Post-sync stats ──────────────────────────────────────────────────────────
+echo -e "${CYAN}📊 Database summary:${NC}"
+echo ""
+
+# DB size
+DB_SIZE=$(psql $LOCAL_PSQL_ARGS -d "$LOCAL_DB_NAME" -t -A -c \
+  "SELECT pg_size_pretty(pg_database_size('${LOCAL_DB_NAME}'));" 2>/dev/null)
+echo -e "   Total size: ${GREEN}${DB_SIZE}${NC}"
+echo ""
+
+# Table row counts (Prisma tables only, skip _prisma_migrations)
+psql $LOCAL_PSQL_ARGS -d "$LOCAL_DB_NAME" -c "
+  SELECT
+    c.relname AS \"Table\",
+    to_char(c.reltuples::bigint, 'FM999 999') AS \"Rows\"
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relkind = 'r'
+    AND c.relname NOT LIKE '_prisma%'
+  ORDER BY c.reltuples DESC;
+" 2>/dev/null
+
 echo ""
 
 # ── Regenerate Prisma client against local DB ────────────────────────────────

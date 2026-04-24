@@ -3,6 +3,9 @@
 // Handles: OPEN questions, ESSAY grading, per-subject prompt strategies
 // ============================================================================
 
+import { getEssayGuidelines, EssayLevel } from "./essay-guidelines.js";
+import { PrismaClient } from "@prisma/client";
+
 import { claudeCall } from "./claude-monitor.js";
 
 // ── Subject-specific system prompts ────────────────────────────────────────
@@ -51,6 +54,11 @@ interface EssayGradeResult {
   overallFeedback: string;
   strengths: string[];
   improvements: string[];
+}
+
+export interface TopicSuggestion {
+  topic: string;
+  hints: string[];
 }
 
 const ESSAY_CRITERIA: Record<
@@ -188,6 +196,13 @@ Oceń odpowiedź ucznia. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
   const text = result.text;
 
   try {
+    let cleanText = text.trim();
+    if (cleanText.startsWith("```")) {
+      cleanText = cleanText
+        .replace(/^```(?:json)?\s*\n?/, "")
+        .replace(/\n?```\s*$/, "");
+    }
+
     const result = JSON.parse(text);
     return {
       isCorrect: result.isCorrect ?? false,
@@ -210,13 +225,27 @@ export async function gradeEssay(params: {
   subjectSlug: string;
   prompt: string;
   content: string;
+  level?: EssayLevel;
   userId?: string;
 }): Promise<EssayGradeResult> {
-  const systemPrompt =
+  const level = params.level || "podstawowy";
+  const guidelines = getEssayGuidelines(params.subjectSlug, level);
+
+  const baseSystemPrompt =
     SUBJECT_SYSTEM_PROMPTS[params.subjectSlug] ||
     SUBJECT_SYSTEM_PROMPTS._default;
-  const criteria =
-    ESSAY_CRITERIA[params.subjectSlug] || ESSAY_CRITERIA._default;
+
+  const systemPrompt = `${baseSystemPrompt}
+ 
+---
+ 
+${guidelines.systemContext}
+ 
+---
+ 
+Poziom egzaminu: ${level === "rozszerzony" ? "ROZSZERZONY" : "PODSTAWOWY"}`;
+
+  const criteria = guidelines.criteria;
   const maxTotal = criteria.reduce((sum, c) => sum + c.maxScore, 0);
 
   const criteriaDesc = criteria
@@ -225,18 +254,20 @@ export async function gradeEssay(params: {
 
   const userPrompt = `## Temat wypracowania
 ${params.prompt}
-
+ 
 ## Kryteria oceny
 ${criteriaDesc}
-
+ 
 ## Maksymalna suma punktów: ${maxTotal}
-
+ 
+## Poziom: ${level === "rozszerzony" ? "ROZSZERZONY" : "PODSTAWOWY"}
+ 
 ## Treść wypracowania ucznia
 ${params.content}
-
+ 
 ---
-
-Oceń wypracowanie. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
+ 
+Oceń wypracowanie zgodnie z powyższymi wytycznymi CKE. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
 {
   "criteria": [
     ${criteria.map((c) => `{ "name": "${c.name}", "score": <0-${c.maxScore}>, "maxScore": ${c.maxScore}, "feedback": "<1-2 zdania>" }`).join(",\n    ")}
@@ -252,25 +283,38 @@ Oceń wypracowanie. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],
     userId: params.userId,
-    metadata: { subjectSlug: params.subjectSlug },
+    metadata: { subjectSlug: params.subjectSlug, level },
   });
   const text = result.text;
 
+  let cleanText = text.trim();
+  if (cleanText.startsWith("```")) {
+    cleanText = cleanText
+      .replace(/^```(?:json)?\s*\n?/, "")
+      .replace(/\n?```\s*$/, "");
+  }
+
   try {
-    const result = JSON.parse(text);
-    const totalScore = (result.criteria as CriterionResult[]).reduce(
+    const parsed = JSON.parse(cleanText);
+    const totalScore = (parsed.criteria as CriterionResult[]).reduce(
       (s, c) => s + c.score,
       0,
     );
 
     return {
-      criteria: result.criteria,
+      criteria: parsed.criteria,
       overallScore: (totalScore / maxTotal) * 100,
-      overallFeedback: result.overallFeedback,
-      strengths: result.strengths || [],
-      improvements: result.improvements || [],
+      overallFeedback: parsed.overallFeedback,
+      strengths: parsed.strengths || [],
+      improvements: parsed.improvements || [],
     };
-  } catch {
+  } catch (e) {
+    console.error(
+      "Essay grading JSON parse error:",
+      e,
+      "\nRaw response:",
+      text.slice(0, 500),
+    );
     return {
       criteria: criteria.map((c) => ({
         name: c.name,
@@ -285,4 +329,140 @@ Oceń wypracowanie. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
       improvements: [],
     };
   }
+}
+
+// suggestEssayTopic — checks history for diversity ──────────────────
+
+export async function suggestEssayTopic(params: {
+  prisma: PrismaClient;
+  subjectSlug: string;
+  subjectId: string;
+  level?: EssayLevel;
+  topicName?: string;
+  userId: string;
+}): Promise<TopicSuggestion> {
+  const level = params.level || "podstawowy";
+
+  // ── Fetch previous suggestions for this user + subject ──────────────
+  const previousSuggestions = await params.prisma.essayTopicSuggestion.findMany(
+    {
+      where: {
+        userId: params.userId,
+        subjectId: params.subjectId,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { suggestion: true, level: true },
+    },
+  );
+
+  let historyBlock = "";
+  if (previousSuggestions.length > 0) {
+    const topicList = previousSuggestions
+      .map((s, i) => `${i + 1}. [${s.level}] ${s.suggestion}`)
+      .join("\n");
+    historyBlock = `
+ 
+UWAGA — PONIŻSZE TEMATY BYŁY JUŻ ZAPROPONOWANE TEMU UŻYTKOWNIKOWI.
+NIE POWTARZAJ żadnego z nich. Zaproponuj temat RÓŻNY tematycznie i problemowo.
+ 
+Wcześniej zaproponowane tematy:
+${topicList}
+`;
+  }
+
+  const subjectInstructions: Record<string, Record<string, string>> = {
+    polski: {
+      podstawowy: `Zaproponuj temat rozprawki maturalnej z języka polskiego na poziomie PODSTAWOWYM.
+Temat musi stawiać problem do rozważenia i wymagać odwołań do tekstów kultury. Sformułuj w stylu CKE.`,
+      rozszerzony: `Zaproponuj temat wypracowania z języka polskiego na poziomie ROZSZERZONYM.
+Temat powinien dotyczyć problematyki literackiej lub językowej i wymagać pogłębionej analizy.`,
+    },
+    angielski: {
+      podstawowy: `Zaproponuj temat wypowiedzi pisemnej z angielskiego na poziomie PODSTAWOWYM.
+Forma: e-mail/list/wpis na blogu (80-130 słów). Podaj polecenie z 4 podpunktami w stylu CKE.`,
+      rozszerzony: `Zaproponuj temat wypowiedzi pisemnej z angielskiego na poziomie ROZSZERZONYM.
+Forma: rozprawka/artykuł/recenzja/list formalny (200-250 słów).`,
+    },
+    historia: {
+      rozszerzony: `Zaproponuj temat wypracowania z historii na poziomie ROZSZERZONYM.
+Temat musi stawiać problem historyczny wymagający argumentacji z konkretnymi faktami.`,
+    },
+    wos: {
+      rozszerzony: `Zaproponuj temat wypracowania z WOS na poziomie ROZSZERZONYM.
+Temat powinien dotyczyć zagadnień politycznych, społecznych, prawnych lub filozoficznych.`,
+    },
+  };
+
+  const defaultInstructions: Record<string, string> = {
+    podstawowy: `Zaproponuj temat wypracowania maturalnego na poziomie podstawowym.`,
+    rozszerzony: `Zaproponuj temat wypracowania maturalnego na poziomie rozszerzonym.`,
+  };
+
+  const subjectMap =
+    subjectInstructions[params.subjectSlug] ?? defaultInstructions;
+  const baseInstruction =
+    subjectMap[level] ?? subjectMap.rozszerzony ?? subjectMap.podstawowy!;
+
+  const topicContext = params.topicName
+    ? `\nTemat powinien nawiązywać do działu/zagadnienia: "${params.topicName}".`
+    : "";
+
+  const fullPrompt = `${baseInstruction}${topicContext}${historyBlock}
+ 
+Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown, bez backticks):
+{
+  "topic": "<temat wypracowania, 1-3 zdania>",
+  "hints": [
+    "<wskazówka 1: jak podejść do tematu, np. jaką tezę postawić>",
+    "<wskazówka 2: do jakich tekstów/źródeł się odwołać>",
+    "<wskazówka 3: na co zwrócić uwagę w argumentacji>",
+    "<wskazówka 4: czego unikać>"
+  ]
+}`;
+
+  const result = await claudeCall({
+    caller: "essay-topic-suggestion",
+    model: "claude-sonnet-4-6",
+    maxTokens: 800,
+    system:
+      "Jesteś doświadczonym egzaminatorem maturalnym. Proponujesz tematy wypracowań zgodne z formatem CKE i dajesz konkretne wskazówki jak podejść do tematu. Odpowiadaj WYŁĄCZNIE po polsku w formacie JSON.",
+    messages: [{ role: "user", content: fullPrompt }],
+    userId: params.userId,
+    metadata: { subjectSlug: params.subjectSlug, level },
+  });
+
+  // Parse — strip markdown fencing if present
+  let cleanText = result.text.trim();
+  if (cleanText.startsWith("```")) {
+    cleanText = cleanText
+      .replace(/^```(?:json)?\s*\n?/, "")
+      .replace(/\n?```\s*$/, "");
+  }
+
+  let topic: string;
+  let hints: string[];
+
+  try {
+    const parsed = JSON.parse(cleanText);
+    topic = parsed.topic;
+    hints = Array.isArray(parsed.hints) ? parsed.hints : [];
+  } catch {
+    // Fallback — treat entire response as topic, no hints
+    topic = result.text.trim();
+    hints = [];
+  }
+
+  // Save suggestion to DB
+  await params.prisma.essayTopicSuggestion.create({
+    data: {
+      userId: params.userId,
+      subjectId: params.subjectId,
+      topicId: null,
+      level,
+      suggestion: topic,
+    },
+  });
+
+  return { topic, hints };
 }

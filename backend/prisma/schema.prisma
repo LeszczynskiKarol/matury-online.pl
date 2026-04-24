@@ -588,3 +588,18 @@ model QuestionView {
   @@id([userId, questionId])
   @@index([questionId])
 }
+
+// Tracks AI-suggested essay topics per user to ensure variety
+model EssayTopicSuggestion {
+  id        String   @id @default(cuid())
+  userId    String
+  subjectId String
+  topicId   String?  // optional topic/dział filter
+  level     String   // "podstawowy" | "rozszerzony"
+  suggestion String  @db.Text // the suggested topic text
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, subjectId])
+  @@index([userId, createdAt])
+}
