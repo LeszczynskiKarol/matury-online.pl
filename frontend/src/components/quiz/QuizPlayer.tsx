@@ -23,27 +23,63 @@ function getCorrectAnswerLocal(type: string, content: any): any {
     case "MULTI_SELECT":
       return content.correctAnswers;
     case "TRUE_FALSE":
-      return content.statements?.map((s: any) => s.isTrue);
+      return (
+        content.statements
+          ?.map(
+            (s: any, i: number) =>
+              `${i + 1}. ${s.text} — ${s.isTrue ? "Prawda" : "Fałsz"}`,
+          )
+          .join("\n") || null
+      );
+
     case "FILL_IN":
-      return content.blanks?.map((b: any) => b.acceptedAnswers?.[0]);
+      return (
+        content.blanks
+          ?.map(
+            (b: any, i: number) =>
+              `${b.label ? b.label.replace("___", b.acceptedAnswers?.[0]) : `Luka ${i + 1}: ${b.acceptedAnswers?.[0]}`}`,
+          )
+          .join("\n") || null
+      );
+
     case "MATCHING":
-      return content.pairs;
+      return (
+        content.pairs?.map((p: any) => `${p.left} → ${p.right}`).join("\n") ||
+        null
+      );
     case "ORDERING":
-      return content.correctOrder;
+      return (
+        content.correctOrder
+          ?.map((idx: number, i: number) => `${i + 1}. ${content.items?.[idx]}`)
+          .join("\n") || null
+      );
+
     case "ERROR_FIND":
-      return content.correctErrorStep;
+      const step = content.steps?.find(
+        (s: any) => s.id === content.correctErrorStep,
+      );
+      return step ? `Krok ${step.id}: ${step.text}` : content.correctErrorStep;
+
     case "CLOZE":
-      return Object.fromEntries(
-        Object.entries(content.blanks || {}).map(([k, b]: [string, any]) => [
-          k,
-          b.acceptedAnswers?.[0],
-        ]),
+      return (
+        Object.entries(content.blanks || {})
+          .map(
+            ([k, b]: [string, any], i: number) =>
+              `Luka ${i + 1}: ${b.acceptedAnswers?.[0]}`,
+          )
+          .join("\n") || null
       );
     case "PROOF_ORDER":
       return content.correctOrder;
     case "GRAPH_INTERPRET":
     case "TABLE_DATA":
-      return content.subQuestions?.map((sq: any) => sq.acceptedAnswers?.[0]);
+      return (
+        content.subQuestions
+          ?.map(
+            (sq: any, i: number) => `${sq.text}: ${sq.acceptedAnswers?.[0]}`,
+          )
+          .join("\n") || null
+      );
     case "WIAZKA":
       return (
         content.subQuestions
@@ -336,7 +372,7 @@ export function QuizPlayer({
           exclude: [...answeredIds.current],
           limit: remaining,
         });
-        data.questions.forEach((q: any) => answeredIds.current.add(q.id));
+        // ⚠️ NIE dodawaj do answeredIds tutaj — tylko submitAnswer i skipQuestion to robią
         setQuestions(data.questions);
         setPoolTotal(data.total);
         setCurrentIndex(0);
@@ -365,7 +401,6 @@ export function QuizPlayer({
   const handleFiltersChange = useCallback(
     (newFilters: LiveFilters) => {
       setFilters(newFilters);
-      answeredIds.current.clear();
       const hasAny =
         newFilters.topicIds.length > 0 ||
         newFilters.types.length > 0 ||
@@ -374,34 +409,17 @@ export function QuizPlayer({
       if (hasAny) {
         loadFilteredQuestions(newFilters);
       } else {
-        // Wszystkie filtry usunięte — załaduj świeżą pulę bez filtrów
+        // Wszystkie filtry usunięte — po prostu kontynuuj z bieżącymi pytaniami
         setPoolTotal(undefined);
-        questionsApi
-          .pool({
-            subjectId,
-            exclude: [...answeredIds.current],
-            limit: Math.max(1, questionCount - results.length),
-          })
-          .then((data) => {
-            data.questions.forEach((q: any) => answeredIds.current.add(q.id));
-            setQuestions(data.questions);
-            setCurrentIndex(0);
-            setResponse(null);
-            setFeedbackData(null);
-            setPhase("question");
-            startTime.current = Date.now();
-          })
-          .catch(console.error);
       }
     },
-    [loadFilteredQuestions, subjectId],
+    [loadFilteredQuestions],
   );
 
   const clearFilters = useCallback(() => {
     setFilters(EMPTY_FILTERS);
     setPoolTotal(undefined);
-    handleFiltersChange(EMPTY_FILTERS);
-  }, [handleFiltersChange]);
+  }, []);
 
   const hasActiveFilters =
     filters.topicIds.length > 0 ||
@@ -626,9 +644,10 @@ export function QuizPlayer({
 
   // ── Summary ─────────────────────────────────────────────────────────
   if (phase === "summary") {
-    const correct = results.filter((r) => r.isCorrect).length;
+    const submitted = results.filter((r) => !r.revealed);
+    const correct = submitted.filter((r) => r.isCorrect).length;
     const accuracy =
-      results.length > 0 ? Math.round((correct / results.length) * 100) : 0;
+      submitted.length > 0 ? Math.round((correct / submitted.length) * 100) : 0;
     return (
       <div className="max-w-lg mx-auto text-center py-12 animate-scale-in">
         <div className="text-6xl mb-6">
@@ -638,7 +657,8 @@ export function QuizPlayer({
           Sesja zakończona!
         </h2>
         <p className="text-zinc-500 mb-8">
-          {correct} z {results.length} poprawnych
+          {correct} z {submitted.length} poprawnych (
+          {results.length - submitted.length} podejrzanych)
         </p>
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="stat-card text-center">
@@ -840,7 +860,7 @@ export function QuizPlayer({
                         currentQuestion.type,
                         content,
                       );
-                      setFeedbackData({
+                      const revealData = {
                         isCorrect: false,
                         score: 0,
                         xpEarned: 0,
@@ -849,7 +869,9 @@ export function QuizPlayer({
                           content.explanation,
                         correctAnswer: correct,
                         revealed: true,
-                      });
+                      };
+                      setFeedbackData(revealData);
+                      setResults((p) => [...p, revealData]);
                       setPhase("feedback");
                     }}
                     className="px-4 py-2.5 rounded-2xl text-sm font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-surface-800 hover:bg-zinc-200 dark:hover:bg-surface-700 transition-all"
@@ -1563,7 +1585,17 @@ function ClosedQuestion({
           </p>
         </div>
       )}
-
+      {/* Wyraz do analizy */}
+      {content.word && (
+        <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/30 mb-6 text-center">
+          <p className="text-xs text-indigo-500 dark:text-indigo-400 mb-1">
+            Wyraz:
+          </p>
+          <p className="text-2xl font-display font-bold text-indigo-700 dark:text-indigo-300">
+            „{content.word}"
+          </p>
+        </div>
+      )}
       {/* Autor / dzieło */}
       {(content.author || content.work) && (
         <div className="flex flex-wrap gap-2 mb-4">
@@ -1622,7 +1654,11 @@ function MultiSelectQuestion({
 }: any) {
   const sel = (response as string[]) || [];
   const isA = feedback !== null;
-  const correctSet = new Set<string>(feedback?.correctAnswer || []);
+  const correctSet = new Set<string>(
+    feedback?.isCorrect
+      ? sel // wszystko co zaznaczył user jest poprawne
+      : feedback?.correctAnswer || [],
+  );
   const tog = (id: string) => {
     if (disabled) return;
     onChange(
@@ -1997,9 +2033,12 @@ function MatchingQuestion({
   const correctMap = useMemo(() => {
     const m = new Map<string, string>();
     if (feedback?.correctAnswer) {
-      (feedback.correctAnswer as { left: string; right: string }[]).forEach(
-        (pair) => m.set(pair.left, pair.right),
-      );
+      if (Array.isArray(feedback.correctAnswer)) {
+        (feedback.correctAnswer as { left: string; right: string }[]).forEach(
+          (pair) => m.set(pair.left, pair.right),
+        );
+      }
+      // string z getCorrectAnswerLocal → correctMap puste, ale feedback.isCorrect handles it
     }
     return m;
   }, [feedback?.correctAnswer]);
