@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { gamification } from "../../lib/api";
+import { getFlavorText } from "../../lib/badge-flavors";
 
 // ── Tier visual config ─────────────────────────────────────────────────────
 
@@ -63,28 +64,28 @@ function BadgeCard({
   isEarned,
   onShowcaseToggle,
   isShowcased,
+  isExpanded,
+  onExpand,
 }: {
   badge: any;
   isEarned: boolean;
   onShowcaseToggle?: () => void;
   isShowcased?: boolean;
+  isExpanded?: boolean;
+  onExpand?: () => void;
 }) {
   const tier = TIER_COLORS[badge.tier] || TIER_COLORS.BRONZE;
+  const flavor = getFlavorText(badge.slug);
 
   return (
     <div
-      className={`relative p-4 rounded-2xl border-2 transition-all duration-200 group
-        ${
-          isEarned
-            ? "bg-surface-50/5 hover:shadow-lg cursor-pointer"
-            : "bg-black/20 opacity-50"
-        }`}
+      className={`relative rounded-2xl border-2 transition-all duration-200 group cursor-pointer
+        ${isEarned ? "bg-surface-50/5 hover:shadow-lg" : "bg-black/20 opacity-50"}`}
       style={{
         borderColor: isEarned ? tier.border : "rgba(255,255,255,0.06)",
       }}
-      onClick={isEarned ? onShowcaseToggle : undefined}
+      onClick={onExpand}
     >
-      {/* Top accent */}
       {isEarned && (
         <div
           className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
@@ -92,75 +93,96 @@ function BadgeCard({
         />
       )}
 
-      {/* Showcase star */}
       {isShowcased && <div className="absolute top-2 right-2 text-xs">📌</div>}
 
-      <div className="flex items-center gap-3">
-        {/* Icon */}
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-          style={{
-            background: isEarned ? tier.bg : "#1e1e30",
-            filter: isEarned ? "none" : "grayscale(1)",
-            boxShadow: isEarned ? `0 4px 16px ${tier.glow}` : "none",
-          }}
-        >
-          {isEarned ? badge.icon : "🔒"}
-        </div>
-
-        {/* Text */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span
-              className={`font-display font-bold text-sm ${isEarned ? "text-zinc-100" : "text-zinc-500"}`}
-            >
-              {badge.name}
-            </span>
-            <span
-              className="text-[10px] font-semibold px-1.5 py-px rounded-md uppercase tracking-wider"
-              style={{
-                background: isEarned ? tier.bg : "#2a2a3e",
-                color:
-                  isEarned &&
-                  badge.tier !== "SILVER" &&
-                  badge.tier !== "PLATINUM"
-                    ? tier.text
-                    : "#a1a1aa",
-              }}
-            >
-              {TIER_LABELS[badge.tier]}
-            </span>
+      <div className="p-4">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+            style={{
+              background: isEarned ? tier.bg : "#1e1e30",
+              filter: isEarned ? "none" : "grayscale(1)",
+              boxShadow: isEarned ? `0 4px 16px ${tier.glow}` : "none",
+            }}
+          >
+            {isEarned ? badge.icon : "🔒"}
           </div>
 
-          <div className="text-xs text-zinc-500 truncate">
-            {badge.description}
-          </div>
-
-          {/* XP reward */}
-          {isEarned && badge.xpReward > 0 && (
-            <span className="xp-badge mt-1 inline-block">
-              +{badge.xpReward} XP
-            </span>
-          )}
-
-          {/* Progress bar for locked */}
-          {!isEarned && badge.progress && (
-            <div className="mt-2">
-              <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${(badge.progress.current / badge.progress.target) * 100}%`,
-                    background: tier.bg,
-                  }}
-                />
-              </div>
-              <div className="text-[10px] text-zinc-600 mt-1 tabular-nums">
-                {badge.progress.current}/{badge.progress.target}
-              </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span
+                className={`font-display font-bold text-sm ${isEarned ? "text-zinc-100" : "text-zinc-500"}`}
+              >
+                {badge.name}
+              </span>
+              <span
+                className="text-[10px] font-semibold px-1.5 py-px rounded-md uppercase tracking-wider"
+                style={{
+                  background: isEarned ? tier.bg : "#2a2a3e",
+                  color:
+                    isEarned &&
+                    badge.tier !== "SILVER" &&
+                    badge.tier !== "PLATINUM"
+                      ? tier.text
+                      : "#a1a1aa",
+                }}
+              >
+                {TIER_LABELS[badge.tier]}
+              </span>
             </div>
-          )}
+            <div className="text-xs text-zinc-500 truncate">
+              {badge.description}
+            </div>
+
+            {isEarned && badge.xpReward > 0 && (
+              <span className="xp-badge mt-1 inline-block">
+                +{badge.xpReward} XP
+              </span>
+            )}
+
+            {!isEarned && badge.progress && (
+              <div className="mt-2">
+                <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${(badge.progress.current / badge.progress.target) * 100}%`,
+                      background: tier.bg,
+                    }}
+                  />
+                </div>
+                <div className="text-[10px] text-zinc-600 mt-1 tabular-nums">
+                  {badge.progress.current}/{badge.progress.target}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* ── FLAVOR TEXT TOOLTIP ── */}
+        {isExpanded && (
+          <div className="mt-3 pt-3 border-t border-zinc-800 dark:border-zinc-700 animate-fade-in">
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 leading-relaxed italic">
+              "{flavor}"
+            </p>
+            {isEarned && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShowcaseToggle?.();
+                }}
+                className={`mt-2 text-[11px] font-semibold px-3 py-1 rounded-lg transition-colors
+                  ${
+                    isShowcased
+                      ? "bg-yellow-500/15 text-yellow-500 hover:bg-yellow-500/25"
+                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300"
+                  }`}
+              >
+                {isShowcased ? "📌 Wyróżniona" : "📌 Wyróżnij na profilu"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -170,6 +192,7 @@ function BadgeCard({
 
 export function BadgesPage() {
   const [tab, setTab] = useState<"profile" | "labels" | "badges">("profile");
+  const [expandedBadge, setExpandedBadge] = useState<string | null>(null);
   const [badgeData, setBadgeData] = useState<any>(null);
   const [labelData, setLabelData] = useState<any>(null);
   const [levelData, setLevelData] = useState<any>(null);
@@ -344,10 +367,26 @@ export function BadgesPage() {
                 isEarned
                 isShowcased={showcaseIds.includes(badge.id)}
                 onShowcaseToggle={() => toggleShowcase(badge.id)}
+                isExpanded={expandedBadge === badge.slug}
+                onExpand={() =>
+                  setExpandedBadge(
+                    expandedBadge === badge.slug ? null : badge.slug,
+                  )
+                }
               />
             ))}
             {(lockedByCategory[activeCat] || []).map((badge: any) => (
-              <BadgeCard key={badge.slug} badge={badge} isEarned={false} />
+              <BadgeCard
+                key={badge.slug}
+                badge={badge}
+                isEarned={false}
+                isExpanded={expandedBadge === badge.slug}
+                onExpand={() =>
+                  setExpandedBadge(
+                    expandedBadge === badge.slug ? null : badge.slug,
+                  )
+                }
+              />
             ))}
           </div>
 
@@ -571,37 +610,43 @@ export function BadgesPage() {
               {titleData.allTitles.map((t: any) => (
                 <div
                   key={t.name}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all
-                    ${t.reached ? "bg-white/[0.03]" : "bg-black/15 opacity-40"}
-                    `}
+                  className={`px-4 py-2.5 rounded-xl transition-all
+                    ${t.reached ? "bg-white/[0.03]" : "bg-black/15 opacity-40"}`}
                   style={{
                     boxShadow: t.isCurrent
                       ? `inset 0 0 0 1px ${t.color}50`
                       : undefined,
                   }}
                 >
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black"
-                    style={{
-                      background: t.reached ? t.color + "20" : "#1e1e30",
-                      color: t.reached ? t.color : "#3f3f46",
-                      border: `1px solid ${t.reached ? t.color + "40" : "#2a2a3e"}`,
-                    }}
-                  >
-                    {t.emoji}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black"
+                      style={{
+                        background: t.reached ? t.color + "20" : "#1e1e30",
+                        color: t.reached ? t.color : "#3f3f46",
+                        border: `1px solid ${t.reached ? t.color + "40" : "#2a2a3e"}`,
+                      }}
+                    >
+                      {t.emoji}
+                    </div>
+                    <span
+                      className="font-display font-bold text-sm flex-1"
+                      style={{ color: t.reached ? t.color : "#52525b" }}
+                    >
+                      {t.name}
+                    </span>
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-600 font-mono">
+                      Poz. {t.minLevel}+
+                    </span>
+                    {t.isCurrent && <span className="text-sm">◀</span>}
+                    {t.reached && !t.isCurrent && (
+                      <span className="text-sm text-green-500">✓</span>
+                    )}
                   </div>
-                  <span
-                    className="font-display font-bold text-sm flex-1"
-                    style={{ color: t.reached ? t.color : "#52525b" }}
-                  >
-                    {t.name}
-                  </span>
-                  <span className="text-[11px] text-zinc-600 font-mono">
-                    Poz. {t.minLevel}+
-                  </span>
-                  {t.isCurrent && <span className="text-sm">◀</span>}
-                  {t.reached && !t.isCurrent && (
-                    <span className="text-sm text-green-500">✓</span>
+                  {t.reached && t.flavorText && (
+                    <p className="text-[11px] text-zinc-500 italic mt-1.5 ml-11 leading-relaxed">
+                      "{t.flavorText}"
+                    </p>
                   )}
                 </div>
               ))}
