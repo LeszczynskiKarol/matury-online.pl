@@ -45,11 +45,20 @@ function getCorrectAnswerLocal(type: string, content: any): any {
     case "TABLE_DATA":
       return content.subQuestions?.map((sq: any) => sq.acceptedAnswers?.[0]);
     case "WIAZKA":
-      return content.subQuestions?.map((sq: any) => ({
-        id: sq.id,
-        type: sq.type,
-        correctAnswer: sq.correctAnswer || sq.acceptedAnswers?.[0],
-      }));
+      return (
+        content.subQuestions
+          ?.map((sq: any, i: number) => {
+            const letter = String.fromCharCode(97 + i);
+            const answer =
+              sq.correctAnswer ||
+              sq.acceptedAnswers?.[0] ||
+              sq.statements
+                ?.map((s: any) => (s.isTrue ? "Prawda" : "Fałsz"))
+                .join(", ");
+            return `${letter}) ${answer}`;
+          })
+          .join("\n") || null
+      );
     case "OPEN":
       return content.sampleAnswer || content.rubric || null;
     case "ESSAY":
@@ -317,16 +326,16 @@ export function QuizPlayer({
     async (newFilters: LiveFilters) => {
       setLoadingMore(true);
       try {
+        const remaining = Math.max(1, questionCount - results.length);
         const data = await questionsApi.pool({
           subjectId,
           topicIds: newFilters.topicIds,
           types: newFilters.types,
           difficulties: newFilters.difficulties,
           sources: newFilters.sources,
-          exclude: [...answeredIds.current], // ← TYLKO ref, zero stale closures
-          limit: 30,
+          exclude: [...answeredIds.current],
+          limit: remaining,
         });
-        // Dodaj nowe ID do refa żeby nie wróciły
         data.questions.forEach((q: any) => answeredIds.current.add(q.id));
         setQuestions(data.questions);
         setPoolTotal(data.total);
@@ -339,31 +348,24 @@ export function QuizPlayer({
         if (err.code === "AI_CREDITS_EXHAUSTED") {
           setAiError({
             title: "Brak kredytów AI",
-            message:
-              "Wykorzystano pulę kredytów AI. Możesz dokupić nieprzepadające kredyty dodatkowe.",
+            message: "Wykorzystano pulę kredytów AI.",
           });
         } else if (err.code === "PREMIUM_REQUIRED") {
           setAiError({
             title: "Wymagany Premium",
-            message: "Dostęp do serwisu wymaga aktywnej subskrypcji Premium.",
-          });
-        } else if (err.code === "DAILY_LIMIT") {
-          setAiError({
-            title: "Dzienny limit osiągnięty",
-            message:
-              "Wykorzystano 5 darmowych pytań na dziś. Odblokuj pełny dostęp z subskrypcją Premium.",
+            message: "Dostęp wymaga subskrypcji Premium.",
           });
         }
       } finally {
         setLoadingMore(false);
       }
     },
-    [subjectId, phase], // ← BEZ questions w deps!
+    [subjectId, phase, questionCount, results.length],
   );
-
   const handleFiltersChange = useCallback(
     (newFilters: LiveFilters) => {
       setFilters(newFilters);
+      answeredIds.current.clear();
       const hasAny =
         newFilters.topicIds.length > 0 ||
         newFilters.types.length > 0 ||
@@ -378,7 +380,7 @@ export function QuizPlayer({
           .pool({
             subjectId,
             exclude: [...answeredIds.current],
-            limit: 10,
+            limit: Math.max(1, questionCount - results.length),
           })
           .then((data) => {
             data.questions.forEach((q: any) => answeredIds.current.add(q.id));
@@ -409,9 +411,9 @@ export function QuizPlayer({
   const currentQuestion = questions[currentIndex];
   const isListeningOnly =
     questionTypes?.length === 1 && questionTypes[0] === "LISTENING";
-  const totalForProgress = isListeningOnly ? questionCount : questions.length;
+  const totalForProgress = isListeningOnly ? questionCount : questionCount;
   const progress =
-    totalForProgress > 0 ? (currentIndex / totalForProgress) * 100 : 0;
+    totalForProgress > 0 ? (results.length / totalForProgress) * 100 : 0;
 
   // ── Actions ─────────────────────────────────────────────────────────
   const submitAnswer = useCallback(async () => {
@@ -691,10 +693,7 @@ export function QuizPlayer({
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-zinc-500">
-            Pytanie {currentIndex + 1} z{" "}
-            {questionTypes?.length === 1 && questionTypes[0] === "LISTENING"
-              ? questionCount
-              : questions.length}
+            Pytanie {results.length + 1} z {questionCount}
             {poolTotal !== undefined && (
               <span className="text-zinc-400 ml-1">(pula: {poolTotal})</span>
             )}
@@ -1611,6 +1610,9 @@ function ClosedQuestion({
     </div>
   );
 }
+// ── REPLACEMENT for MultiSelectQuestion in QuizPlayer.tsx ──
+// Paste this in place of the existing MultiSelectQuestion function
+
 function MultiSelectQuestion({
   content,
   response,
@@ -1637,29 +1639,77 @@ function MultiSelectQuestion({
         {content.options.map((o: any) => {
           const isSelected = sel.includes(o.id);
           const isCorrectOption = correctSet.has(o.id);
-          let c = "option-card";
-          if (isSelected) c += " selected";
-          if (isA && (isCorrectOption || (feedback?.isCorrect && isSelected)))
-            c += " correct";
-          if (isA && isSelected && !isCorrectOption && !feedback?.isCorrect)
-            c += " wrong";
+
+          // ── Feedback states ──────────────────────────────────
+          // 1. Correct + selected   → green  ✓  "Dobrze!"
+          // 2. Correct + missed     → green  ✓  "Pominięto"
+          // 3. Wrong   + selected   → red    ✗  "Źle"
+          // 4. Wrong   + not sel    → neutral (no marker)
+          const isHit = isA && isSelected && isCorrectOption;
+          const isMiss = isA && !isSelected && isCorrectOption;
+          const isFalsePositive = isA && isSelected && !isCorrectOption;
+
+          let cardClass = "option-card w-full text-left";
+          if (!isA && isSelected) cardClass += " selected";
+          if (isHit) cardClass += " correct";
+          if (isMiss) cardClass += " correct"; // show what SHOULD have been picked
+          if (isFalsePositive) cardClass += " wrong";
+
           return (
             <button
               key={o.id}
               onClick={() => tog(o.id)}
               disabled={disabled}
-              className={c + " w-full text-left"}
+              className={cardClass}
             >
+              {/* Checkbox */}
               <div
-                className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center ${
-                  isA && isCorrectOption
+                className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                  isHit
                     ? "bg-brand-500 border-brand-500"
-                    : isSelected
-                      ? "bg-navy-500 border-navy-500"
-                      : "border-zinc-300 dark:border-zinc-600"
+                    : isMiss
+                      ? "bg-brand-500/40 border-brand-500"
+                      : isFalsePositive
+                        ? "bg-red-500 border-red-500"
+                        : isSelected
+                          ? "bg-navy-500 border-navy-500"
+                          : "border-zinc-300 dark:border-zinc-600"
                 }`}
               >
-                {(isSelected || (isA && isCorrectOption)) && (
+                {/* ✓ for correct (hit or miss) */}
+                {(isHit || isMiss) && (
+                  <svg
+                    className="w-3 h-3 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={3}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                )}
+                {/* ✗ for false positive */}
+                {isFalsePositive && (
+                  <svg
+                    className="w-3 h-3 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={3}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                )}
+                {/* Normal checkmark before answer */}
+                {!isA && isSelected && (
                   <svg
                     className="w-3 h-3 text-white"
                     fill="none"
@@ -1675,11 +1725,27 @@ function MultiSelectQuestion({
                   </svg>
                 )}
               </div>
-              <span className="text-sm">
+
+              {/* Option text */}
+              <span className="text-sm flex-1">
                 <ChemText text={o.text} />
               </span>
-              {isA && isCorrectOption && (
-                <span className="ml-auto text-brand-500">✓</span>
+
+              {/* Right-side status badge — only after feedback */}
+              {isHit && (
+                <span className="ml-auto flex items-center gap-1 text-xs font-bold text-brand-600 dark:text-brand-400">
+                  ✓
+                </span>
+              )}
+              {isMiss && (
+                <span className="ml-auto flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                  Pominięto
+                </span>
+              )}
+              {isFalsePositive && (
+                <span className="ml-auto flex items-center gap-1 text-xs font-bold text-red-500">
+                  ✗
+                </span>
               )}
             </button>
           );

@@ -60,8 +60,14 @@ const ALGO_MILESTONES = [
       "1h hard-exclude, skip-rate per typ, quadratic topic penalty, OPEN cap=2",
     color: "emerald",
   },
+  {
+    date: new Date("2026-04-23T22:15:00+02:00"),
+    label: "Algorytm v2.1",
+    details:
+      "Adaptive topic cap (proporcjonalny do liczby tematów w puli — polski 2/10, biologia 4/10)",
+    color: "emerald",
+  },
   // Kolejne milestone'y dodawaj tutaj:
-  // { date: new Date("2026-05-01T12:00:00+02:00"), label: "Algorytm v3", details: "...", color: "sky" },
 ] as const;
 
 export function AdminQuestionLog() {

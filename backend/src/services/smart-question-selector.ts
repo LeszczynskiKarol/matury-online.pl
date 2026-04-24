@@ -338,6 +338,13 @@ function diverseSelect(
 ): ScoredQuestion[] {
   scored.sort((a, b) => b.score - a.score);
 
+  // ── Count distinct topics in candidate pool for adaptive cap ─────────
+  const distinctTopics = new Set(scored.map((s) => s.question.topicId)).size;
+  // polski (48 tematów, 10 pytań) → cap 2
+  // biologia (4 tematy, 10 pytań) → cap 4
+  // chemia (8 tematów, 10 pytań) → cap 2
+  const topicCap = Math.max(2, Math.ceil((count * 1.3) / distinctTopics));
+
   const selected: ScoredQuestion[] = [];
   const topicCounts = new Map<string, number>();
   const typeCounts = new Map<string, number>();
@@ -357,9 +364,11 @@ function diverseSelect(
 
     let adjustedScore = candidate.score;
 
-    // ── Topic penalty — QUADRATIC (was linear) ─────────────────────────
-    // 0 → 0, 1 → -100, 2 → -400, 3 → -900, 4 → -1600
-    if (topicCount >= 1) {
+    // ── Topic cap — adaptive per subject ────────────────────────────────
+    // Hard block above cap, quadratic penalty below
+    if (topicCount >= topicCap) {
+      adjustedScore -= 5000; // hard block
+    } else if (topicCount >= 1) {
       adjustedScore -= topicCount * topicCount * 100;
     }
 
@@ -369,7 +378,7 @@ function diverseSelect(
     }
     // Hard cap: max 2 OPEN/ESSAY questions per session
     if ((q.type === "OPEN" || q.type === "ESSAY") && typeCount >= 2) {
-      adjustedScore -= 2000; // effectively blocks 3rd+ OPEN
+      adjustedScore -= 2000;
     }
 
     // ── Literary work — max 1 ──────────────────────────────────────────
