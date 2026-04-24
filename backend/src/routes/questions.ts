@@ -22,6 +22,7 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
             sources: { type: "string" }, // comma-separated "PP,PR"
             exclude: { type: "string" }, // comma-separated IDs to skip
             shuffle: { type: "boolean" }, // randomize order
+            sort: { type: "string" },
             limit: { type: "number", default: 10 },
             offset: { type: "number", default: 0 },
           },
@@ -38,6 +39,7 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
         difficulty,
         difficulties,
         sources,
+        sort,
         exclude,
         shuffle,
         limit,
@@ -73,6 +75,79 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
       if (excludeIds.length > 0) where.id = { notIn: excludeIds };
 
       const total = await app.prisma.question.count({ where });
+      // ── ADMIN DETERMINISTIC BROWSE ─────────────────────────────────────
+      if (sort && !shuffle) {
+        const rawQuestions = await app.prisma.question.findMany({
+          where,
+          select: {
+            id: true,
+            type: true,
+            difficulty: true,
+            points: true,
+            content: true,
+            source: true,
+            totalAttempts: true,
+            createdAt: true,
+            topic: {
+              select: { id: true, name: true, slug: true, sortOrder: true },
+            },
+          },
+          orderBy:
+            sort === "newest"
+              ? { createdAt: "desc" }
+              : sort === "oldest"
+                ? { createdAt: "asc" }
+                : { createdAt: "desc" },
+          take: limit,
+          skip: offset,
+        });
+
+        let sorted = rawQuestions;
+        if (sort === "az") {
+          sorted = [...rawQuestions].sort((a: any, b: any) => {
+            const d = a.topic.sortOrder - b.topic.sortOrder;
+            if (d !== 0) return d;
+            return ((a.content as any)?.question || "").localeCompare(
+              (b.content as any)?.question || "",
+              "pl",
+            );
+          });
+        } else if (sort === "za") {
+          sorted = [...rawQuestions].sort((a: any, b: any) => {
+            const d = b.topic.sortOrder - a.topic.sortOrder;
+            if (d !== 0) return d;
+            return ((b.content as any)?.question || "").localeCompare(
+              (a.content as any)?.question || "",
+              "pl",
+            );
+          });
+        }
+
+        // ── Policz ile razy BIEŻĄCY USER widział każde pytanie ──────────
+        const userId = req.user?.userId;
+        let viewCounts: Record<string, number> = {};
+        if (userId && sorted.length > 0) {
+          const counts = await app.prisma.answer.groupBy({
+            by: ["questionId"],
+            where: {
+              userId,
+              questionId: { in: sorted.map((q: any) => q.id) },
+            },
+            _count: { id: true },
+          });
+          for (const c of counts) {
+            viewCounts[c.questionId] = c._count.id;
+          }
+        }
+
+        return {
+          questions: sorted.map((q: any) => ({
+            ...q,
+            myViewCount: viewCounts[q.id] || 0,
+          })),
+          total,
+        };
+      }
 
       if (shuffle) {
         // Auto-generate LISTENING if pool empty

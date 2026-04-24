@@ -212,6 +212,29 @@ export const questions = {
     return request<{ questions: any[]; total: number }>(`/questions?${qs}`);
   },
 
+  browse: (params: {
+    subjectId: string;
+    sort: "newest" | "oldest" | "az" | "za";
+    topicIds?: string[];
+    types?: string[];
+    difficulties?: number[];
+    sources?: string[];
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    qs.set("subjectId", params.subjectId);
+    qs.set("sort", params.sort);
+    if (params.topicIds?.length) qs.set("topicIds", params.topicIds.join(","));
+    if (params.types?.length) qs.set("types", params.types.join(","));
+    if (params.difficulties?.length)
+      qs.set("difficulties", params.difficulties.join(","));
+    if (params.sources?.length) qs.set("sources", params.sources.join(","));
+    if (params.limit) qs.set("limit", String(params.limit));
+    if (params.offset) qs.set("offset", String(params.offset));
+    return request<{ questions: any[]; total: number }>(`/questions?${qs}`);
+  },
+
   skip: (questionId: string, sessionId?: string) =>
     request<{ ok: boolean }>(`/questions/${questionId}/skip`, {
       method: "POST",

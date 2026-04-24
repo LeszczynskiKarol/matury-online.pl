@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { MathGraph } from "./MathGraph";
 import { AdminQuestionSearch } from "./AdminQuestionSearch";
+import { AdminBrowseBar, type AdminSort } from "./AdminBrowseBar";
 import { auth } from "../../lib/api";
 import {
   answers as answersApi,
@@ -85,12 +86,45 @@ function getCorrectAnswerLocal(type: string, content: any): any {
         content.subQuestions
           ?.map((sq: any, i: number) => {
             const letter = String.fromCharCode(97 + i);
-            const answer =
-              sq.correctAnswer ||
-              sq.acceptedAnswers?.[0] ||
-              sq.statements
-                ?.map((s: any) => (s.isTrue ? "Prawda" : "Fałsz"))
+            let answer: string;
+
+            if (sq.type === "OPEN") {
+              answer =
+                sq.sampleAnswer || sq.correctAnswer || "(brak wzorcowej)";
+            } else if (sq.type === "MULTI_SELECT") {
+              const ids = sq.correctAnswers || [];
+              answer = ids
+                .map((id: string) => {
+                  const opt = sq.options?.find((o: any) => o.id === id);
+                  return opt ? `${id}: ${opt.text}` : id;
+                })
                 .join(", ");
+            } else if (sq.type === "CLOSED") {
+              const opt = sq.options?.find(
+                (o: any) => o.id === sq.correctAnswer,
+              );
+              answer = opt
+                ? `${sq.correctAnswer}: ${opt.text}`
+                : sq.correctAnswer || "—";
+            } else if (sq.type === "TRUE_FALSE" && sq.statements) {
+              answer = sq.statements
+                .map((s: any) => (s.isTrue ? "Prawda" : "Fałsz"))
+                .join(", ");
+            } else if (sq.type === "FILL_IN") {
+              answer =
+                sq.acceptedAnswers?.[0] ||
+                Object.values(sq.blanks || {})
+                  .map((b: any) => b.acceptedAnswers?.[0])
+                  .join(", ") ||
+                "—";
+            } else {
+              answer =
+                sq.correctAnswer ||
+                sq.acceptedAnswers?.[0] ||
+                sq.sampleAnswer ||
+                "—";
+            }
+
             return `${letter}) ${answer}`;
           })
           .join("\n") || null
@@ -118,6 +152,8 @@ interface Question {
   content: any;
   source?: string;
   topic: { id: string; name: string; slug: string };
+  myViewCount?: number;
+  totalAttempts?: number;
 }
 
 interface QuizPlayerProps {
@@ -222,12 +258,49 @@ export function QuizPlayer({
   );
   const [poolTotal, setPoolTotal] = useState<number | undefined>();
   const [loadingMore, setLoadingMore] = useState(false);
+  const [adminSort, setAdminSort] = useState<AdminSort>(null);
+  const [browseTotal, setBrowseTotal] = useState(0);
+  const [browseOffset, setBrowseOffset] = useState(0);
   const [aiError, setAiError] = useState<{
     title: string;
     message: string;
   } | null>(null);
   const answeredIds = useRef<Set<string>>(new Set());
   const startTime = useRef(Date.now());
+
+  const handleAdminBrowse = useCallback(
+    (sort: AdminSort, loadedQuestions: any[], total: number) => {
+      setAdminSort(sort);
+      setBrowseTotal(total);
+      setBrowseOffset(0);
+      setQuestions(loadedQuestions);
+      setCurrentIndex(0);
+      setResponse(null);
+      setFeedbackData(null);
+      setPhase("question");
+      startTime.current = Date.now();
+    },
+    [],
+  );
+
+  const handleAdminBrowseOff = useCallback(() => {
+    setAdminSort(null);
+    setBrowseTotal(0);
+    setBrowseOffset(0);
+    // Reload fresh smart-selected questions
+    questionsApi
+      .pool({ subjectId, limit: 10 })
+      .then((data) => {
+        data.questions.forEach((q: any) => answeredIds.current.add(q.id));
+        setQuestions(data.questions);
+        setCurrentIndex(0);
+        setResponse(null);
+        setFeedbackData(null);
+        setPhase("question");
+        startTime.current = Date.now();
+      })
+      .catch(console.error);
+  }, [subjectId]);
 
   // Load filter options once
   useEffect(() => {
@@ -527,6 +600,43 @@ export function QuizPlayer({
       return;
     }
 
+    if (adminSort) {
+      if (currentIndex + 1 < questions.length) {
+        setCurrentIndex((i) => i + 1);
+        setResponse(null);
+        setFeedbackData(null);
+        setPhase("question");
+        startTime.current = Date.now();
+      } else {
+        const newOffset = browseOffset + 50;
+        setBrowseOffset(newOffset);
+        const qs = new URLSearchParams({
+          subjectId,
+          sort: adminSort,
+          limit: "50",
+          offset: String(newOffset),
+        });
+        fetch(`${import.meta.env.PUBLIC_API_URL || "/api"}/questions?${qs}`, {
+          credentials: "include",
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.questions.length > 0) {
+              setQuestions(data.questions);
+              setCurrentIndex(0);
+              setResponse(null);
+              setFeedbackData(null);
+              setPhase("question");
+              startTime.current = Date.now();
+            } else {
+              setPhase("summary");
+            }
+          })
+          .catch(console.error);
+      }
+      return;
+    }
+
     // ── Standardowa logika dla pozostałych typów pytań ──────────────────
     if (currentIndex + 1 >= questions.length) {
       if (hasActiveFilters) {
@@ -740,6 +850,19 @@ export function QuizPlayer({
 
       {isAdmin && (
         <AdminQuestionSearch onSelectQuestion={handleAdminSelectQuestion} />
+      )}
+
+      {isAdmin && (
+        <AdminBrowseBar
+          subjectId={subjectId}
+          active={adminSort}
+          onActivate={handleAdminBrowse}
+          onDeactivate={handleAdminBrowseOff}
+          currentQuestion={currentQuestion}
+          seenCount={
+            currentQuestion?.myViewCount ?? currentQuestion?.totalAttempts ?? 0
+          }
+        />
       )}
 
       {/* ═══ LIVE FILTER BAR ═══ */}
