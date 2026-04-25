@@ -410,15 +410,6 @@ export function BadgesPage() {
       {/* ═══ LABELS TAB ═══ */}
       {tab === "labels" && labelData && (
         <div className="space-y-6">
-          <div className="glass-card p-4">
-            <p className="text-sm text-zinc-400 leading-relaxed">
-              Etykiety to dynamiczne{" "}
-              <strong className="text-zinc-200">GitHub-style labels</strong>{" "}
-              widoczne przy Twoim profilu w leaderboardzie. Odświeżają się
-              automatycznie — tracisz serię, etykieta znika.
-            </p>
-          </div>
-
           {/* Active labels */}
           {labelData.active.length > 0 && (
             <div>
