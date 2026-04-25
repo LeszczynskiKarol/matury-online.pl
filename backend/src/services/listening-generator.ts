@@ -407,7 +407,7 @@ export async function generateListeningQuestion(
   const result = await claudeCall({
     caller: "listening-batch-generator",
     model: "claude-sonnet-4-6",
-    maxTokens: 8192,
+    maxTokens: 16384,
     messages: [{ role: "user", content: prompt }],
     metadata: {
       pattern: params.pattern,
@@ -417,6 +417,24 @@ export async function generateListeningQuestion(
     },
   });
   const rawText = result.text;
+
+  if (result.raw.stop_reason === "max_tokens") {
+    console.error(
+      `❌ Response truncated at ${rawText.length} chars (stop_reason=max_tokens). Retrying with shorter pattern...`,
+    );
+    // Retry once as short_dialogue which produces less text
+    if (params.pattern !== "short_dialogue") {
+      return generateListeningQuestion(prisma, {
+        ...params,
+        pattern: "short_dialogue",
+      });
+    }
+    throw new Error("Response truncated even on short_dialogue pattern");
+  }
+
+  console.log(
+    `📝 Response: ${rawText.length} chars, stop_reason=${result.raw.stop_reason}`,
+  );
 
   // Clean potential markdown wrapping
 
