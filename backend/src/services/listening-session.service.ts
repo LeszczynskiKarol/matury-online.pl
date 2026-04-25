@@ -214,7 +214,14 @@ async function generateNewQuestion(
   const { generateListeningQuestion } =
     await import("./listening-generator.js");
 
-  // Pick random pattern and topic
+  // Detect language from subject
+  const subject = await prisma.subject.findUnique({
+    where: { id: state.subjectId },
+    select: { slug: true },
+  });
+  const language: "en" | "de" = subject?.slug === "niemiecki" ? "de" : "en";
+
+  // Pick random pattern
   const patterns = [
     "short_dialogue",
     "short_dialogue",
@@ -223,7 +230,9 @@ async function generateNewQuestion(
     "interview_mcq",
     "gap_fill",
   ] as const;
-  const topics = [
+
+  // Language-specific topics
+  const topicsEN = [
     "booking a hotel",
     "shopping for clothes",
     "visiting a doctor",
@@ -241,6 +250,25 @@ async function generateNewQuestion(
     "daily routine",
   ];
 
+  const topicsDE = [
+    "Hotelreservierung",
+    "Einkaufen im Supermarkt",
+    "Beim Arzt",
+    "Reiseplanung",
+    "Schulleben und Stundenplan",
+    "Hobbys und Freizeit",
+    "Am Flughafen",
+    "Vorstellungsgespräch",
+    "Sportveranstaltung",
+    "Kochen und Rezepte",
+    "Öffentliche Verkehrsmittel",
+    "Soziale Medien und Jugendliche",
+    "Umweltbewusstsein im Alltag",
+    "Filmkritik",
+    "Tagesablauf beschreiben",
+  ];
+
+  const topics = language === "de" ? topicsDE : topicsEN;
   const pattern = patterns[Math.floor(Math.random() * patterns.length)];
   const topic = topics[Math.floor(Math.random() * topics.length)];
   const level = state.difficulty <= 3 ? "PP" : "PR";
@@ -252,6 +280,7 @@ async function generateNewQuestion(
     level: level as any,
     topic,
     difficulty: state.difficulty,
+    language,
   });
 
   state.shownIds.add(questionId);

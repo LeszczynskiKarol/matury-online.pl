@@ -85,6 +85,146 @@ export function AdminExport() {
     return p;
   };
 
+  // ── Wspólny fetcher (deduplikacja) ──────────────────────────────────
+  const fetchAllQuestions = async (): Promise<any[]> => {
+    const allQ = new Map<string, any>();
+    for (const g of groups) {
+      const params = buildParams(g);
+      let offset = 0;
+      while (true) {
+        const data = await admin.questions({ ...params, limit: 200, offset });
+        for (const q of data.questions) {
+          if (g.source && q.source !== g.source) continue;
+          allQ.set(q.id, q);
+        }
+        if (data.questions.length < 200) break;
+        offset += 200;
+      }
+    }
+    return [...allQ.values()];
+  };
+
+  const handleExportCSV = async () => {
+    if (groups.length === 0) return;
+    setExporting(true);
+    setExportResult(null);
+    try {
+      const questions = await fetchAllQuestions();
+      const esc = (v: any): string => {
+        if (v == null) return "";
+        const s = String(v).replace(/"/g, '""');
+        return s.includes(",") || s.includes('"') || s.includes("\n")
+          ? `"${s}"`
+          : s;
+      };
+      const headers = [
+        "id",
+        "przedmiot",
+        "temat",
+        "typ",
+        "trudnosc",
+        "punkty",
+        "zrodlo",
+        "tresc",
+        "odpowiedz",
+        "objasnienie",
+        "proby",
+        "poprawne",
+        "data",
+        "content_json",
+      ];
+      const rows = questions.map((q) => {
+        const c = q.content || {};
+        const text = c.question || c.context || c.prompt || c.instruction || "";
+        let ans = "";
+        if (c.correctAnswer) ans = String(c.correctAnswer);
+        else if (c.correctAnswers) ans = c.correctAnswers.join(", ");
+        else if (c.sampleAnswer) ans = c.sampleAnswer;
+        else if (c.statements)
+          ans = c.statements
+            .map((s: any) => `${s.text}: ${s.isTrue ? "T" : "F"}`)
+            .join("; ");
+        else if (c.pairs)
+          ans = c.pairs.map((p: any) => `${p.left} → ${p.right}`).join("; ");
+        else if (Array.isArray(c.blanks))
+          ans = c.blanks
+            .map((b: any) => b.acceptedAnswers?.[0] || "")
+            .join("; ");
+        return [
+          q.id,
+          q.subject?.name || "",
+          q.topic?.name || "",
+          q.type,
+          q.difficulty,
+          q.points,
+          q.source || "",
+          text,
+          ans,
+          q.explanation || "",
+          q.totalAttempts,
+          q.correctCount,
+          q.createdAt ? new Date(q.createdAt).toISOString() : "",
+          JSON.stringify(c),
+        ]
+          .map(esc)
+          .join(",");
+      });
+      const csv = "\uFEFF" + headers.join(",") + "\n" + rows.join("\n");
+      downloadBlob(
+        csv,
+        "text/csv;charset=utf-8",
+        `matury-export-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+      setExportResult(`CSV: ${questions.length} pytań (zdeduplikowane)`);
+    } catch (err) {
+      console.error(err);
+      setExportResult("Błąd eksportu CSV");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportJSON = async () => {
+    if (groups.length === 0) return;
+    setExporting(true);
+    setExportResult(null);
+    try {
+      const questions = await fetchAllQuestions();
+      const clean = questions.map((q) => ({
+        id: q.id,
+        type: q.type,
+        difficulty: q.difficulty,
+        points: q.points,
+        content: q.content,
+        explanation: q.explanation || undefined,
+        source: q.source || undefined,
+        topic: q.topic?.name,
+        subject: q.subject?.name,
+      }));
+      const json = JSON.stringify(clean, null, 2);
+      downloadBlob(
+        json,
+        "application/json;charset=utf-8",
+        `matury-export-${new Date().toISOString().slice(0, 10)}.json`,
+      );
+      setExportResult(`JSON: ${questions.length} pytań (zdeduplikowane)`);
+    } catch (err) {
+      console.error(err);
+      setExportResult("Błąd eksportu JSON");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const downloadBlob = (content: string, type: string, filename: string) => {
+    const blob = new Blob([content], { type });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   const addGroup = async () => {
     if (!draftSubject && !draftType && !draftDifficulty && !draftSource) return;
 
@@ -143,110 +283,6 @@ export function AdminExport() {
   const totalCount = groups.reduce((s, g) => s + (g.count || 0), 0);
   const allCounted = groups.every((g) => g.count !== null);
 
-  const handleExport = async () => {
-    if (groups.length === 0) return;
-    setExporting(true);
-    setExportResult(null);
-
-    try {
-      const allQ = new Map<string, any>();
-
-      for (const g of groups) {
-        const params = buildParams(g);
-        let offset = 0;
-        while (true) {
-          const data = await admin.questions({ ...params, limit: 200, offset });
-          for (const q of data.questions) {
-            if (g.source && q.source !== g.source) continue;
-            allQ.set(q.id, q);
-          }
-          if (data.questions.length < 200) break;
-          offset += 200;
-        }
-      }
-
-      const questions = [...allQ.values()];
-      const esc = (v: any): string => {
-        if (v == null) return "";
-        const s = String(v).replace(/"/g, '""');
-        return s.includes(",") || s.includes('"') || s.includes("\n")
-          ? `"${s}"`
-          : s;
-      };
-
-      const headers = [
-        "id",
-        "przedmiot",
-        "temat",
-        "typ",
-        "trudnosc",
-        "punkty",
-        "zrodlo",
-        "tresc",
-        "odpowiedz",
-        "objasnienie",
-        "proby",
-        "poprawne",
-        "data",
-        "content_json",
-      ];
-      const rows = questions.map((q) => {
-        const c = q.content || {};
-        const text = c.question || c.context || c.prompt || c.instruction || "";
-        let ans = "";
-        if (c.correctAnswer) ans = String(c.correctAnswer);
-        else if (c.correctAnswers) ans = c.correctAnswers.join(", ");
-        else if (c.sampleAnswer) ans = c.sampleAnswer;
-        else if (c.statements)
-          ans = c.statements
-            .map((s: any) => `${s.text}: ${s.isTrue ? "T" : "F"}`)
-            .join("; ");
-        else if (c.pairs)
-          ans = c.pairs.map((p: any) => `${p.left} → ${p.right}`).join("; ");
-        else if (Array.isArray(c.blanks))
-          ans = c.blanks
-            .map((b: any) => b.acceptedAnswers?.[0] || "")
-            .join("; ");
-
-        return [
-          q.id,
-          q.subject?.name || "",
-          q.topic?.name || "",
-          q.type,
-          q.difficulty,
-          q.points,
-          q.source || "",
-          text,
-          ans,
-          q.explanation || "",
-          q.totalAttempts,
-          q.correctCount,
-          q.createdAt ? new Date(q.createdAt).toISOString() : "",
-          JSON.stringify(c),
-        ]
-          .map(esc)
-          .join(",");
-      });
-
-      const csv = "\uFEFF" + headers.join(",") + "\n" + rows.join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `matury-export-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-
-      setExportResult(
-        `Wyeksportowano ${questions.length} pytań (zdeduplikowane)`,
-      );
-    } catch (err) {
-      console.error(err);
-      setExportResult("Błąd eksportu");
-    } finally {
-      setExporting(false);
-    }
-  };
-
   // ── RENDER ──────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 animate-fade-in">
@@ -268,9 +304,9 @@ export function AdminExport() {
           )}
           {groups.length > 0 && (
             <button
-              onClick={handleExport}
+              onClick={handleExportCSV}
               disabled={exporting || !allCounted || totalCount === 0}
-              className="btn-primary text-sm py-2.5 px-6 disabled:opacity-40"
+              className="btn-primary text-sm py-2.5 px-5 disabled:opacity-40"
             >
               {exporting ? (
                 <span className="flex items-center gap-2">
@@ -278,8 +314,17 @@ export function AdminExport() {
                   Pobieram...
                 </span>
               ) : (
-                `📥 Eksportuj ~${totalCount} pytań`
+                `📥 CSV ~${totalCount}`
               )}
+            </button>
+          )}
+          {groups.length > 0 && (
+            <button
+              onClick={handleExportJSON}
+              disabled={exporting || !allCounted || totalCount === 0}
+              className="px-5 py-2.5 rounded-2xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/25 transition-all disabled:opacity-40"
+            >
+              {exporting ? "..." : `{ } JSON ~${totalCount}`}
             </button>
           )}
         </div>

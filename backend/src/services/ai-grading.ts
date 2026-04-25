@@ -384,6 +384,12 @@ Forma: e-mail/list/wpis na blogu (80-130 słów). Podaj polecenie z 4 podpunktam
       rozszerzony: `Zaproponuj temat wypowiedzi pisemnej z angielskiego na poziomie ROZSZERZONYM.
 Forma: rozprawka/artykuł/recenzja/list formalny (200-250 słów).`,
     },
+    niemiecki: {
+      podstawowy: `Zaproponuj temat wypowiedzi pisemnej z niemieckiego na poziomie PODSTAWOWYM.
+Forma: e-mail/list/wpis na blogu (80-130 słów). Podaj polecenie z 4 podpunktami w stylu CKE.`,
+      rozszerzony: `Zaproponuj temat wypowiedzi pisemnej z niemieckiego na poziomie ROZSZERZONYM.
+Forma: rozprawka/artykuł/recenzja/list formalny (200-250 słów).`,
+    },
     historia: {
       rozszerzony: `Zaproponuj temat wypracowania z historii na poziomie ROZSZERZONYM.
 Temat musi stawiać problem historyczny wymagający argumentacji z konkretnymi faktami.`,

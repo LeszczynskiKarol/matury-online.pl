@@ -33,6 +33,11 @@ export const VOICES = {
   // Australian
   AUSTRALIAN_FEMALE: "en-AU-Neural2-A",
   AUSTRALIAN_MALE: "en-AU-Neural2-B",
+  // German (de-DE)
+  GERMAN_FEMALE: "de-DE-Neural2-A",
+  GERMAN_MALE: "de-DE-Neural2-B",
+  GERMAN_FEMALE_2: "de-DE-Neural2-C",
+  GERMAN_MALE_2: "de-DE-Neural2-D",
 } as const;
 
 export type VoiceName = (typeof VOICES)[keyof typeof VOICES];
@@ -86,6 +91,20 @@ const CDN_BASE =
   process.env.CDN_AUDIO_URL ||
   `https://${S3_BUCKET}.s3.${process.env.S3_AUDIO_REGION || "eu-north-1"}.amazonaws.com`;
 
+// ── Language code resolver ───────────────────────────────────────────────
+
+function resolveLanguageCode(voiceName: string): string {
+  // Extract language code from voice name prefix (e.g. "de-DE-Neural2-A" → "de-DE")
+  const match = voiceName.match(/^([a-z]{2}-[A-Z]{2})/);
+  if (match) return match[1];
+
+  // Fallback mapping for safety
+  if (voiceName.startsWith("de-")) return "de-DE";
+  if (voiceName.startsWith("en-GB")) return "en-GB";
+  if (voiceName.startsWith("en-AU")) return "en-AU";
+  return "en-US";
+}
+
 // ── Core TTS Function ────────────────────────────────────────────────────
 
 const ttsClient = new textToSpeech.TextToSpeechClient();
@@ -94,14 +113,12 @@ async function synthesizeSegment(segment: TTSSegment): Promise<Buffer> {
   const pauseMs = segment.pauseAfterMs ?? 600;
   const ssml = `<speak>${segment.text}<break time="${pauseMs}ms"/></speak>`;
 
+  const languageCode = resolveLanguageCode(segment.voice);
+
   const [response] = await ttsClient.synthesizeSpeech({
     input: { ssml },
     voice: {
-      languageCode: segment.voice.startsWith("en-GB")
-        ? "en-GB"
-        : segment.voice.startsWith("en-AU")
-          ? "en-AU"
-          : "en-US",
+      languageCode,
       name: segment.voice,
     },
     audioConfig: {

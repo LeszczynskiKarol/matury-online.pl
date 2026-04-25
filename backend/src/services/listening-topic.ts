@@ -1,7 +1,6 @@
 // ============================================================================
 // Listening topic helper — creates/fetches the listening topic for a subject
-// Currently only angielski supports LISTENING. Guard here to avoid creating
-// dangling topics in subjects where listening isn't part of the taxonomy.
+// Subjects with LISTENING support: angielski, niemiecki
 // backend/src/services/listening-topic.ts
 // ============================================================================
 
@@ -17,8 +16,11 @@ const LISTENING_TOPIC_CONFIG: Record<
     name: "XIV. Rozumienie ze słuchu",
     sortOrder: 14,
   },
-  // Future-proof: add other languages here when needed
-  // niemiecki: { slug: "horverstehen", name: "...", sortOrder: 14 },
+  niemiecki: {
+    slug: "hoerverstehen",
+    name: "XIV. Rozumienie ze słuchu",
+    sortOrder: 14,
+  },
 };
 
 /**
@@ -58,4 +60,11 @@ export async function ensureListeningTopic(
   }
 
   return topic;
+}
+
+/**
+ * Check if a subject supports listening by slug.
+ */
+export function subjectSupportsListening(slug: string): boolean {
+  return slug in LISTENING_TOPIC_CONFIG;
 }

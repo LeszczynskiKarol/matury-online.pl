@@ -327,7 +327,7 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
         where: { id: subjectId },
       });
       if (
-        subjectForFilter?.slug === "angielski" &&
+        ["angielski", "niemiecki"].includes(subjectForFilter?.slug ?? "") &&
         !typeCounts.some((t: any) => t.type === "LISTENING")
       ) {
         typeCounts.push({ type: "LISTENING", count: 0 });

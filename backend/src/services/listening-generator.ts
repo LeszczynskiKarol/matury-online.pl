@@ -2,6 +2,8 @@
 // Listening Content Generator — Claude Sonnet generates transcripts + questions
 // backend/src/services/listening-generator.ts
 //
+// Supports: English (angielski) + German (niemiecki)
+//
 // Flow:  generate() → Claude API → content JSON → DB → TTS → S3 → done
 //
 // Usage:
@@ -19,21 +21,23 @@ import { VOICES, VoiceName, generateListeningAudio } from "./tts.service.js";
 // ── Listening Task Patterns (mirror CKE matura format) ───────────────────
 
 export type ListeningPattern =
-  | "short_dialogue" // PP: 30-60s, 1 MCQ per dialogue
-  | "monologue_tf" // PP: 1-2min monologue, 3-5 T/F statements
-  | "interview_mcq" // PP/PR: 2-3min, 3-5 MCQ
-  | "gap_fill" // PR: academic/news, fill missing info
-  | "extended_mixed"; // PR: 3-4min, mixed question types
+  | "short_dialogue"
+  | "monologue_tf"
+  | "interview_mcq"
+  | "gap_fill"
+  | "extended_mixed";
 
 export type Level = "PP" | "PR";
+export type Language = "en" | "de";
 
 interface GenerateParams {
   subjectId: string;
   topicId: string;
   pattern: ListeningPattern;
   level: Level;
-  topic?: string; // e.g. "travel", "environment", "technology"
-  difficulty?: number; // 1-5, auto-inferred from level if not set
+  topic?: string;
+  difficulty?: number;
+  language?: Language;
 }
 
 // ── Voice Assignment Logic ───────────────────────────────────────────────
@@ -46,59 +50,111 @@ interface VoiceAssignment {
 function assignVoices(
   pattern: ListeningPattern,
   speakerCount: number,
+  language: Language = "en",
 ): VoiceAssignment[] {
-  const pool: VoiceAssignment[] = [
-    { speaker: "Speaker 1", voice: VOICES.BRITISH_FEMALE },
-    { speaker: "Speaker 2", voice: VOICES.BRITISH_MALE },
-    { speaker: "Speaker 3", voice: VOICES.BRITISH_FEMALE_2 },
-    { speaker: "Speaker 4", voice: VOICES.BRITISH_MALE_2 },
-  ];
+  const pool: VoiceAssignment[] =
+    language === "de"
+      ? [
+          { speaker: "Speaker 1", voice: VOICES.GERMAN_FEMALE },
+          { speaker: "Speaker 2", voice: VOICES.GERMAN_MALE },
+          { speaker: "Speaker 3", voice: VOICES.GERMAN_FEMALE_2 },
+          { speaker: "Speaker 4", voice: VOICES.GERMAN_MALE_2 },
+        ]
+      : [
+          { speaker: "Speaker 1", voice: VOICES.BRITISH_FEMALE },
+          { speaker: "Speaker 2", voice: VOICES.BRITISH_MALE },
+          { speaker: "Speaker 3", voice: VOICES.BRITISH_FEMALE_2 },
+          { speaker: "Speaker 4", voice: VOICES.BRITISH_MALE_2 },
+        ];
 
   if (pattern === "monologue_tf" || pattern === "gap_fill") {
-    // Single speaker — alternate male/female randomly
     return [pool[Math.random() > 0.5 ? 0 : 1]];
   }
 
   return pool.slice(0, Math.min(speakerCount, 4));
 }
 
-// ── Prompt Templates ─────────────────────────────────────────────────────
+// ── Prompt Builder ───────────────────────────────────────────────────────
 
 function buildPrompt(params: GenerateParams): string {
-  const levelDesc =
-    params.level === "PP"
+  const lang: Language = params.language || "en";
+  const isDE = lang === "de";
+
+  const levelDesc = isDE
+    ? params.level === "PP"
+      ? "B1/B1+ (matura podstawowa). Einfache, klare Sprache. Moderates Tempo. Alltagssituationen."
+      : "B2/C1 (matura rozszerzona). Komplexer Wortschatz, differenzierte Argumente. Natürliches Tempo."
+    : params.level === "PP"
       ? "B1/B1+ (matura podstawowa). Simple, clear language. Speed: moderate."
       : "B2/C1 (matura rozszerzona). Complex vocabulary, nuanced arguments. Natural speed.";
 
   const topicHint = params.topic
-    ? `Topic/theme: ${params.topic}.`
-    : "Choose an interesting, varied topic appropriate for 18-year-old Polish students preparing for matura.";
+    ? isDE
+      ? `Thema: ${params.topic}.`
+      : `Topic/theme: ${params.topic}.`
+    : isDE
+      ? "Wähle ein interessantes, abwechslungsreiches Thema, das für 18-jährige polnische Abiturienten geeignet ist."
+      : "Choose an interesting, varied topic appropriate for 18-year-old Polish students preparing for matura.";
 
-  const patternInstructions: Record<ListeningPattern, string> = {
-    short_dialogue: `Create a SHORT DIALOGUE (4-8 exchanges, 30-60 seconds when read aloud).
+  const patternInstructions: Record<ListeningPattern, string> = isDE
+    ? {
+        short_dialogue: `Create a SHORT DIALOGUE IN GERMAN (4-8 exchanges, 30-60 seconds when read aloud).
+Two speakers in a natural, everyday situation (Geschäft, Schule, Reise, Telefonat, Arztpraxis, Restaurant, Bahnhof, etc.).
+Generate exactly 1 multiple-choice question IN GERMAN (4 options A-D) about the dialogue.
+The question should test understanding of specific information, NOT general gist.`,
+
+        monologue_tf: `Create a MONOLOGUE IN GERMAN (1-2 minutes when read aloud, ~150-250 words).
+One speaker: could be a Reiseführer, Lehrer, Radiosprecher, student giving a Referat, Museumsmitarbeiter, etc.
+Generate 3-4 TRUE/FALSE statements IN GERMAN that test detailed comprehension.
+At least one statement should be a tricky paraphrase (true but worded differently).
+At least one should contain a plausible-sounding detail that contradicts the recording.`,
+
+        interview_mcq: `Create an INTERVIEW or CONVERSATION IN GERMAN (2-3 minutes, ~250-400 words).
+Two speakers: an interviewer and a guest (Experte/Expertin, Reisende/r, Künstler/in, Sportler/in, Wissenschaftler/in, etc.).
+Generate 3-4 multiple-choice questions IN GERMAN (4 options A-D each).
+Questions should test: main idea, specific details, speaker's attitude/opinion, inference.
+Distribute correct answers across A, B, C, D (NOT all the same letter).`,
+
+        gap_fill: `Create an ACADEMIC/INFORMATIONAL recording IN GERMAN (2-3 minutes, ~300-450 words).
+One speaker: Dozent/in, Nachrichtensprecher/in, or Dokumentarfilmerzähler/in.
+Topic should be factual (Wissenschaft, Geschichte, Statistik, aktuelle Ereignisse aus DACH-Ländern).
+Generate 4-5 FILL_IN questions IN GERMAN where the student writes a word, number, or short phrase heard in the recording.
+Answers should be unambiguous — specific names, numbers, dates, or key terms.`,
+
+        extended_mixed: `Create a COMPLEX RECORDING IN GERMAN (3-4 minutes, ~400-600 words).
+Can be: Podiumsdiskussion, Radiosendung, multi-part Durchsage, Reportage.
+2-3 speakers with distinct viewpoints.
+Generate 5-6 questions IN GERMAN using a MIX of types:
+- 2 multiple-choice (A-D)
+- 2 TRUE/FALSE (with 2 statements each)
+- 1-2 FILL_IN (specific detail)
+This is the hardest format — test inference, attitude, and detail simultaneously.`,
+      }
+    : {
+        short_dialogue: `Create a SHORT DIALOGUE (4-8 exchanges, 30-60 seconds when read aloud).
 Two speakers in a natural, everyday situation (shop, school, travel, phone call, etc.).
 Generate exactly 1 multiple-choice question (4 options A-D) about the dialogue.
 The question should test understanding of specific information, NOT general gist.`,
 
-    monologue_tf: `Create a MONOLOGUE (1-2 minutes when read aloud, ~150-250 words).
+        monologue_tf: `Create a MONOLOGUE (1-2 minutes when read aloud, ~150-250 words).
 One speaker: could be a tour guide, teacher, radio presenter, student giving a presentation, etc.
 Generate 3-4 TRUE/FALSE statements that test detailed comprehension.
 At least one statement should be a tricky paraphrase (true but worded differently).
 At least one should contain a plausible-sounding detail that contradicts the recording.`,
 
-    interview_mcq: `Create an INTERVIEW or CONVERSATION (2-3 minutes, ~250-400 words).
+        interview_mcq: `Create an INTERVIEW or CONVERSATION (2-3 minutes, ~250-400 words).
 Two speakers: an interviewer and a guest (expert, traveler, artist, athlete, etc.).
 Generate 3-4 multiple-choice questions (4 options A-D each).
 Questions should test: main idea, specific details, speaker's attitude/opinion, inference.
 Distribute correct answers across A, B, C, D (NOT all the same letter).`,
 
-    gap_fill: `Create an ACADEMIC/INFORMATIONAL recording (2-3 minutes, ~300-450 words).
+        gap_fill: `Create an ACADEMIC/INFORMATIONAL recording (2-3 minutes, ~300-450 words).
 One speaker: lecturer, news reporter, or documentary narrator.
 Topic should be factual (science, history, statistics, current affairs).
 Generate 4-5 FILL_IN questions where the student writes a word, number, or short phrase heard in the recording.
 Answers should be unambiguous — specific names, numbers, dates, or key terms.`,
 
-    extended_mixed: `Create a COMPLEX RECORDING (3-4 minutes, ~400-600 words).
+        extended_mixed: `Create a COMPLEX RECORDING (3-4 minutes, ~400-600 words).
 Can be: panel discussion, radio program, multi-part announcement.
 2-3 speakers with distinct viewpoints.
 Generate 5-6 questions using a MIX of types:
@@ -106,28 +162,60 @@ Generate 5-6 questions using a MIX of types:
 - 2 TRUE/FALSE (with 2 statements each)
 - 1-2 FILL_IN (specific detail)
 This is the hardest format — test inference, attitude, and detail simultaneously.`,
-  };
+      };
 
-  return `You are an expert English language matura exam creator for Polish students.
+  const langLabel = isDE ? "German" : "English";
+  const langExamples = isDE
+    ? {
+        title: "Hotelzimmer buchen",
+        contextPL: "Usłyszysz rozmowę dwóch przyjaciół na temat wakacji.",
+        question: "Hören Sie die Aufnahme und beantworten Sie die Fragen.",
+        questionText: "question text in German",
+        speakerNames: "German names like Hans, Anna, Frau Müller, Herr Schmidt",
+      }
+    : {
+        title: "Booking a hotel room",
+        contextPL: "Usłyszysz rozmowę dwóch przyjaciół na temat wakacji.",
+        question: "Listen to the recording and answer the questions.",
+        questionText: "question text in English",
+        speakerNames: "names",
+      };
 
-TASK: Create a listening comprehension exercise.
+  const criticalRules = isDE
+    ? `CRITICAL RULES:
+1. The transcript must be ENTIRELY IN GERMAN and sound NATURAL when read aloud — use contractions (geht's, gibt's, ist's), modal particles (ja, doch, mal, eben, halt, eigentlich, schon, wohl), fillers (also, na ja, naja, ähm, tja), self-corrections where appropriate for the register.
+2. For dialogues: clearly mark speakers as [Speaker 1] and [Speaker 2] (or ${langExamples.speakerNames}).
+3. For MCQ: correct answers must be distributed across A/B/C/D — do NOT make A always correct.
+4. ALL questions, ALL options, and the main instruction ("question" field) must be IN GERMAN.
+5. The "contextPL" field must ALWAYS be IN POLISH — this is the only Polish text in the output.
+6. Questions must be answerable ONLY from the recording — not from general knowledge.
+7. Include subtle distractors — options that sound plausible but contradict specific details.
+8. Content should reflect DACH countries (Deutschland, Österreich, Schweiz) and be relevant to 18-year-olds: Technologie, Reisen, Umwelt, soziale Medien, Beruf, Kultur, Gesundheit, Beziehungen, aktuelle Themen.
+9. Use appropriate register: formal (Sie) for official/business contexts, informal (du) for friends/family/peers.
+10. Use correct German orthography: Umlauts (ä, ö, ü), Eszett (ß), compound nouns (Führerscheinprüfung, Auslandsaufenthalt), separable verbs (ankommen, aufstehen, einkaufen) — split correctly in main clauses.
+11. For PP level: stick to Alltag topics, simple sentence structures, common vocabulary. For PR level: use Konjunktiv II, Passiv, complex Nebensätze, academic register.`
+    : `CRITICAL RULES:
+1. The transcript must sound NATURAL when read aloud — use contractions, fillers (well, you know, actually), hesitations, self-corrections where appropriate for the register.
+2. For dialogues: clearly mark speakers as [Speaker 1] and [Speaker 2] (or ${langExamples.speakerNames}).
+3. For MCQ: correct answers must be distributed across A/B/C/D — do NOT make A always correct.
+4. Questions must be answerable ONLY from the recording — not from general knowledge.
+5. Include subtle distractors — options that sound plausible but contradict specific details.
+6. Content should be interesting and relevant to 18-year-olds: technology, travel, environment, social media, careers, culture, health, relationships, current affairs.`;
+
+  return `You are an expert ${langLabel} language matura exam creator for Polish students.
+
+TASK: Create a listening comprehension exercise${isDE ? " IN GERMAN" : ""}.
 
 LEVEL: ${levelDesc}
 ${topicHint}
 
 FORMAT: ${patternInstructions[params.pattern]}
 
-CRITICAL RULES:
-1. The transcript must sound NATURAL when read aloud — use contractions, fillers (well, you know, actually), hesitations, self-corrections where appropriate for the register.
-2. For dialogues: clearly mark speakers as [Speaker 1] and [Speaker 2] (or names).
-3. For MCQ: correct answers must be distributed across A/B/C/D — do NOT make A always correct.
-4. Questions must be answerable ONLY from the recording — not from general knowledge.
-5. Include subtle distractors — options that sound plausible but contradict specific details.
-6. Content should be interesting and relevant to 18-year-olds: technology, travel, environment, social media, careers, culture, health, relationships, current affairs.
+${criticalRules}
 
 STRICT JSON SCHEMA — every field is REQUIRED exactly as shown:
 - subQuestions[].id: STRING like "a", "b", "c" (NOT numbers)
-- subQuestions[].text: STRING (the question text)  
+- subQuestions[].text: STRING (the question text)
 - subQuestions[].type: "CLOSED" | "TRUE_FALSE" | "FILL_IN"
 - subQuestions[].points: NUMBER
 - subQuestions[].options[].id: "A", "B", "C", "D" (NOT "letter", NOT lowercase)
@@ -138,18 +226,18 @@ STRICT JSON SCHEMA — every field is REQUIRED exactly as shown:
 
 RESPOND ONLY WITH THIS JSON (no markdown, no backticks, no extra text):
 {
-  "title": "<short descriptive title, e.g. 'Booking a hotel room'>",
+  "title": "<short descriptive title, e.g. '${langExamples.title}'>",
   "listeningType": "<monologue|dialogue|interview|announcement|news_report>",
-  "transcript": "<full transcript with [Speaker 1], [Speaker 2] labels if dialogue>",
+  "transcript": "<full transcript${isDE ? " IN GERMAN" : ""} with [Speaker 1], [Speaker 2] labels if dialogue>",
   "speakers": [
     {"id": "1", "name": "<character name>", "gender": "female|male"}
   ],
-  "contextPL": "<1 sentence in Polish describing what student will hear, e.g. 'Usłyszysz rozmowę dwóch przyjaciół na temat wakacji.'>",
-  "question": "<main instruction in English, e.g. 'Listen to the recording and answer the questions.'>",
+  "contextPL": "<1 sentence in Polish describing what student will hear, e.g. '${langExamples.contextPL}'>",
+  "question": "<main instruction${isDE ? " IN GERMAN" : " in English"}, e.g. '${langExamples.question}'>",
   "subQuestions": [
     {
       "id": "a",
-      "text": "<question text in English>",
+      "text": "<${langExamples.questionText}>",
       "type": "CLOSED|TRUE_FALSE|FILL_IN",
       "points": <1 or 2>,
       "options": [{"id":"A","text":"..."},{"id":"B","text":"..."},{"id":"C","text":"..."},{"id":"D","text":"..."}],
@@ -179,21 +267,26 @@ function parseTranscriptToSegments(
   transcript: string,
   speakers: { id: string; name: string; gender: string }[],
   level: Level,
+  language: Language = "en",
 ): ParsedSegment[] {
   const speed = level === "PP" ? 0.92 : 1.0;
   const voiceMap = new Map<string, VoiceName>();
 
-  // Assign voices based on gender
-  const maleVoices = [
-    VOICES.BRITISH_MALE,
-    VOICES.BRITISH_MALE_2,
-    VOICES.AMERICAN_MALE,
-  ];
-  const femaleVoices = [
-    VOICES.BRITISH_FEMALE,
-    VOICES.BRITISH_FEMALE_2,
-    VOICES.AMERICAN_FEMALE,
-  ];
+  // Assign voices based on gender + language
+  const maleVoices: VoiceName[] =
+    language === "de"
+      ? [VOICES.GERMAN_MALE, VOICES.GERMAN_MALE_2]
+      : [VOICES.BRITISH_MALE, VOICES.BRITISH_MALE_2, VOICES.AMERICAN_MALE];
+
+  const femaleVoices: VoiceName[] =
+    language === "de"
+      ? [VOICES.GERMAN_FEMALE, VOICES.GERMAN_FEMALE_2]
+      : [
+          VOICES.BRITISH_FEMALE,
+          VOICES.BRITISH_FEMALE_2,
+          VOICES.AMERICAN_FEMALE,
+        ];
+
   let mi = 0,
     fi = 0;
 
@@ -212,10 +305,13 @@ function parseTranscriptToSegments(
   }
 
   // Default voice for unlabeled text (monologues)
-  const defaultVoice =
+  const defaultVoice: VoiceName =
     speakers.length > 0
-      ? voiceMap.get(speakers[0].name) || VOICES.BRITISH_FEMALE
-      : VOICES.BRITISH_FEMALE;
+      ? voiceMap.get(speakers[0].name) ||
+        (language === "de" ? VOICES.GERMAN_FEMALE : VOICES.BRITISH_FEMALE)
+      : language === "de"
+        ? VOICES.GERMAN_FEMALE
+        : VOICES.BRITISH_FEMALE;
 
   // Split transcript by speaker labels: [Speaker 1], [Sarah], etc.
   const regex = /\[([^\]]+)\]\s*/g;
@@ -229,9 +325,9 @@ function parseTranscriptToSegments(
   regex.lastIndex = 0; // reset
 
   if (!hasLabels) {
-    // Monologue — single segment, maybe split into sentences for natural pauses
+    // Monologue — split into sentence groups for natural pauses
     const sentences = transcript.match(/[^.!?]+[.!?]+/g) || [transcript];
-    const chunkSize = 3; // group 3 sentences per segment
+    const chunkSize = 3;
     for (let i = 0; i < sentences.length; i += chunkSize) {
       const chunk = sentences
         .slice(i, i + chunkSize)
@@ -252,7 +348,6 @@ function parseTranscriptToSegments(
 
   // Dialogue — split by speaker labels
   while ((match = regex.exec(transcript)) !== null) {
-    // Text before this label belongs to previous speaker
     if (match.index > lastIndex) {
       const text = transcript.slice(lastIndex, match.index).trim();
       if (text) {
@@ -261,7 +356,7 @@ function parseTranscriptToSegments(
           text,
           voice: voiceMap.get(currentSpeaker) || defaultVoice,
           speed,
-          pauseAfterMs: 700, // longer pause between speakers
+          pauseAfterMs: 700,
         });
       }
     }
@@ -290,24 +385,30 @@ export async function generateListeningQuestion(
   prisma: PrismaClient,
   params: GenerateParams,
 ): Promise<string> {
+  const language: Language = params.language || "en";
   const prompt = buildPrompt(params);
 
   // 1. Call Claude to generate content
-  console.log(`🧠 Generating ${params.pattern} (${params.level})...`);
+  console.log(
+    `🧠 Generating ${params.pattern} (${params.level}, ${language.toUpperCase()})...`,
+  );
 
   const result = await claudeCall({
     caller: "listening-batch-generator",
     model: "claude-sonnet-4-6",
+    maxTokens: 8192,
     messages: [{ role: "user", content: prompt }],
     metadata: {
       pattern: params.pattern,
       level: params.level,
       topic: params.topic,
+      language,
     },
   });
   const rawText = result.text;
 
   // Clean potential markdown wrapping
+
   const jsonText = rawText
     .replace(/```json\s*/g, "")
     .replace(/```\s*/g, "")
@@ -317,15 +418,30 @@ export async function generateListeningQuestion(
   try {
     generated = JSON.parse(jsonText);
   } catch (e) {
-    console.error("❌ Failed to parse Claude response:", rawText.slice(0, 200));
-    throw new Error("Claude returned invalid JSON");
+    // Attempt to fix truncated JSON by closing open structures
+    const fixed =
+      jsonText.replace(/,\s*$/, "") + // trailing comma
+      (jsonText.includes('"subQuestions"') ? "]}" : "}");
+    try {
+      generated = JSON.parse(fixed);
+      console.warn("⚠ Fixed truncated JSON");
+    } catch {
+      console.error(
+        "❌ Failed to parse Claude response:",
+        rawText.slice(0, 300),
+      );
+      throw new Error(
+        "Claude returned invalid JSON — response likely truncated. Check max_tokens.",
+      );
+    }
   }
 
-  // 2. Parse transcript into TTS segments
+  // 2. Parse transcript into TTS segments (language-aware voices)
   const segments = parseTranscriptToSegments(
     generated.transcript,
     generated.speakers || [],
     params.level,
+    language,
   );
 
   // 3. Build full content object
@@ -339,7 +455,10 @@ export async function generateListeningQuestion(
       params.level === "PR" && params.pattern === "extended_mixed" ? 1 : 2,
     contextPL: generated.contextPL,
     question:
-      generated.question || "Listen to the recording and answer the questions.",
+      generated.question ||
+      (language === "de"
+        ? "Hören Sie die Aufnahme und beantworten Sie die Fragen."
+        : "Listen to the recording and answer the questions."),
     subQuestions: generated.subQuestions,
   };
 
@@ -370,7 +489,9 @@ export async function generateListeningQuestion(
     data: { questionCount: { increment: 1 } },
   });
 
-  console.log(`✅ Created question ${question.id} (${params.pattern})`);
+  console.log(
+    `✅ Created question ${question.id} (${params.pattern}, ${language.toUpperCase()})`,
+  );
 
   // 5. Generate audio immediately
   try {
@@ -389,11 +510,12 @@ interface BatchParams {
   topicId: string;
   level: Level;
   count: number;
+  language?: Language;
   patterns?: ListeningPattern[];
   topics?: string[];
 }
 
-const DEFAULT_TOPICS_PP = [
+const DEFAULT_TOPICS_PP_EN = [
   "booking a hotel",
   "shopping for clothes",
   "visiting a doctor",
@@ -416,7 +538,7 @@ const DEFAULT_TOPICS_PP = [
   "social media",
 ];
 
-const DEFAULT_TOPICS_PR = [
+const DEFAULT_TOPICS_PR_EN = [
   "artificial intelligence ethics",
   "climate change solutions",
   "space exploration",
@@ -437,6 +559,52 @@ const DEFAULT_TOPICS_PR = [
   "circular economy",
   "urban planning",
   "media literacy",
+];
+
+const DEFAULT_TOPICS_PP_DE = [
+  "Hotelreservierung",
+  "Einkaufen im Supermarkt",
+  "Beim Arzt",
+  "Im Restaurant bestellen",
+  "Reiseplanung",
+  "Schulleben",
+  "Hobbys und Freizeit",
+  "Telefonat mit Freunden",
+  "Am Flughafen",
+  "Vorstellungsgespräch",
+  "Wetterbericht",
+  "Geburtstagsfeier",
+  "Nach dem Weg fragen",
+  "Sportveranstaltung",
+  "Filmkritik",
+  "Kochen und Rezepte",
+  "Tagesablauf",
+  "Öffentliche Verkehrsmittel",
+  "Umweltbewusstsein",
+  "Soziale Medien",
+];
+
+const DEFAULT_TOPICS_PR_DE = [
+  "Künstliche Intelligenz und Ethik",
+  "Klimawandel und Lösungen",
+  "Weltraumforschung",
+  "Psychische Gesundheit",
+  "Homeoffice und Remote-Arbeit",
+  "Kulturelle Vielfalt",
+  "Nachhaltige Mode",
+  "Gentechnik-Debatte",
+  "Regulierung sozialer Medien",
+  "Bildungsreform",
+  "Wohnungskrise",
+  "Erneuerbare Energien",
+  "Digitaler Datenschutz",
+  "Zukunft der Arbeit",
+  "Migration in Europa",
+  "Gesundheitssysteme im Vergleich",
+  "Cybersicherheit",
+  "Kreislaufwirtschaft",
+  "Stadtplanung und Urbanisierung",
+  "Medienkompetenz",
 ];
 
 const DEFAULT_PATTERNS_PP: ListeningPattern[] = [
@@ -461,12 +629,20 @@ export async function generateListeningBatch(
   prisma: PrismaClient,
   params: BatchParams,
 ): Promise<string[]> {
+  const language: Language = params.language || "en";
   const patterns =
     params.patterns ||
     (params.level === "PP" ? DEFAULT_PATTERNS_PP : DEFAULT_PATTERNS_PR);
+
   const topicPool =
     params.topics ||
-    (params.level === "PP" ? DEFAULT_TOPICS_PP : DEFAULT_TOPICS_PR);
+    (language === "de"
+      ? params.level === "PP"
+        ? DEFAULT_TOPICS_PP_DE
+        : DEFAULT_TOPICS_PR_DE
+      : params.level === "PP"
+        ? DEFAULT_TOPICS_PP_EN
+        : DEFAULT_TOPICS_PR_EN);
 
   const ids: string[] = [];
 
@@ -481,9 +657,12 @@ export async function generateListeningBatch(
         pattern,
         level: params.level,
         topic,
+        language,
       });
       ids.push(id);
-      console.log(`  [${i + 1}/${params.count}] ✅ ${pattern}: ${topic}`);
+      console.log(
+        `  [${i + 1}/${params.count}] ✅ ${pattern}: ${topic} (${language.toUpperCase()})`,
+      );
     } catch (err: any) {
       console.error(
         `  [${i + 1}/${params.count}] ❌ ${pattern}: ${err.message}`,
@@ -497,7 +676,7 @@ export async function generateListeningBatch(
   }
 
   console.log(
-    `\n🎉 Batch complete: ${ids.length}/${params.count} questions generated`,
+    `\n🎉 Batch complete: ${ids.length}/${params.count} questions generated (${language.toUpperCase()})`,
   );
   return ids;
 }
