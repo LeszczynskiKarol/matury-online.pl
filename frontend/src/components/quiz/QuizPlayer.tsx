@@ -292,7 +292,11 @@ export function QuizPlayer({
     message: string;
   } | null>(null);
   const answeredIds = useRef<Set<string>>(new Set());
+  const viewedIds = useRef<Set<string>>(new Set());
   const startTime = useRef(Date.now());
+  const [resultsMap, setResultsMap] = useState<
+    Record<string, { result: any; response: any }>
+  >({});
 
   const handleAdminBrowse = useCallback(
     (sort: AdminSort, loadedQuestions: any[], total: number) => {
@@ -548,6 +552,10 @@ export function QuizPlayer({
       setFeedbackData(result);
       setResults((p) => [...p, result]);
       setTotalXp((p) => p + result.xpEarned);
+      setResultsMap((prev) => ({
+        ...prev,
+        [currentQuestion.id]: { result, response },
+      }));
       setPhase("feedback");
     } catch (err: any) {
       if (err.code === "AI_CREDITS_EXHAUSTED") {
@@ -737,6 +745,15 @@ export function QuizPlayer({
     loadFilteredQuestions,
   ]);
 
+  const goToPrevious = useCallback(() => {
+    if (currentIndex <= 0) return;
+    setCurrentIndex((i) => i - 1);
+    setResponse(null);
+    setFeedbackData(null);
+    setPhase("question");
+    startTime.current = Date.now();
+  }, [currentIndex]);
+
   const endSession = useCallback(() => {
     const isListeningOnly =
       questionTypes?.length === 1 && questionTypes[0] === "LISTENING";
@@ -755,9 +772,11 @@ export function QuizPlayer({
     setPhase("summary");
   }, [sessionId, questionTypes]);
 
-  // Track question view — fires every time question is displayed
+  // Track question view — fires only ONCE per question (skips on back-nav)
   useEffect(() => {
     if (!currentQuestion || phase !== "question") return;
+    if (viewedIds.current.has(currentQuestion.id)) return;
+    viewedIds.current.add(currentQuestion.id);
     fetch(
       `${import.meta.env.PUBLIC_API_URL || "/api"}/questions/${currentQuestion.id}/view`,
       {
@@ -995,34 +1014,57 @@ export function QuizPlayer({
       {!loadingMore && (
         <div className="flex justify-between">
           {phase === "question" ? (
-            currentIndex + 1 >= questions.length ? (
-              <button
-                onClick={endSession}
-                className="btn-ghost text-sm text-zinc-500"
-              >
-                Zakończ sesję nauki
-              </button>
-            ) : (
-              <button
-                onClick={skipQuestion}
-                className="btn-ghost text-sm text-zinc-500"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            <div className="flex items-center gap-3">
+              {currentIndex > 0 && (
+                <button
+                  onClick={goToPrevious}
+                  className="btn-ghost text-sm text-zinc-500"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                  />
-                </svg>
-                Pomiń
-              </button>
-            )
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 19l-7-7 7-7M19 19l-7-7 7-7"
+                    />
+                  </svg>
+                  Poprzednie
+                </button>
+              )}
+              {currentIndex + 1 >= questions.length ? (
+                <button
+                  onClick={endSession}
+                  className="btn-ghost text-sm text-zinc-500"
+                >
+                  Zakończ sesję nauki
+                </button>
+              ) : (
+                <button
+                  onClick={skipQuestion}
+                  className="btn-ghost text-sm text-zinc-500"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                    />
+                  </svg>
+                  Pomiń
+                </button>
+              )}
+            </div>
           ) : (
             <div />
           )}
@@ -1049,6 +1091,13 @@ export function QuizPlayer({
                       };
                       setFeedbackData(revealData);
                       setResults((p) => [...p, revealData]);
+                      setResultsMap((prev) => ({
+                        ...prev,
+                        [currentQuestion.id]: {
+                          result: revealData,
+                          response: null,
+                        },
+                      }));
                       setPhase("feedback");
                     }}
                     className="px-4 py-2.5 rounded-2xl text-sm font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-surface-800 hover:bg-zinc-200 dark:hover:bg-surface-700 transition-all"
@@ -1073,9 +1122,19 @@ export function QuizPlayer({
               </>
             )}
             {phase === "feedback" && (
-              <button onClick={nextQuestion} className="btn-primary">
-                Następne pytanie →
-              </button>
+              <div className="flex items-center gap-3">
+                {currentIndex > 0 && (
+                  <button
+                    onClick={goToPrevious}
+                    className="btn-ghost text-sm text-zinc-400"
+                  >
+                    ← Wróć
+                  </button>
+                )}
+                <button onClick={nextQuestion} className="btn-primary">
+                  Następne pytanie →
+                </button>
+              </div>
             )}
           </div>
         </div>
