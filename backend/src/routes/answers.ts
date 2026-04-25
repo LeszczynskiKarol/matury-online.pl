@@ -153,7 +153,7 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                 const aiResult = await gradeOpenQuestion({
                   subjectSlug: question.subject.slug,
                   question: content.question || blank.label || "",
-                  rubric: `Luka "${blank.id}": poprawne odpowiedzi to: ${blank.acceptedAnswers.join(", ")}. Oceń czy odpowiedź ucznia "${userAnswers[blank.id]}" jest merytorycznie równoważna lub poprawną formą gramatyczną.`,
+                  rubric: `Luka "${blank.id}": wzorcowa odpowiedź to: ${blank.acceptedAnswers.join(" / ")}. Uczeń wpisał: "${userAnswers[blank.id]}". Oceń czy odpowiedź jest poprawna merytorycznie (synonim, inna poprawna forma). Bądź LIBERALNY — jeśli sens się zgadza, uznaj za poprawne.`,
                   maxPoints: 1,
                   userAnswer: userAnswers[blank.id],
                   sampleAnswer: blank.acceptedAnswers[0],
@@ -168,7 +168,11 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                   score: aiResult.score,
                   feedback: aiResult.feedback,
                 };
-              } catch {
+              } catch (err: any) {
+                console.error(
+                  `[FILL_IN AI fallback] blank=${blank.id} error:`,
+                  err.message || err,
+                );
                 fillAiResults[blank.id] = {
                   score: 0,
                   feedback:
@@ -260,8 +264,8 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
 
                 const aiResult = await gradeOpenQuestion({
                   subjectSlug: question.subject.slug,
-                  question: content.instruction || content.template || "",
-                  rubric: `Luka "${k}": poprawne odpowiedzi to: ${blanksObj[k].acceptedAnswers.join(", ")}. Oceń czy odpowiedź ucznia "${userCloze[k]}" jest poprawną formą gramatyczną/merytorycznie równoważna.`,
+                  question: `${content.instruction || ""}\nZdanie: ${content.template || ""}`,
+                  rubric: `Luka "${k}": wzorcowa odpowiedź to: ${blanksObj[k].acceptedAnswers.join(" / ")}. Uczeń wpisał: "${userCloze[k]}". Oceń czy w KONTEKŚCIE CAŁEGO ZDANIA odpowiedź ucznia jest poprawna gramatycznie i merytorycznie (może być synonim lub inna poprawna forma). Bądź LIBERALNY — jeśli zdanie z odpowiedzią ucznia ma sens, uznaj za poprawne.`,
                   maxPoints: 1,
                   userAnswer: userCloze[k],
                   sampleAnswer: blanksObj[k].acceptedAnswers[0],
@@ -276,7 +280,11 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                   score: aiResult.score,
                   feedback: aiResult.feedback,
                 };
-              } catch {
+              } catch (err: any) {
+                console.error(
+                  `[CLOZE AI fallback] blank=${k} error:`,
+                  err.message || err,
+                );
                 clozeAiResults[k] = {
                   score: 0,
                   feedback:
@@ -343,8 +351,11 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                     score: aiResult.score,
                     feedback: aiResult.feedback,
                   };
-                } catch {
-                  // No credits — 0 for this sub, no crash
+                } catch (err: any) {
+                  console.error(
+                    `[${question.type} AI fallback] sub=${sq.id} error:`,
+                    err.message || err,
+                  );
                   subAiResults[sq.id] = {
                     score: 0,
                     feedback:
@@ -476,7 +487,10 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                   correctAnswer: aiResult.correctAnswer,
                 };
               } catch (creditErr: any) {
-                // No credits — skip AI, award 0, show sampleAnswer
+                console.error(
+                  `[WIAZKA OPEN AI] sub=${sq.id} error:`,
+                  creditErr.message || creditErr,
+                );
                 wiazkaAiResults[sq.id] = {
                   score: 0,
                   pointsEarned: 0,
@@ -610,7 +624,11 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                     feedback: aiResult.feedback,
                     correctAnswer: aiResult.correctAnswer,
                   };
-                } catch {
+                } catch (err: any) {
+                  console.error(
+                    `[EXPERIMENT_DESIGN AI] field=${field.id} error:`,
+                    err.message || err,
+                  );
                   expAiResults[field.id] = {
                     score: 0,
                     pointsEarned: 0,

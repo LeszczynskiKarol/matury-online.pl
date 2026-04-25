@@ -2464,13 +2464,15 @@ function ClozeQuestion({
             </span>
           );
 
-        const ok =
+        const deterministicOk =
           isA &&
           b?.acceptedAnswers?.some(
             (a: string) =>
               a.toLowerCase().trim() ===
               (ans[id] || ans[rawId] || "").toLowerCase().trim(),
           );
+        const aiOk = isA && feedback?.aiGrading?.blanks?.[id]?.score >= 0.5;
+        const ok = deterministicOk || aiOk;
         return (
           <input
             key={i}
@@ -2495,6 +2497,26 @@ function ClozeQuestion({
       <div className="text-sm leading-8 p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800">
         {tmpl()}
       </div>
+      {/* AI grading per-blank feedback */}
+      {isA && feedback?.aiGrading?.blanks && (
+        <div className="mt-4 space-y-2">
+          {Object.entries(feedback.aiGrading.blanks).map(
+            ([blankId, result]: [string, any]) => (
+              <div
+                key={blankId}
+                className={`p-3 rounded-xl text-xs ${result.score >= 0.5 ? "bg-brand-50 dark:bg-brand-900/10 border border-brand-200" : "bg-red-50 dark:bg-red-900/10 border border-red-200"}`}
+              >
+                <span className="font-bold">
+                  {result.score >= 0.5 ? "✅" : "❌"} Luka {blankId}:
+                </span>{" "}
+                <span className="text-zinc-600 dark:text-zinc-400">
+                  {result.feedback}
+                </span>
+              </div>
+            ),
+          )}
+        </div>
+      )}
       {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
