@@ -572,6 +572,13 @@ export function QuizPlayer({
           message:
             "Ocena pytań otwartych przez AI jest dostępna wyłącznie dla użytkowników Premium.",
         });
+      } else {
+        setAiError({
+          title: "Błąd oceny",
+          message:
+            err.message ||
+            "Nie udało się ocenić odpowiedzi. Spróbuj ponownie lub pomiń pytanie.",
+        });
       }
     } finally {
       setSubmitting(false);
