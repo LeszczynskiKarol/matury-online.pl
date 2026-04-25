@@ -279,7 +279,16 @@ export const questions = {
 // ── Gamification ─────────────────────────────────────────────────────────
 
 export const gamification = {
-  // Badges (replaces old achievements)
+  leaderboardVisibility: () =>
+    request<{ hideFromLeaderboard: boolean }>(
+      "/gamification/leaderboard/visibility",
+    ),
+  toggleLeaderboardVisibility: () =>
+    request<{ hideFromLeaderboard: boolean }>(
+      "/gamification/leaderboard/toggle-visibility",
+      { method: "POST" },
+    ),
+
   badges: () =>
     request<{
       earned: any[];
@@ -323,7 +332,11 @@ export const gamification = {
   level: () => request<any>("/gamification/level"),
   leaderboard: (subjectId?: string) => {
     const qs = subjectId ? `?subjectId=${subjectId}` : "";
-    return request<any[]>(`/gamification/leaderboard${qs}`);
+    return request<{
+      leaders: any[];
+      currentUserEntry: any;
+      type: string;
+    }>(`/gamification/leaderboard${qs}`);
   },
   streak: () => request<any>("/gamification/streak"),
 };
