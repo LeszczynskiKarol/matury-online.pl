@@ -135,7 +135,13 @@ const currentPath = Astro.url.pathname;
   </div>
 
   <!-- Gamification popups portal -->
-  <div id="gamification-popups"></div>
+  <div id="gamification-popups"><script>
+  import { createElement } from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { GamificationToasts } from '../components/GamificationToasts';
+  const el = document.getElementById('gamification-popups');
+  if (el) createRoot(el).render(createElement(GamificationToasts));
+</script></div>
 
   <script>
     // Fetch user, show admin nav if ADMIN, handle logout

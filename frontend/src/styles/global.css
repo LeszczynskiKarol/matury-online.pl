@@ -222,3 +222,21 @@
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
 }
+
+/* ── Gamification Toast Animation ───────────────────────────────────────── */
+/* ADD this to your global.css */
+
+@keyframes toast-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}

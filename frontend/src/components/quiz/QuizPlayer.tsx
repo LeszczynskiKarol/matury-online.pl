@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { MathGraph } from "./MathGraph";
 import { AdminQuestionSearch } from "./AdminQuestionSearch";
 import { AdminBrowseBar, type AdminSort } from "./AdminBrowseBar";
+import { processGamificationResponse } from "../GamificationToasts";
 import { auth } from "../../lib/api";
 import {
   answers as answersApi,
@@ -548,6 +549,7 @@ export function QuizPlayer({
         sessionId,
         timeSpentMs,
       });
+      processGamificationResponse(result.gamification);
       answeredIds.current.add(currentQuestion.id);
       setFeedbackData(result);
       setResults((p) => [...p, result]);
