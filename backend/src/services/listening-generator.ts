@@ -100,33 +100,44 @@ function buildPrompt(params: GenerateParams): string {
     ? {
         short_dialogue: `Create a SHORT DIALOGUE IN GERMAN (4-8 exchanges, 30-60 seconds when read aloud).
 Two speakers in a natural, everyday situation (Geschäft, Schule, Reise, Telefonat, Arztpraxis, Restaurant, Bahnhof, etc.).
-Generate exactly 1 multiple-choice question IN GERMAN (4 options A-D) about the dialogue.
-The question should test understanding of specific information, NOT general gist.`,
+Generate 3 subQuestions using a MIX of types:
+- 1 CLOSED (multiple choice A-D) testing a specific detail
+- 1 TRUE_FALSE (with 2 statements) testing comprehension
+- 1 FILL_IN (student writes a word or short phrase heard in the recording)
+All questions IN GERMAN. This creates a rich exercise worth 4 points total.`,
 
         monologue_tf: `Create a MONOLOGUE IN GERMAN (1-2 minutes when read aloud, ~150-250 words).
 One speaker: could be a Reiseführer, Lehrer, Radiosprecher, student giving a Referat, Museumsmitarbeiter, etc.
-Generate 3-4 TRUE/FALSE statements IN GERMAN that test detailed comprehension.
-At least one statement should be a tricky paraphrase (true but worded differently).
-At least one should contain a plausible-sounding detail that contradicts the recording.`,
+Generate 3-4 subQuestions using a MIX of types:
+- 1 CLOSED (multiple choice A-D)
+- 1 TRUE_FALSE (with 3-4 statements testing detailed comprehension, at least one tricky paraphrase, at least one plausible-sounding but false detail)
+- 1 FILL_IN (specific detail: word, number, or short phrase)
+All questions IN GERMAN. This creates a rich exercise worth 4-5 points total.`,
 
         interview_mcq: `Create an INTERVIEW or CONVERSATION IN GERMAN (2-3 minutes, ~250-400 words).
 Two speakers: an interviewer and a guest (Experte/Expertin, Reisende/r, Künstler/in, Sportler/in, Wissenschaftler/in, etc.).
-Generate 3-4 multiple-choice questions IN GERMAN (4 options A-D each).
+Generate 3-4 subQuestions using a MIX of types:
+- 1-2 CLOSED (multiple choice A-D, distribute correct answers across letters)
+- 1 TRUE_FALSE (with 3-4 statements testing detailed comprehension)
+- 1 FILL_IN (specific detail: word, number, or short phrase)
 Questions should test: main idea, specific details, speaker's attitude/opinion, inference.
-Distribute correct answers across A, B, C, D (NOT all the same letter).`,
+All questions IN GERMAN. Distribute correct answers across A, B, C, D (NOT all the same letter).`,
 
         gap_fill: `Create an ACADEMIC/INFORMATIONAL recording IN GERMAN (2-3 minutes, ~300-450 words).
 One speaker: Dozent/in, Nachrichtensprecher/in, or Dokumentarfilmerzähler/in.
 Topic should be factual (Wissenschaft, Geschichte, Statistik, aktuelle Ereignisse aus DACH-Ländern).
-Generate 4-5 FILL_IN questions IN GERMAN where the student writes a word, number, or short phrase heard in the recording.
-Answers should be unambiguous — specific names, numbers, dates, or key terms.`,
+Generate 3-4 subQuestions using a MIX of types:
+- 1 CLOSED (multiple choice A-D) about the main idea or a key detail
+- 1 TRUE_FALSE (with 2-3 statements)
+- 1-2 FILL_IN (student writes a word, number, or short phrase heard in the recording — answers must be unambiguous)
+All questions IN GERMAN.`,
 
         extended_mixed: `Create a COMPLEX RECORDING IN GERMAN (3-4 minutes, ~400-600 words).
 Can be: Podiumsdiskussion, Radiosendung, multi-part Durchsage, Reportage.
 2-3 speakers with distinct viewpoints.
-Generate 5-6 questions IN GERMAN using a MIX of types:
-- 2 multiple-choice (A-D)
-- 2 TRUE/FALSE (with 2 statements each)
+Generate 5-6 subQuestions IN GERMAN using a MIX of types:
+- 2 CLOSED (multiple choice A-D)
+- 2 TRUE_FALSE (with 2-3 statements each)
 - 1-2 FILL_IN (specific detail)
 This is the hardest format — test inference, attitude, and detail simultaneously.`,
       }

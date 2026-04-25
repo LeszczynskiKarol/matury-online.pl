@@ -223,10 +223,10 @@ async function generateNewQuestion(
 
   // Pick random pattern
   const patterns = [
-    "short_dialogue",
-    "short_dialogue",
     "monologue_tf",
     "monologue_tf",
+    "monologue_tf",
+    "interview_mcq",
     "interview_mcq",
     "gap_fill",
   ] as const;

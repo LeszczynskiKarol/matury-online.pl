@@ -14,6 +14,32 @@ interface SessionCategory {
 }
 
 const SUBJECT_CATEGORIES: Record<string, SessionCategory[]> = {
+  niemiecki: [
+    {
+      label: "Pisanie",
+      icon: "✎",
+      types: ["OPEN"],
+      desc: "Pytania otwarte, e-maile, wypowiedzi",
+    },
+    {
+      label: "Testy i quizy",
+      icon: "◉",
+      types: ["CLOSED", "MULTI_SELECT", "TRUE_FALSE", "FILL_IN", "MATCHING"],
+      desc: "Gramatyka, słownictwo, Sprachmittel",
+    },
+    {
+      label: "Praca z tekstem",
+      icon: "◫",
+      types: ["TABLE_DATA"],
+      desc: "Leseverstehen — analiza tekstów",
+    },
+    {
+      label: "Słuchanie",
+      icon: "🎧",
+      types: ["LISTENING"],
+      desc: "AI generuje nagrania w czasie rzeczywistym",
+    },
+  ],
   informatyka: [
     {
       label: "Pisanie",
