@@ -2954,6 +2954,106 @@ function WiazkaQuestion({
                   );
                 })}
               </div>
+            )}
+            {sq.type === "MULTI_SELECT" && sq.options && (
+              <div className="space-y-2">
+                <p className="text-[10px] text-zinc-400 mb-1">
+                  Wybierz wszystkie poprawne
+                </p>
+                {sq.options.map((o: any) => {
+                  const sel: string[] = Array.isArray(ans[sq.id])
+                    ? ans[sq.id]
+                    : [];
+                  const isSelected = sel.includes(o.id);
+                  const isCorrectOpt = sq.correctAnswers?.includes(o.id);
+                  const isHit = isA && isSelected && isCorrectOpt;
+                  const isMiss = isA && !isSelected && isCorrectOpt;
+                  const isFalsePositive = isA && isSelected && !isCorrectOpt;
+                  let cls = "option-card w-full text-left text-sm";
+                  if (!isA && isSelected) cls += " selected";
+                  if (isHit || isMiss) cls += " correct";
+                  if (isFalsePositive) cls += " wrong";
+                  return (
+                    <button
+                      key={o.id}
+                      onClick={() => {
+                        if (disabled) return;
+                        set(
+                          sq.id,
+                          isSelected
+                            ? sel.filter((x: string) => x !== o.id)
+                            : [...sel, o.id],
+                        );
+                      }}
+                      disabled={disabled}
+                      className={cls}
+                    >
+                      <div
+                        className={`flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                          isHit
+                            ? "bg-brand-500 border-brand-500"
+                            : isMiss
+                              ? "bg-brand-500/40 border-brand-500"
+                              : isFalsePositive
+                                ? "bg-red-500 border-red-500"
+                                : isSelected
+                                  ? "bg-navy-500 border-navy-500"
+                                  : "border-zinc-300 dark:border-zinc-600"
+                        }`}
+                      >
+                        {(isHit || isMiss || (!isA && isSelected)) && (
+                          <svg
+                            className="w-3 h-3 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={3}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
+                        {isFalsePositive && (
+                          <svg
+                            className="w-3 h-3 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={3}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                      <span>
+                        <ChemText text={o.text} />
+                      </span>
+                      {isHit && (
+                        <span className="ml-auto text-brand-500 font-bold">
+                          ✓
+                        </span>
+                      )}
+                      {isMiss && (
+                        <span className="ml-auto text-[10px] font-semibold text-amber-600 bg-amber-100 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                          Pominięto
+                        </span>
+                      )}
+                      {isFalsePositive && (
+                        <span className="ml-auto text-red-500 font-bold">
+                          ✗
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             )}{" "}
             {sq.type === "FILL_IN" && sq.template && (
               <div className="text-sm leading-8 p-3 rounded-xl bg-white dark:bg-surface-700">

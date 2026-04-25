@@ -237,11 +237,17 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           const wResp = response as Record<string, any>;
           let earned = 0,
             max = 0;
+          const wiazkaAiResults: Record<string, any> = {};
+
           for (const sq of wSubs) {
             const pts = sq.points || 1;
             max += pts;
-            if (sq.type === "CLOSED" && wResp[sq.id] === sq.correctAnswer)
+
+            // ── CLOSED — deterministic ──
+            if (sq.type === "CLOSED" && wResp[sq.id] === sq.correctAnswer) {
               earned += pts;
+            }
+            // ── TRUE_FALSE — deterministic ──
             else if (
               sq.type === "TRUE_FALSE" &&
               sq.statements &&
@@ -251,10 +257,21 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                 (st: any, i: number) => wResp[sq.id][i] === st.isTrue,
               );
               if (allOk) earned += pts;
-            } else if (
-              (sq.type === "OPEN" || sq.type === "FILL_IN") &&
-              sq.acceptedAnswers
-            ) {
+            }
+            // ── MULTI_SELECT — deterministic ──
+            else if (sq.type === "MULTI_SELECT" && sq.correctAnswers) {
+              const correct = new Set<string>(sq.correctAnswers as string[]);
+              const submitted = new Set<string>(
+                Array.isArray(wResp[sq.id]) ? (wResp[sq.id] as string[]) : [],
+              );
+              const hits = [...correct].filter((x) => submitted.has(x));
+              const falsePos = [...submitted].filter((x) => !correct.has(x));
+              if (hits.length === correct.size && falsePos.length === 0) {
+                earned += pts;
+              }
+            }
+            // ── FILL_IN with acceptedAnswers — deterministic ──
+            else if (sq.type === "FILL_IN" && sq.acceptedAnswers) {
               const uv = (typeof wResp[sq.id] === "string" ? wResp[sq.id] : "")
                 .trim()
                 .toLowerCase();
@@ -262,12 +279,88 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                 sq.acceptedAnswers.some(
                   (a: string) => a.toLowerCase().trim() === uv,
                 )
-              )
+              ) {
                 earned += pts;
+              }
+            }
+            // ── FILL_IN with blanks object — deterministic ──
+            else if (
+              sq.type === "FILL_IN" &&
+              sq.blanks &&
+              typeof wResp[sq.id] === "object"
+            ) {
+              const subAns = wResp[sq.id] as Record<string, string>;
+              const blankEntries = Object.entries(sq.blanks) as [string, any][];
+              let blankCorrect = 0;
+              for (const [blankId, blank] of blankEntries) {
+                const uv = (subAns[blankId] || "").trim().toLowerCase();
+                if (
+                  blank.acceptedAnswers?.some(
+                    (a: string) => a.toLowerCase().trim() === uv,
+                  )
+                ) {
+                  blankCorrect++;
+                }
+              }
+              if (
+                blankEntries.length > 0 &&
+                blankCorrect === blankEntries.length
+              ) {
+                earned += pts;
+              }
+            }
+            // ── OPEN — AI grading ──
+            else if (
+              sq.type === "OPEN" &&
+              typeof wResp[sq.id] === "string" &&
+              wResp[sq.id].trim().length > 0
+            ) {
+              try {
+                const { requireAiCredits } =
+                  await import("../services/ai-credits.js");
+                await requireAiCredits(app.prisma, userId);
+
+                const aiResult = await gradeOpenQuestion({
+                  subjectSlug: question.subject.slug,
+                  question: sq.text,
+                  rubric:
+                    sq.rubric ||
+                    sq.sampleAnswer ||
+                    "Oceń merytoryczną poprawność odpowiedzi.",
+                  maxPoints: pts,
+                  userAnswer: wResp[sq.id],
+                  sampleAnswer: sq.sampleAnswer,
+                  userId,
+                });
+
+                const sqEarned = Math.round(aiResult.score * pts);
+                earned += sqEarned;
+                wiazkaAiResults[sq.id] = {
+                  score: aiResult.score,
+                  pointsEarned: sqEarned,
+                  feedback: aiResult.feedback,
+                  correctAnswer: aiResult.correctAnswer,
+                };
+              } catch (creditErr: any) {
+                // No credits — skip AI, award 0, show sampleAnswer
+                wiazkaAiResults[sq.id] = {
+                  score: 0,
+                  pointsEarned: 0,
+                  feedback:
+                    "Brak kredytów AI — odpowiedź nie została oceniona. Porównaj ze wzorcową odpowiedzią.",
+                  correctAnswer: sq.sampleAnswer || null,
+                };
+              }
             }
           }
+
           score = max > 0 ? earned / max : 0;
           isCorrect = earned === max;
+
+          // Attach AI sub-grading results if any
+          if (Object.keys(wiazkaAiResults).length > 0) {
+            aiGrading = { subQuestions: wiazkaAiResults };
+          }
           break;
         }
         case "OPEN": {
