@@ -157,6 +157,7 @@ export async function gradeOpenQuestion(params: {
   userAnswer: string;
   sampleAnswer?: string;
   userId?: string;
+  caller?: string;
 }): Promise<OpenGradeResult> {
   const systemPrompt =
     SUBJECT_SYSTEM_PROMPTS[params.subjectSlug] ||
@@ -186,7 +187,7 @@ Oceń odpowiedź ucznia. Odpowiedz WYŁĄCZNIE w formacie JSON (bez markdown):
 }`;
 
   const result = await claudeCall({
-    caller: "ai-grading-open",
+    caller: params.caller || "ai-grading-open",
     model: "claude-sonnet-4-6",
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],

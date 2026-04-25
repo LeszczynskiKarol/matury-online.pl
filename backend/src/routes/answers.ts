@@ -125,22 +125,65 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
         case "FILL_IN": {
           const blanks = content.blanks as {
             id: string;
+            label?: string;
             acceptedAnswers: string[];
           }[];
           let correctCount = 0;
           const userAnswers = response as Record<string, string>;
+          const fillAiResults: Record<string, any> = {};
+
           for (const blank of blanks) {
             const userAns = (userAnswers[blank.id] || "").trim().toLowerCase();
+
+            // ── Deterministic first ──
             if (
               blank.acceptedAnswers.some(
-                (a: string) => a.toLowerCase() === userAns,
+                (a: string) => a.toLowerCase().trim() === userAns,
               )
             ) {
               correctCount++;
             }
+            // ── AI fallback ──
+            else if (userAns.length > 0) {
+              try {
+                const { requireAiCredits } =
+                  await import("../services/ai-credits.js");
+                await requireAiCredits(app.prisma, userId);
+
+                const aiResult = await gradeOpenQuestion({
+                  subjectSlug: question.subject.slug,
+                  question: content.question || blank.label || "",
+                  rubric: `Luka "${blank.id}": poprawne odpowiedzi to: ${blank.acceptedAnswers.join(", ")}. Oceń czy odpowiedź ucznia "${userAnswers[blank.id]}" jest merytorycznie równoważna lub poprawną formą gramatyczną.`,
+                  maxPoints: 1,
+                  userAnswer: userAnswers[blank.id],
+                  sampleAnswer: blank.acceptedAnswers[0],
+                  userId,
+                  caller: "ai-grading-fill-in",
+                });
+
+                if (aiResult.isCorrect || aiResult.score >= 0.5) {
+                  correctCount++;
+                }
+                fillAiResults[blank.id] = {
+                  score: aiResult.score,
+                  feedback: aiResult.feedback,
+                };
+              } catch {
+                fillAiResults[blank.id] = {
+                  score: 0,
+                  feedback:
+                    "Brak kredytów AI. Poprawna: " + blank.acceptedAnswers[0],
+                };
+              }
+            }
           }
+
           score = correctCount / blanks.length;
           isCorrect = score >= 1.0;
+
+          if (Object.keys(fillAiResults).length > 0) {
+            aiGrading = { blanks: fillAiResults };
+          }
           break;
         }
         case "MATCHING": {
@@ -195,17 +238,61 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           const userCloze = response as Record<string, string>;
           const keys = Object.keys(blanksObj);
           let correct = 0;
+          const clozeAiResults: Record<string, any> = {};
+
           for (const k of keys) {
             const userVal = (userCloze[k] || "").trim().toLowerCase();
+
+            // ── Deterministic first ──
             if (
               blanksObj[k].acceptedAnswers.some(
                 (a: string) => a.toLowerCase().trim() === userVal,
               )
-            )
+            ) {
               correct++;
+            }
+            // ── AI fallback ──
+            else if (userVal.length > 0) {
+              try {
+                const { requireAiCredits } =
+                  await import("../services/ai-credits.js");
+                await requireAiCredits(app.prisma, userId);
+
+                const aiResult = await gradeOpenQuestion({
+                  subjectSlug: question.subject.slug,
+                  question: content.instruction || content.template || "",
+                  rubric: `Luka "${k}": poprawne odpowiedzi to: ${blanksObj[k].acceptedAnswers.join(", ")}. Oceń czy odpowiedź ucznia "${userCloze[k]}" jest poprawną formą gramatyczną/merytorycznie równoważna.`,
+                  maxPoints: 1,
+                  userAnswer: userCloze[k],
+                  sampleAnswer: blanksObj[k].acceptedAnswers[0],
+                  userId,
+                  caller: "ai-grading-cloze",
+                });
+
+                if (aiResult.isCorrect || aiResult.score >= 0.5) {
+                  correct++;
+                }
+                clozeAiResults[k] = {
+                  score: aiResult.score,
+                  feedback: aiResult.feedback,
+                };
+              } catch {
+                clozeAiResults[k] = {
+                  score: 0,
+                  feedback:
+                    "Brak kredytów AI. Poprawna: " +
+                    blanksObj[k].acceptedAnswers[0],
+                };
+              }
+            }
           }
+
           score = keys.length > 0 ? correct / keys.length : 0;
           isCorrect = score >= 1.0;
+
+          if (Object.keys(clozeAiResults).length > 0) {
+            aiGrading = { blanks: clozeAiResults };
+          }
           break;
         }
         case "GRAPH_INTERPRET":
@@ -246,6 +333,7 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                     userAnswer: userSubs[sq.id],
                     sampleAnswer: sq.acceptedAnswers[0],
                     userId,
+                    caller: `ai-grading-${question.type.toLowerCase()}`,
                   });
 
                   if (aiResult.isCorrect || aiResult.score >= 0.5) {
@@ -376,6 +464,7 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                   userAnswer: wResp[sq.id],
                   sampleAnswer: sq.sampleAnswer,
                   userId,
+                  caller: "ai-grading-wiazka-open",
                 });
 
                 const sqEarned = Math.round(aiResult.score * pts);
@@ -510,6 +599,7 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                     userAnswer: userVal,
                     sampleAnswer: field.sampleAnswer,
                     userId,
+                    caller: "ai-grading-experiment-design",
                   });
 
                   const fieldEarned = Math.round(aiResult.score * pts);

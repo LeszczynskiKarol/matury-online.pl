@@ -2,7 +2,7 @@
 // MATURY-ONLINE.PL — Fastify Backend Entry
 // ============================================================================
 
-import Fastify from "fastify";
+import Fastify, { FastifyRequest, FastifyReply } from "fastify";
 import cookie from "@fastify/cookie";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";

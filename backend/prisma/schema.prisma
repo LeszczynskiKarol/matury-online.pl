@@ -23,6 +23,7 @@ model User {
   passwordHash  String?  // null for OAuth users
   name          String?
   avatarUrl     String?
+  hideFromLeaderboard Boolean @default(false)
   emailVerified            Boolean   @default(false)
   verificationCode         String?
   verificationCodeExpiresAt DateTime?

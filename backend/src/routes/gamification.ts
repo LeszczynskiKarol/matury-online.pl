@@ -10,7 +10,6 @@ import {
   getTitleForLevel,
   getNextTitle,
   getAllTitlesWithStatus,
-  TITLES,
 } from "../services/titles.js";
 
 const SUBJECT_THRESHOLDS = [0, 100, 350, 800, 1500];
@@ -177,13 +176,52 @@ export const gamificationRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  // ── Toggle leaderboard visibility ──────────────────────────────────────
+  app.post(
+    "/leaderboard/toggle-visibility",
+    { preHandler: [app.authenticate] },
+    async (req) => {
+      const user = await app.prisma.user.findUniqueOrThrow({
+        where: { id: req.user.userId },
+        select: { hideFromLeaderboard: true },
+      });
+
+      const newVal = !user.hideFromLeaderboard;
+
+      await app.prisma.user.update({
+        where: { id: req.user.userId },
+        data: { hideFromLeaderboard: newVal },
+      });
+
+      return { hideFromLeaderboard: newVal };
+    },
+  );
+
+  app.get(
+    "/leaderboard/visibility",
+    { preHandler: [app.authenticate] },
+    async (req) => {
+      const user = await app.prisma.user.findUniqueOrThrow({
+        where: { id: req.user.userId },
+        select: { hideFromLeaderboard: true },
+      });
+      return { hideFromLeaderboard: user.hideFromLeaderboard };
+    },
+  );
+
   // ── Leaderboard (enhanced with titles & labels) ────────────────────────
-  app.get("/leaderboard", async (req) => {
-    const { subjectId } = req.query as any;
+  app.get("/leaderboard", { preHandler: [app.optionalAuth] }, async (req) => {
+    const { subjectId } = req.query as { subjectId?: string };
+    const currentUserId = req.user?.userId;
 
     if (subjectId) {
+      // ── Per-subject leaderboard ──
       const top = await app.prisma.subjectProgress.findMany({
-        where: { subjectId },
+        where: {
+          subjectId,
+          xp: { gt: 0 },
+          user: { hideFromLeaderboard: false },
+        },
         orderBy: { xp: "desc" },
         take: 50,
         include: {
@@ -193,24 +231,97 @@ export const gamificationRoutes: FastifyPluginAsync = async (app) => {
               name: true,
               avatarUrl: true,
               globalLevel: true,
-              activeTitle: true,
               currentStreak: true,
+              showcaseBadgeIds: true,
             },
           },
         },
       });
-      return top.map((sp, i) => ({
-        rank: i + 1,
-        user: {
-          ...sp.user,
-          title: getTitleForLevel(sp.user.globalLevel),
-        },
-        xp: sp.xp,
-        level: sp.level,
-      }));
+
+      // Get showcase badge details for all users
+      const allShowcaseIds = top.flatMap(
+        (sp) => (sp.user.showcaseBadgeIds as string[]) || [],
+      );
+      const showcaseBadges =
+        allShowcaseIds.length > 0
+          ? await app.prisma.achievement.findMany({
+              where: { id: { in: allShowcaseIds } },
+              select: { id: true, icon: true, tier: true, name: true },
+            })
+          : [];
+      const badgeMap = new Map(showcaseBadges.map((b) => [b.id, b]));
+
+      const result = top.map((sp, i) => {
+        const userShowcase = ((sp.user.showcaseBadgeIds as string[]) || [])
+          .map((id) => badgeMap.get(id))
+          .filter(Boolean);
+
+        return {
+          rank: i + 1,
+          isCurrentUser: sp.user.id === currentUserId,
+          user: {
+            id: sp.user.id,
+            name: sp.user.name,
+            avatarUrl: sp.user.avatarUrl,
+            globalLevel: sp.user.globalLevel,
+            currentStreak: sp.user.currentStreak,
+            title: getTitleForLevel(sp.user.globalLevel),
+            showcaseBadges: userShowcase,
+          },
+          xp: sp.xp,
+          level: sp.level,
+        };
+      });
+
+      // If current user not in top 50, find their rank
+      let currentUserEntry = null;
+      if (currentUserId && !result.some((r) => r.isCurrentUser)) {
+        const userProgress = await app.prisma.subjectProgress.findUnique({
+          where: { userId_subjectId: { userId: currentUserId, subjectId } },
+        });
+        if (userProgress && userProgress.xp > 0) {
+          const above = await app.prisma.subjectProgress.count({
+            where: {
+              subjectId,
+              xp: { gt: userProgress.xp },
+              user: { hideFromLeaderboard: false },
+            },
+          });
+          const user = await app.prisma.user.findUniqueOrThrow({
+            where: { id: currentUserId },
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+              globalLevel: true,
+              currentStreak: true,
+              showcaseBadgeIds: true,
+            },
+          });
+          const userShowcase = ((user.showcaseBadgeIds as string[]) || [])
+            .map((id) => badgeMap.get(id))
+            .filter(Boolean);
+
+          currentUserEntry = {
+            rank: above + 1,
+            isCurrentUser: true,
+            user: {
+              ...user,
+              title: getTitleForLevel(user.globalLevel),
+              showcaseBadges: userShowcase,
+            },
+            xp: userProgress.xp,
+            level: userProgress.level,
+          };
+        }
+      }
+
+      return { leaders: result, currentUserEntry, type: "subject" };
     }
 
+    // ── Global leaderboard ──
     const top = await app.prisma.user.findMany({
+      where: { totalXp: { gt: 0 }, hideFromLeaderboard: false },
       orderBy: { totalXp: "desc" },
       take: 50,
       select: {
@@ -219,17 +330,86 @@ export const gamificationRoutes: FastifyPluginAsync = async (app) => {
         avatarUrl: true,
         totalXp: true,
         globalLevel: true,
-        activeTitle: true,
         currentStreak: true,
         showcaseBadgeIds: true,
       },
     });
 
-    return top.map((u, i) => ({
-      rank: i + 1,
-      ...u,
-      title: getTitleForLevel(u.globalLevel),
-    }));
+    const allShowcaseIds = top.flatMap(
+      (u) => (u.showcaseBadgeIds as string[]) || [],
+    );
+    const showcaseBadges =
+      allShowcaseIds.length > 0
+        ? await app.prisma.achievement.findMany({
+            where: { id: { in: allShowcaseIds } },
+            select: { id: true, icon: true, tier: true, name: true },
+          })
+        : [];
+    const badgeMap = new Map(showcaseBadges.map((b) => [b.id, b]));
+
+    const result = top.map((u, i) => {
+      const userShowcase = ((u.showcaseBadgeIds as string[]) || [])
+        .map((id) => badgeMap.get(id))
+        .filter(Boolean);
+
+      return {
+        rank: i + 1,
+        isCurrentUser: u.id === currentUserId,
+        id: u.id,
+        name: u.name,
+        avatarUrl: u.avatarUrl,
+        totalXp: u.totalXp,
+        globalLevel: u.globalLevel,
+        currentStreak: u.currentStreak,
+        title: getTitleForLevel(u.globalLevel),
+        showcaseBadges: userShowcase,
+      };
+    });
+
+    // If current user not in top 50
+    let currentUserEntry = null;
+    if (currentUserId && !result.some((r) => r.isCurrentUser)) {
+      const user = await app.prisma.user.findUniqueOrThrow({
+        where: { id: currentUserId },
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+          totalXp: true,
+          globalLevel: true,
+          currentStreak: true,
+          hideFromLeaderboard: true,
+          showcaseBadgeIds: true,
+        },
+      });
+      if (user.totalXp > 0) {
+        const above = await app.prisma.user.count({
+          where: {
+            totalXp: { gt: user.totalXp },
+            hideFromLeaderboard: false,
+          },
+        });
+        const userShowcase = ((user.showcaseBadgeIds as string[]) || [])
+          .map((id) => badgeMap.get(id))
+          .filter(Boolean);
+
+        currentUserEntry = {
+          rank: above + 1,
+          isCurrentUser: true,
+          id: user.id,
+          name: user.name,
+          avatarUrl: user.avatarUrl,
+          totalXp: user.totalXp,
+          globalLevel: user.globalLevel,
+          currentStreak: user.currentStreak,
+          title: getTitleForLevel(user.globalLevel),
+          showcaseBadges: userShowcase,
+          hidden: user.hideFromLeaderboard,
+        };
+      }
+    }
+
+    return { leaders: result, currentUserEntry, type: "global" };
   });
 
   // ── Streak info ────────────────────────────────────────────────────────
