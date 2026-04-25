@@ -90,14 +90,82 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           break;
         }
         case "LISTENING": {
-          // Grading is deterministic (no AI) — credits were already consumed
-          // at generation time in /listening/start and /listening/next.
           const result = gradeListeningQuestion(
             question.content as any,
             response,
           );
           isCorrect = result.isCorrect;
           score = result.score;
+
+          // AI fallback for FILL_IN sub-questions that got 0 deterministycznie
+          const subs = (content.subQuestions || []) as any[];
+          const userResp = response as Record<string, any>;
+          const listeningAiResults: Record<string, any> = {};
+          let aiCorrected = 0;
+
+          for (const sq of subs) {
+            const sqType =
+              sq.type ||
+              (sq.acceptedAnswers ? "FILL_IN" : sq.options ? "CLOSED" : "OPEN");
+            if (sqType !== "FILL_IN" && sqType !== "OPEN") continue;
+
+            const detail = result.details[sq.id];
+            if (!detail || detail.earned > 0) continue; // already correct
+
+            const userVal = (
+              typeof userResp[sq.id] === "string" ? userResp[sq.id] : ""
+            ).trim();
+            if (userVal.length === 0) continue; // empty — skip AI
+
+            const accepted = sq.acceptedAnswers || [];
+            if (accepted.length === 0) continue; // no reference answers
+
+            try {
+              const { requireAiCredits } =
+                await import("../services/ai-credits.js");
+              await requireAiCredits(app.prisma, userId);
+
+              const aiResult = await gradeOpenQuestion({
+                subjectSlug: question.subject.slug,
+                question: sq.text || sq.question || content.question || "",
+                rubric: `Wzorcowe odpowiedzi: ${accepted.join(" / ")}. Uczeń wpisał: "${userVal}". Oceń czy odpowiedź jest merytorycznie poprawna (synonim, inna forma). Bądź LIBERALNY.`,
+                maxPoints: sq.points || 1,
+                userAnswer: userVal,
+                sampleAnswer: accepted[0],
+                userId,
+                caller: "ai-grading-listening-fill-in",
+              });
+
+              listeningAiResults[sq.id] = {
+                score: aiResult.score,
+                feedback: aiResult.feedback,
+              };
+
+              if (aiResult.isCorrect || aiResult.score >= 0.5) {
+                aiCorrected += sq.points || 1;
+              }
+            } catch (err: any) {
+              console.error(
+                `[LISTENING AI fallback] sub=${sq.id} error:`,
+                err.message || err,
+              );
+              listeningAiResults[sq.id] = {
+                score: 0,
+                feedback: "Poprawna: " + accepted[0],
+              };
+            }
+          }
+
+          // Recalculate score if AI corrected anything
+          if (aiCorrected > 0) {
+            const newEarned = result.pointsEarned + aiCorrected;
+            score = result.maxPoints > 0 ? newEarned / result.maxPoints : 0;
+            isCorrect = newEarned === result.maxPoints;
+          }
+
+          if (Object.keys(listeningAiResults).length > 0) {
+            aiGrading = { subQuestions: listeningAiResults };
+          }
           break;
         }
         case "MULTI_SELECT": {

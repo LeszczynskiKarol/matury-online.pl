@@ -257,11 +257,15 @@ export function ListeningQuestion({
               <>
                 {(() => {
                   const userVal = (ans[sq.id] || "").toLowerCase().trim();
-                  const isOk =
+                  const deterministicOk =
                     isA &&
                     sq.acceptedAnswers?.some(
                       (a: string) => a.toLowerCase().trim() === userVal,
                     );
+                  const aiOk =
+                    isA &&
+                    feedback?.aiGrading?.subQuestions?.[sq.id]?.score >= 0.5;
+                  const isOk = deterministicOk || aiOk;
                   return (
                     <>
                       <input
@@ -278,20 +282,43 @@ export function ListeningQuestion({
                         }`}
                         placeholder="Type your answer..."
                       />
-                      {isA && !isOk && sq.acceptedAnswers?.length > 0 && (
-                        <p className="text-xs mt-1.5 font-medium text-brand-600 dark:text-brand-400">
-                          ✓ Poprawna odpowiedź:{" "}
-                          <span className="font-bold">
-                            {sq.acceptedAnswers[0]}
-                          </span>
-                          {sq.acceptedAnswers.length > 1 && (
-                            <span className="text-zinc-500">
-                              {" "}
-                              (lub: {sq.acceptedAnswers.slice(1).join(", ")})
+                      {isA && feedback?.aiGrading?.subQuestions?.[sq.id] && (
+                        <div
+                          className={`mt-2 p-3 rounded-xl border ${feedback.aiGrading.subQuestions[sq.id].score >= 0.5 ? "bg-brand-50 dark:bg-brand-900/10 border-brand-200" : "bg-red-50 dark:bg-red-900/10 border-red-200"}`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm">
+                              {feedback.aiGrading.subQuestions[sq.id].score >=
+                              0.5
+                                ? "✅"
+                                : "❌"}
                             </span>
-                          )}
-                        </p>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                              Ocena AI
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                            {feedback.aiGrading.subQuestions[sq.id].feedback}
+                          </p>
+                        </div>
                       )}
+                      {isA &&
+                        !isOk &&
+                        !feedback?.aiGrading?.subQuestions?.[sq.id] &&
+                        sq.acceptedAnswers?.length > 0 && (
+                          <p className="text-xs mt-1.5 font-medium text-brand-600 dark:text-brand-400">
+                            ✓ Poprawna odpowiedź:{" "}
+                            <span className="font-bold">
+                              {sq.acceptedAnswers[0]}
+                            </span>
+                            {sq.acceptedAnswers.length > 1 && (
+                              <span className="text-zinc-500">
+                                {" "}
+                                (lub: {sq.acceptedAnswers.slice(1).join(", ")})
+                              </span>
+                            )}
+                          </p>
+                        )}
                     </>
                   );
                 })()}
