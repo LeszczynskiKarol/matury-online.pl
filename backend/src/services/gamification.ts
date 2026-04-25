@@ -78,6 +78,22 @@ export function calculateXp(params: {
     case "ORDERING":
       baseXp = isCorrect ? XP_TABLE.MATCHING_CORRECT : XP_TABLE.CLOSED_WRONG;
       break;
+    case "WIAZKA":
+    case "EXPERIMENT_DESIGN":
+      // Partial scoring — proportional XP like OPEN
+      baseXp = XP_TABLE.OPEN_BASE + score * 100 * XP_TABLE.OPEN_PER_PERCENT;
+      break;
+    case "CLOZE":
+    case "ERROR_FIND":
+    case "PROOF_ORDER":
+    case "TABLE_DATA":
+    case "GRAPH_INTERPRET":
+    case "LISTENING":
+    case "DIAGRAM_LABEL":
+    case "CROSS_PUNNETT":
+    case "CALCULATION":
+      baseXp = isCorrect ? 12 : score > 0 ? Math.round(2 + score * 10) : 2;
+      break;
     default:
       baseXp = isCorrect ? 10 : 2;
   }

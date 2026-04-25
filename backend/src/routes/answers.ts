@@ -466,11 +466,11 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
 
                 const aiResult = await gradeOpenQuestion({
                   subjectSlug: question.subject.slug,
-                  question: sq.text,
+                  question: `${content.work ? `Lektura: ${content.work}.` : ""}${content.epochLabel ? ` Epoka: ${content.epochLabel}.` : ""}\n${content.context || ""}\n\nPytanie: ${sq.text}`,
                   rubric:
                     sq.rubric ||
                     sq.sampleAnswer ||
-                    "Oceń merytoryczną poprawność odpowiedzi.",
+                    "Oceń merytoryczną poprawność i kompletność odpowiedzi. Odnieś się do treści lektury/materiału źródłowego.",
                   maxPoints: pts,
                   userAnswer: wResp[sq.id],
                   sampleAnswer: sq.sampleAnswer,
@@ -499,6 +499,14 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                   correctAnswer: sq.sampleAnswer || null,
                 };
               }
+            } // ── OPEN — empty answer → 0 points ──
+            else if (sq.type === "OPEN") {
+              wiazkaAiResults[sq.id] = {
+                score: 0,
+                pointsEarned: 0,
+                feedback: "Brak odpowiedzi.",
+                correctAnswer: sq.sampleAnswer || null,
+              };
             }
           }
 
@@ -520,6 +528,8 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           const userLabels = response as Record<string, string>;
           if (labels?.length) {
             let correct = 0;
+            const labelAiResults: Record<string, any> = {};
+
             for (const label of labels) {
               const uv = (userLabels[label.id] || "").trim().toLowerCase();
               if (
@@ -528,10 +538,46 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                 )
               ) {
                 correct++;
+              } else if (uv.length > 0) {
+                try {
+                  const { requireAiCredits } =
+                    await import("../services/ai-credits.js");
+                  await requireAiCredits(app.prisma, userId);
+
+                  const aiResult = await gradeOpenQuestion({
+                    subjectSlug: question.subject.slug,
+                    question: label.question,
+                    rubric: `Wzorcowe odpowiedzi: ${label.acceptedAnswers.join(" / ")}. Uczeń wpisał: "${userLabels[label.id]}". Oceń czy jest merytorycznie równoważne (synonim, inna poprawna nazwa). Bądź LIBERALNY.`,
+                    maxPoints: 1,
+                    userAnswer: userLabels[label.id],
+                    sampleAnswer: label.acceptedAnswers[0],
+                    userId,
+                    caller: "ai-grading-diagram-label",
+                  });
+
+                  if (aiResult.isCorrect || aiResult.score >= 0.5) correct++;
+                  labelAiResults[label.id] = {
+                    score: aiResult.score,
+                    feedback: aiResult.feedback,
+                  };
+                } catch (err: any) {
+                  console.error(
+                    `[DIAGRAM_LABEL AI] label=${label.id} error:`,
+                    err.message || err,
+                  );
+                  labelAiResults[label.id] = {
+                    score: 0,
+                    feedback: "Poprawna: " + label.acceptedAnswers[0],
+                  };
+                }
               }
             }
+
             score = correct / labels.length;
             isCorrect = score >= 1.0;
+            if (Object.keys(labelAiResults).length > 0) {
+              aiGrading = { labels: labelAiResults };
+            }
           }
           break;
         }
@@ -539,12 +585,103 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
         case "CALCULATION": {
           const expected = content.answer?.expectedValue;
           const tolerance = content.answer?.tolerance ?? 0;
-          const userVal = parseFloat(
-            typeof response === "string" ? response : String(response),
-          );
-          if (expected != null && !isNaN(userVal)) {
-            isCorrect = Math.abs(userVal - expected) <= tolerance;
-            score = isCorrect ? 1.0 : 0.0;
+
+          // Frontend sends { value: "5,04", steps: "..." } OR plain string
+          let rawValue: string;
+          if (
+            typeof response === "object" &&
+            response !== null &&
+            !Array.isArray(response)
+          ) {
+            rawValue = String(response.value || "");
+          } else {
+            rawValue = String(response);
+          }
+
+          // Parse: handle Polish comma decimal, strip units/text
+          const cleaned = rawValue
+            .replace(/,/g, ".")
+            .replace(/[^0-9.\-]/g, "")
+            .trim();
+          const userVal = parseFloat(cleaned);
+
+          const stepsText =
+            typeof response === "object" ? response.steps || "" : "";
+          const deterministicMatch =
+            expected != null &&
+            !isNaN(userVal) &&
+            (Math.abs(userVal - expected) <= tolerance ||
+              !!content.answer?.acceptedValues?.some(
+                (av: any) =>
+                  Math.abs(parseFloat(String(av)) - userVal) <= 0.001,
+              ));
+
+          if (deterministicMatch) {
+            isCorrect = true;
+            score = 1.0;
+
+            // AI feedback on steps when user wrote reasoning
+            if (content.showSteps && stepsText.trim().length > 10) {
+              try {
+                const { requireAiCredits } =
+                  await import("../services/ai-credits.js");
+                await requireAiCredits(app.prisma, userId);
+
+                const aiResult = await gradeOpenQuestion({
+                  subjectSlug: question.subject.slug,
+                  question: content.question || "",
+                  rubric: `Poprawna odpowiedź: ${expected} ${content.answer?.unit || ""}. Uczeń podał POPRAWNY wynik: ${rawValue}. Oceń TOK ROZUMOWANIA — wskaż czy metoda jest poprawna, kroki logiczne, i daj konstruktywny feedback.`,
+                  maxPoints: question.points,
+                  userAnswer: `Obliczenia:\n${stepsText}\n\nWynik: ${rawValue}`,
+                  sampleAnswer:
+                    content.explanation ||
+                    `${expected} ${content.answer?.unit || ""}`,
+                  userId,
+                  caller: "ai-grading-calculation-steps",
+                });
+
+                aiGrading = { feedback: aiResult.feedback };
+              } catch (err: any) {
+                console.error(
+                  `[CALCULATION AI steps] error:`,
+                  err.message || err,
+                );
+              }
+            }
+          } else if (rawValue.trim().length > 0) {
+            // ── AI: user wrote something but no deterministic match ──
+            try {
+              const { requireAiCredits } =
+                await import("../services/ai-credits.js");
+              await requireAiCredits(app.prisma, userId);
+
+              const aiResult = await gradeOpenQuestion({
+                subjectSlug: question.subject.slug,
+                question: content.question || "",
+                rubric: `Poprawna odpowiedź: ${expected} ${content.answer?.unit || ""}${tolerance > 0 ? ` (±${tolerance})` : ""}. Akceptowane wartości: ${(content.answer?.acceptedValues || [expected]).join(", ")}. Uczeń podał wynik: "${rawValue}". Oceń czy wynik jest poprawny (może być inny zapis, zaokrąglenie, inna jednostka). ${stepsText.trim().length > 10 ? "Oceń też tok rozumowania." : ""}`,
+                maxPoints: question.points,
+                userAnswer:
+                  stepsText.trim().length > 10
+                    ? `Obliczenia:\n${stepsText}\n\nWynik: ${rawValue}`
+                    : rawValue,
+                sampleAnswer:
+                  content.explanation ||
+                  `${expected} ${content.answer?.unit || ""}`,
+                userId,
+                caller: "ai-grading-calculation",
+              });
+
+              isCorrect = aiResult.isCorrect;
+              score = aiResult.score;
+              aiGrading = {
+                feedback: aiResult.feedback,
+                correctAnswer: aiResult.correctAnswer,
+              };
+            } catch (err: any) {
+              console.error(`[CALCULATION AI] error:`, err.message || err);
+              isCorrect = false;
+              score = 0;
+            }
           } else {
             isCorrect = false;
             score = 0;
@@ -561,6 +698,8 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           const userPunnett = response as Record<string, string>;
           if (punnettQs?.length) {
             let correct = 0;
+            const punnettAiResults: Record<string, any> = {};
+
             for (const pq of punnettQs) {
               const uv = (userPunnett[pq.id] || "").trim().toLowerCase();
               if (
@@ -569,10 +708,46 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
                 )
               ) {
                 correct++;
+              } else if (uv.length > 0) {
+                try {
+                  const { requireAiCredits } =
+                    await import("../services/ai-credits.js");
+                  await requireAiCredits(app.prisma, userId);
+
+                  const aiResult = await gradeOpenQuestion({
+                    subjectSlug: question.subject.slug,
+                    question: `${content.question || ""}\n${pq.label}`,
+                    rubric: `Wzorcowe odpowiedzi: ${pq.acceptedAnswers.join(" / ")}. Uczeń wpisał: "${userPunnett[pq.id]}". Oceń merytorycznie. Bądź LIBERALNY z zapisem genotypów.`,
+                    maxPoints: 1,
+                    userAnswer: userPunnett[pq.id],
+                    sampleAnswer: pq.acceptedAnswers[0],
+                    userId,
+                    caller: "ai-grading-cross-punnett",
+                  });
+
+                  if (aiResult.isCorrect || aiResult.score >= 0.5) correct++;
+                  punnettAiResults[pq.id] = {
+                    score: aiResult.score,
+                    feedback: aiResult.feedback,
+                  };
+                } catch (err: any) {
+                  console.error(
+                    `[CROSS_PUNNETT AI] q=${pq.id} error:`,
+                    err.message || err,
+                  );
+                  punnettAiResults[pq.id] = {
+                    score: 0,
+                    feedback: "Poprawna: " + pq.acceptedAnswers[0],
+                  };
+                }
               }
             }
+
             score = correct / punnettQs.length;
             isCorrect = score >= 1.0;
+            if (Object.keys(punnettAiResults).length > 0) {
+              aiGrading = { questions: punnettAiResults };
+            }
           }
           break;
         }

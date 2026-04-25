@@ -71,8 +71,16 @@ function getCorrectAnswerLocal(type: string, content: any): any {
           )
           .join("\n") || null
       );
-    case "PROOF_ORDER":
-      return content.correctOrder;
+    case "PROOF_ORDER": {
+      const stepMap = Object.fromEntries(
+        (content.steps || []).map((s: any) => [s.id, s.text]),
+      );
+      return (
+        content.correctOrder
+          ?.map((id: string, i: number) => `${i + 1}. ${stepMap[id] || id}`)
+          .join("\n") || null
+      );
+    }
     case "GRAPH_INTERPRET":
     case "TABLE_DATA":
       return (
@@ -91,7 +99,9 @@ function getCorrectAnswerLocal(type: string, content: any): any {
 
             if (sq.type === "OPEN") {
               answer =
-                sq.sampleAnswer || sq.correctAnswer || "(brak wzorcowej)";
+                sq.sampleAnswer ||
+                sq.correctAnswer ||
+                "(brak wzorcowej odpowiedzi)";
             } else if (sq.type === "MULTI_SELECT") {
               const ids = sq.correctAnswers || [];
               answer = ids
@@ -969,13 +979,90 @@ export function QuizPlayer({
         <span className="text-[10px] text-zinc-400 ml-auto uppercase tracking-wide">
           {TYPE_LABELS[currentQuestion.type] || currentQuestion.type}
         </span>
-        {(currentQuestion.type === "LISTENING" ||
-          currentQuestion.type === "OPEN") && (
-          <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold ml-1">
-            🤖 Ocena AI{" "}
-            {currentQuestion.type === "LISTENING" ? "~4 kr." : "~1 kr."}
-          </span>
-        )}
+        {(() => {
+          const t = currentQuestion.type;
+          const c = currentQuestion.content;
+          // Always AI
+          if (t === "LISTENING")
+            return (
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold ml-1">
+                🤖 Ocena AI ~4 kr.
+              </span>
+            );
+          if (t === "OPEN")
+            return (
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold ml-1">
+                🤖 Ocena AI ~1 kr.
+              </span>
+            );
+          if (t === "ESSAY")
+            return (
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold ml-1">
+                🤖 Ocena AI ~3 kr.
+              </span>
+            );
+          // Always AI per field
+          if (t === "EXPERIMENT_DESIGN") {
+            const n = c.fields?.length || 1;
+            return (
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold ml-1">
+                🤖 Ocena AI ~{n} kr.
+              </span>
+            );
+          }
+          // WIAZKA — only if has OPEN sub-questions
+          if (
+            t === "WIAZKA" &&
+            c.subQuestions?.some((sq: any) => sq.type === "OPEN")
+          ) {
+            const n = c.subQuestions.filter(
+              (sq: any) => sq.type === "OPEN",
+            ).length;
+            return (
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold ml-1">
+                🤖 Ocena AI ~{n} kr.
+              </span>
+            );
+          }
+          // CALCULATION with showSteps
+          if (t === "CALCULATION" && c.showSteps)
+            return (
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 font-semibold ml-1">
+                🤖 Ocena AI ~1 kr.
+              </span>
+            );
+          // Fallback AI types — show "do X kr." (may or may not trigger)
+          if (
+            [
+              "CLOZE",
+              "FILL_IN",
+              "TABLE_DATA",
+              "GRAPH_INTERPRET",
+              "DIAGRAM_LABEL",
+              "CROSS_PUNNETT",
+              "CALCULATION",
+            ].includes(t)
+          ) {
+            const n =
+              t === "CLOZE"
+                ? Object.keys(c.blanks || {}).length
+                : t === "FILL_IN"
+                  ? c.blanks?.length || 1
+                  : t === "TABLE_DATA" || t === "GRAPH_INTERPRET"
+                    ? c.subQuestions?.length || 1
+                    : t === "DIAGRAM_LABEL"
+                      ? c.labels?.length || 1
+                      : t === "CROSS_PUNNETT"
+                        ? c.questions?.length || 1
+                        : 1;
+            return (
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-semibold ml-1">
+                🤖 AI fallback do ~{n} kr.
+              </span>
+            );
+          }
+          return null;
+        })()}
       </div>
 
       {/* Loading overlay */}
@@ -1885,6 +1972,32 @@ function ClosedQuestion({
           );
         })}
       </div>
+      {isA && !feedback?.revealed && (
+        <div className="mt-4 p-3 rounded-xl bg-sky-50 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-800/30">
+          <p className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider mb-2">
+            Poprawna kolejność:
+          </p>
+          <div className="space-y-1.5">
+            {content.correctOrder.map((sid: string, i: number) => (
+              <div
+                key={i}
+                className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300"
+              >
+                <span className="w-5 h-5 rounded-full bg-brand-500 text-white text-[10px] flex items-center justify-center font-bold flex-shrink-0">
+                  {i + 1}
+                </span>
+                <span>
+                  <ChemText
+                    text={
+                      content.steps.find((s: any) => s.id === sid)?.text || sid
+                    }
+                  />
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );
@@ -2615,13 +2728,16 @@ function TableDataQuestion({
       </div>
       <div className="space-y-4">
         {content.subQuestions.map((sq: any) => {
-          const ok =
+          const deterministicOk =
             isA &&
-            sq.acceptedAnswers.some(
+            sq.acceptedAnswers?.some(
               (a: string) =>
                 a.toLowerCase().trim() ===
                 (ans[sq.id] || "").toLowerCase().trim(),
             );
+          const aiOk =
+            isA && feedback?.aiGrading?.subQuestions?.[sq.id]?.score >= 0.5;
+          const ok = deterministicOk || aiOk;
           return (
             <div key={sq.id}>
               <label className="block text-sm font-medium mb-1.5">
@@ -2637,7 +2753,26 @@ function TableDataQuestion({
                 className={`input ${isA ? (ok ? "!border-brand-500" : "!border-red-500") : ""}`}
                 placeholder="Odpowiedź..."
               />
-              {isA && !ok && (
+              {isA && feedback?.aiGrading?.subQuestions?.[sq.id] && (
+                <div
+                  className={`mt-2 p-3 rounded-xl border ${feedback.aiGrading.subQuestions[sq.id].score >= 0.5 ? "bg-brand-50 dark:bg-brand-900/10 border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30"}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm">
+                      {feedback.aiGrading.subQuestions[sq.id].score >= 0.5
+                        ? "✅"
+                        : "❌"}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                      Ocena AI
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                    {feedback.aiGrading.subQuestions[sq.id].feedback}
+                  </p>
+                </div>
+              )}
+              {isA && !ok && !feedback?.aiGrading?.subQuestions?.[sq.id] && (
                 <p className="text-xs mt-1 text-brand-600">
                   Poprawna: {sq.acceptedAnswers[0]}
                 </p>
@@ -2687,13 +2822,16 @@ function GraphInterpretQuestion({
       )}
       <div className="space-y-4">
         {content.subQuestions?.map((sq: any) => {
-          const ok =
+          const deterministicOk =
             isA &&
-            sq.acceptedAnswers.some(
+            sq.acceptedAnswers?.some(
               (a: string) =>
                 a.toLowerCase().trim() ===
                 (ans[sq.id] || "").toLowerCase().trim(),
             );
+          const aiOk =
+            isA && feedback?.aiGrading?.subQuestions?.[sq.id]?.score >= 0.5;
+          const ok = deterministicOk || aiOk;
           return (
             <div key={sq.id}>
               <label className="block text-sm font-medium mb-1.5">
@@ -2709,7 +2847,26 @@ function GraphInterpretQuestion({
                 className={`input ${isA ? (ok ? "!border-brand-500" : "!border-red-500") : ""}`}
                 placeholder="Odpowiedź..."
               />
-              {isA && !ok && (
+              {isA && feedback?.aiGrading?.subQuestions?.[sq.id] && (
+                <div
+                  className={`mt-2 p-3 rounded-xl border ${feedback.aiGrading.subQuestions[sq.id].score >= 0.5 ? "bg-brand-50 dark:bg-brand-900/10 border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30"}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm">
+                      {feedback.aiGrading.subQuestions[sq.id].score >= 0.5
+                        ? "✅"
+                        : "❌"}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                      Ocena AI
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                    {feedback.aiGrading.subQuestions[sq.id].feedback}
+                  </p>
+                </div>
+              )}
+              {isA && !ok && !feedback?.aiGrading?.subQuestions?.[sq.id] && (
                 <p className="text-xs mt-1 text-brand-600">
                   Poprawna: {sq.acceptedAnswers[0]}
                 </p>
@@ -2942,6 +3099,49 @@ function WiazkaQuestion({
                   className="input resize-none text-sm"
                   placeholder="Odpowiedź..."
                 />
+                {isA && feedback?.aiGrading?.subQuestions?.[sq.id] && (
+                  <div
+                    className={`mt-2 p-3 rounded-xl border ${feedback.aiGrading.subQuestions[sq.id].score >= 0.5 ? "bg-brand-50 dark:bg-brand-900/10 border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30"}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm">
+                        {feedback.aiGrading.subQuestions[sq.id].score >= 0.5
+                          ? "✅"
+                          : "❌"}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                        {feedback.aiGrading.subQuestions[sq.id].pointsEarned ??
+                          0}
+                        /{sq.points || 1} pkt
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                      {feedback.aiGrading.subQuestions[sq.id].feedback}
+                    </p>
+                    {feedback.aiGrading.subQuestions[sq.id].correctAnswer && (
+                      <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-700">
+                        <p className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider mb-0.5">
+                          Wzorcowa:
+                        </p>
+                        <p className="text-xs text-zinc-700 dark:text-zinc-300">
+                          {feedback.aiGrading.subQuestions[sq.id].correctAnswer}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {isA &&
+                  sq.type === "OPEN" &&
+                  !feedback?.aiGrading?.subQuestions?.[sq.id] && (
+                    <div className="mt-2 p-3 rounded-xl border bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">❌</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                          0/{sq.points || 1} pkt — Brak odpowiedzi
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 {isA && sq.sampleAnswer && (
                   <div className="mt-2 p-3 rounded-xl bg-sky-50 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-800/30">
                     <p className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider mb-1">
@@ -3235,16 +3435,22 @@ function FeedbackBlock({ feedback }: { feedback: any }) {
   // Normalny feedback po sprawdzeniu
   return (
     <div
-      className={`mt-6 p-4 rounded-2xl animate-slide-up ${feedback.isCorrect ? "bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30"}`}
+      className={`mt-6 p-4 rounded-2xl animate-slide-up ${feedback.isCorrect ? "bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800/30" : feedback.score > 0 ? "bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30" : "bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30"}`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{feedback.isCorrect ? "✅" : "❌"}</span>
+          <span className="text-lg">
+            {feedback.isCorrect ? "✅" : feedback.score > 0 ? "⚠️" : "❌"}
+          </span>
           <span className="font-display font-semibold text-sm">
-            {feedback.isCorrect ? "Poprawnie!" : "Niepoprawnie"}
+            {feedback.isCorrect
+              ? "Poprawnie!"
+              : feedback.score > 0
+                ? `Częściowo — ${Math.round(feedback.score * 100)}%`
+                : "Niepoprawnie"}
           </span>
         </div>
-        {feedback.xpEarned > 0 && feedback.isCorrect && (
+        {feedback.xpEarned > 0 && (
           <span className="xp-badge animate-xp-pop">
             +{feedback.xpEarned} XP
           </span>

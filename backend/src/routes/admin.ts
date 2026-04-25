@@ -581,7 +581,13 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       // Klucz: `userId:questionId`
       let answerMap: Record<
         string,
-        { isCorrect: boolean | null; response: any; timeSpentMs: number | null }
+        {
+          isCorrect: boolean | null;
+          response: any;
+          timeSpentMs: number | null;
+          aiGrading: any;
+          score: number | null;
+        }
       > = {};
       if (events.length > 0) {
         const userIds = [...new Set(events.map((e: any) => e.user.id))];
@@ -595,6 +601,8 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
             isCorrect: true,
             response: true,
             timeSpentMs: true,
+            aiGrading: true,
+            score: true,
           },
           orderBy: { createdAt: "desc" },
         });
@@ -605,6 +613,8 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
               isCorrect: a.isCorrect,
               response: a.response,
               timeSpentMs: a.timeSpentMs,
+              aiGrading: a.aiGrading,
+              score: a.score,
             };
           }
         }

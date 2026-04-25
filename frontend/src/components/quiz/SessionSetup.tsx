@@ -14,6 +14,149 @@ interface SessionCategory {
 }
 
 const SUBJECT_CATEGORIES: Record<string, SessionCategory[]> = {
+  chemia: [
+    {
+      label: "Pisanie",
+      icon: "✎",
+      types: ["OPEN"],
+      desc: "Pytania otwarte, reakcje, wyjaśnienia",
+    },
+    {
+      label: "Testy i quizy",
+      icon: "◉",
+      types: [
+        "CLOSED",
+        "MULTI_SELECT",
+        "TRUE_FALSE",
+        "FILL_IN",
+        "MATCHING",
+        "ORDERING",
+        "ERROR_FIND",
+        "CLOZE",
+      ],
+      desc: "Zamknięte, uzupełnianie, łączenia",
+    },
+    {
+      label: "Obliczenia",
+      icon: "🧮",
+      types: ["CALCULATION"],
+      desc: "Stechiometria, stężenia, pH",
+    },
+    {
+      label: "Dane i wykresy",
+      icon: "🗺",
+      types: ["TABLE_DATA", "GRAPH_INTERPRET", "WIAZKA"],
+      desc: "Tabele, wykresy, analiza danych",
+    },
+  ],
+  biologia: [
+    {
+      label: "Pisanie",
+      icon: "✎",
+      types: ["OPEN"],
+      desc: "Pytania otwarte, wyjaśnienia procesów",
+    },
+    {
+      label: "Testy i quizy",
+      icon: "◉",
+      types: [
+        "CLOSED",
+        "MULTI_SELECT",
+        "TRUE_FALSE",
+        "FILL_IN",
+        "MATCHING",
+        "ORDERING",
+        "ERROR_FIND",
+        "CLOZE",
+      ],
+      desc: "Zamknięte, uzupełnianie, łączenia",
+    },
+    {
+      label: "Schematy i doświadczenia",
+      icon: "🧪",
+      types: [
+        "DIAGRAM_LABEL",
+        "EXPERIMENT_DESIGN",
+        "CROSS_PUNNETT",
+        "CALCULATION",
+      ],
+      desc: "Opisy schematów, projekty doświadczeń, krzyżówki, obliczenia",
+    },
+    {
+      label: "Dane i wykresy",
+      icon: "🗺",
+      types: ["TABLE_DATA", "GRAPH_INTERPRET", "WIAZKA"],
+      desc: "Tabele, wykresy, analiza danych",
+    },
+  ],
+  matematyka: [
+    {
+      label: "Pisanie",
+      icon: "✎",
+      types: ["OPEN"],
+      desc: "Zadania otwarte, dowody, uzasadnienia",
+    },
+    {
+      label: "Testy i quizy",
+      icon: "◉",
+      types: [
+        "CLOSED",
+        "MULTI_SELECT",
+        "TRUE_FALSE",
+        "FILL_IN",
+        "MATCHING",
+        "ORDERING",
+      ],
+      desc: "Zamknięte, uzupełnianie, kolejność",
+    },
+    {
+      label: "Obliczenia",
+      icon: "🧮",
+      types: ["CALCULATION"],
+      desc: "Równania, funkcje, stereometria, rachunek",
+    },
+    {
+      label: "Wykresy i dowody",
+      icon: "📈",
+      types: ["GRAPH_INTERPRET", "TABLE_DATA", "PROOF_ORDER"],
+      desc: "Interpretacja wykresów, dowody krok po kroku",
+    },
+  ],
+  fizyka: [
+    {
+      label: "Pisanie",
+      icon: "✎",
+      types: ["OPEN"],
+      desc: "Wyjaśnienia zjawisk, opisy doświadczeń",
+    },
+    {
+      label: "Testy i quizy",
+      icon: "◉",
+      types: [
+        "CLOSED",
+        "MULTI_SELECT",
+        "TRUE_FALSE",
+        "FILL_IN",
+        "MATCHING",
+        "ORDERING",
+        "ERROR_FIND",
+        "CLOZE",
+      ],
+      desc: "Zamknięte, uzupełnianie, łączenia",
+    },
+    {
+      label: "Obliczenia",
+      icon: "🧮",
+      types: ["CALCULATION"],
+      desc: "Kinematyka, dynamika, energia, fale, prąd",
+    },
+    {
+      label: "Dane i wykresy",
+      icon: "📈",
+      types: ["TABLE_DATA", "GRAPH_INTERPRET", "WIAZKA"],
+      desc: "Tabele pomiarowe, wykresy, analiza danych",
+    },
+  ],
   niemiecki: [
     {
       label: "Pisanie",

@@ -216,6 +216,24 @@ export function ExperimentDesignQuestion({
               className="input resize-none text-sm"
               placeholder={f.placeholder || "Sformułuj odpowiedź..."}
             />
+            {isA && feedback?.aiGrading?.fields?.[f.id] && (
+              <div
+                className={`mt-2 p-3 rounded-xl border ${feedback.aiGrading.fields[f.id].score >= 0.5 ? "bg-brand-50 dark:bg-brand-900/10 border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30"}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm">
+                    {feedback.aiGrading.fields[f.id].score >= 0.5 ? "✅" : "❌"}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                    {feedback.aiGrading.fields[f.id].pointsEarned ?? 0}/
+                    {f.points || 1} pkt
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                  {feedback.aiGrading.fields[f.id].feedback}
+                </p>
+              </div>
+            )}
             {isA && f.sampleAnswer && (
               <details className="mt-2 text-xs">
                 <summary className="cursor-pointer text-brand-600 dark:text-brand-400 font-medium">
@@ -370,28 +388,64 @@ export function CrossPunnettQuestion({
 
       {/* Pytania szczegółowe */}
       <div className="space-y-3">
-        {content.questions?.map((q: any) => (
-          <div key={q.id}>
-            <label className="block text-sm font-medium mb-1.5">
-              {q.label}
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={ans[q.id] || ""}
-                onChange={(e) => set(q.id, e.target.value)}
-                disabled={disabled}
-                className="input"
-                placeholder="Odpowiedź..."
-              />
-              {q.unit && (
-                <span className="text-sm text-zinc-500 font-medium">
-                  {q.unit}
-                </span>
+        {content.questions?.map((q: any) => {
+          const uv = (ans[q.id] || "").trim().toLowerCase();
+          const deterministicOk =
+            isA &&
+            q.acceptedAnswers?.some(
+              (a: string) => a.toLowerCase().trim() === uv,
+            );
+          const aiOk =
+            isA && feedback?.aiGrading?.questions?.[q.id]?.score >= 0.5;
+          const ok = deterministicOk || aiOk;
+
+          return (
+            <div key={q.id}>
+              <label className="block text-sm font-medium mb-1.5">
+                {q.label}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={ans[q.id] || ""}
+                  onChange={(e) => set(q.id, e.target.value)}
+                  disabled={disabled}
+                  className={`input ${isA ? (ok ? "!border-brand-500" : "!border-red-500") : ""}`}
+                  placeholder="Odpowiedź..."
+                />
+                {q.unit && (
+                  <span className="text-sm text-zinc-500 font-medium">
+                    {q.unit}
+                  </span>
+                )}
+              </div>
+              {isA && feedback?.aiGrading?.questions?.[q.id] && (
+                <div
+                  className={`mt-2 p-3 rounded-xl border ${feedback.aiGrading.questions[q.id].score >= 0.5 ? "bg-brand-50 dark:bg-brand-900/10 border-brand-200 dark:border-brand-800/30" : "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30"}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm">
+                      {feedback.aiGrading.questions[q.id].score >= 0.5
+                        ? "✅"
+                        : "❌"}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                      Ocena AI
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                    {feedback.aiGrading.questions[q.id].feedback}
+                  </p>
+                </div>
+              )}
+              {isA && !ok && !feedback?.aiGrading?.questions?.[q.id] && (
+                <p className="text-xs mt-1 text-brand-600">
+                  Poprawna: {q.acceptedAnswers?.[0]}
+                </p>
               )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <MiniFeedback feedback={feedback} />

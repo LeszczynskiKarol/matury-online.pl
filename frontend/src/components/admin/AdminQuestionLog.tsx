@@ -596,6 +596,20 @@ export function AdminQuestionLog() {
                                 2,
                               )}
                             </pre>
+                            {row.answer?.aiGrading && (
+                              <div className="mt-2">
+                                <span className="text-[9px] font-bold text-purple-500 uppercase tracking-wider">
+                                  🤖 AI Grading
+                                </span>
+                                <pre className="text-[9px] font-mono text-purple-600 dark:text-purple-400 whitespace-pre-wrap break-words bg-purple-50 dark:bg-purple-900/10 rounded-lg p-2 border border-purple-200 dark:border-purple-800/30 max-h-[200px] overflow-y-auto mt-1">
+                                  {JSON.stringify(
+                                    row.answer.aiGrading,
+                                    null,
+                                    2,
+                                  )}
+                                </pre>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
