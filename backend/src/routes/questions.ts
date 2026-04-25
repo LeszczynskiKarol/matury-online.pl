@@ -396,11 +396,20 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
   app.post("/:id/view", { preHandler: [app.authenticate] }, async (req) => {
     const userId = req.user.userId;
     const { id } = req.params as { id: string };
+    const { sessionId } = (req.body as any) || {};
+
+    // Zagregowany counter (bez zmian)
     const view = await app.prisma.questionView.upsert({
       where: { userId_questionId: { userId, questionId: id } },
       update: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
       create: { userId, questionId: id, viewCount: 1 },
     });
+
+    // ── NOWE: granularny event log ──
+    await app.prisma.questionViewEvent.create({
+      data: { userId, questionId: id, sessionId: sessionId || null },
+    });
+
     return { ok: true, viewCount: view.viewCount };
   });
 };

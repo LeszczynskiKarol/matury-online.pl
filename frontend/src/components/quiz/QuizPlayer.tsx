@@ -760,7 +760,12 @@ export function QuizPlayer({
     if (!currentQuestion || phase === "loading") return;
     fetch(
       `${import.meta.env.PUBLIC_API_URL || "/api"}/questions/${currentQuestion.id}/view`,
-      { method: "POST", credentials: "include" },
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      },
     )
       .then((r) => r.json())
       .then((data) => {

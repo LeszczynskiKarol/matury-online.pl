@@ -483,7 +483,123 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
       const hasMore = answers.length === limit;
 
-      return { answers, hasMore };
+      // ── Dociągnij viewCount z QuestionView dla tego usera ──────────
+      let viewCountMap: Record<string, number> = {};
+      if (userId && answers.length > 0) {
+        const qIds = [...new Set(answers.map((a: any) => a.questionId))];
+        const views = await app.prisma.questionView.findMany({
+          where: { userId, questionId: { in: qIds } },
+          select: { questionId: true, viewCount: true },
+        });
+        for (const v of views) {
+          viewCountMap[v.questionId] = v.viewCount;
+        }
+      }
+
+      return {
+        answers: answers.map((a: any) => ({
+          ...a,
+          viewCount: viewCountMap[a.questionId] || null,
+        })),
+        hasMore,
+      };
+    },
+  );
+
+  app.get(
+    "/question-view-log",
+    {
+      preHandler: [app.authenticate, app.requireAdmin],
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            userId: { type: "string" },
+            subjectId: { type: "string" },
+            limit: { type: "number", default: 150 },
+            before: { type: "string" },
+          },
+        },
+      },
+    },
+    async (req) => {
+      const { userId, subjectId, limit = 150, before } = req.query as any;
+
+      const where: any = {};
+      if (userId) where.userId = userId;
+      if (subjectId) where.question = { subjectId };
+      if (before) where.createdAt = { lt: new Date(before) };
+
+      const events = await app.prisma.questionViewEvent.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        select: {
+          id: true,
+          questionId: true,
+          sessionId: true,
+          createdAt: true,
+          user: {
+            select: { id: true, name: true, email: true, role: true },
+          },
+          question: {
+            select: {
+              id: true,
+              type: true,
+              difficulty: true,
+              points: true,
+              source: true,
+              content: true,
+              topic: { select: { id: true, name: true, slug: true } },
+            },
+          },
+        },
+      });
+
+      // Dociągnij viewCount per user+question dla wyświetlonych pytań
+      let viewCounts: Record<string, number> = {};
+      if (userId && events.length > 0) {
+        const qIds = [...new Set(events.map((e: any) => e.questionId))];
+        const views = await app.prisma.questionView.findMany({
+          where: { userId, questionId: { in: qIds } },
+          select: { questionId: true, viewCount: true },
+        });
+        for (const v of views) {
+          viewCounts[v.questionId] = v.viewCount;
+        }
+      }
+
+      // Dociągnij info czy user odpowiedział na to pytanie
+      let answerMap: Record<
+        string,
+        { isCorrect: boolean | null; response: any }
+      > = {};
+      if (userId && events.length > 0) {
+        const qIds = [...new Set(events.map((e: any) => e.questionId))];
+        const answers = await app.prisma.answer.findMany({
+          where: { userId, questionId: { in: qIds } },
+          select: { questionId: true, isCorrect: true, response: true },
+          orderBy: { createdAt: "desc" },
+        });
+        // Ostatnia odpowiedź per question
+        for (const a of answers) {
+          if (!answerMap[a.questionId]) {
+            answerMap[a.questionId] = {
+              isCorrect: a.isCorrect,
+              response: a.response,
+            };
+          }
+        }
+      }
+
+      return {
+        events: events.map((e: any) => ({
+          ...e,
+          totalViewCount: viewCounts[e.questionId] || null,
+          answer: answerMap[e.questionId] || null,
+        })),
+        hasMore: events.length === limit,
+      };
     },
   );
 };

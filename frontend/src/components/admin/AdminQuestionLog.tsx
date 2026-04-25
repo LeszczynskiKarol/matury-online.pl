@@ -97,11 +97,11 @@ export function AdminQuestionLog() {
         if (filters.userId) qs.set("userId", filters.userId);
         if (filters.subjectId) qs.set("subjectId", filters.subjectId);
         if (before) qs.set("before", before);
-        const res = await fetch(`${API}/admin/question-log?${qs}`, {
+        const res = await fetch(`${API}/admin/question-view-log?${qs}`, {
           credentials: "include",
         });
         const data = await res.json();
-        setRows((prev) => (append ? [...prev, ...data.answers] : data.answers));
+        setRows((prev) => (append ? [...prev, ...data.events] : data.events));
         setHasMore(data.hasMore);
       } catch (e) {
         console.error(e);
@@ -266,6 +266,12 @@ export function AdminQuestionLog() {
               <th className="py-1.5 px-2 font-semibold">Temat</th>
               <th className="py-1.5 px-2 font-semibold">Treść</th>
               <th className="py-1.5 px-2 font-semibold w-6 text-center">?</th>
+              <th
+                className="py-1.5 px-2 font-semibold w-8 text-center"
+                title="Ile razy wyświetlone"
+              >
+                👁
+              </th>
               <th className="py-1.5 px-2 font-semibold w-10">Czas</th>
               <th className="py-1.5 px-2 font-semibold">Sesja</th>
               <th className="py-1.5 px-2 font-semibold w-14">Data</th>
@@ -275,7 +281,7 @@ export function AdminQuestionLog() {
           <tbody>
             {displayRows.map((row, idx) => {
               const q = row.question;
-              const isSkip = row.response === "__SKIPPED__";
+              const isSkip = row.answer?.response === "__SKIPPED__";
               const occ = occurrenceMap.get(row.id) || 1;
               const totalOcc = countMap.get(row.questionId) || 1;
               const isRepeat = totalOcc > 1;
@@ -304,7 +310,7 @@ export function AdminQuestionLog() {
                   {/* Algo milestone separator(s) */}
                   {milestoneRows.map((ms, mi) => (
                     <tr key={`ms-${ms.date.getTime()}-${mi}`}>
-                      <td colSpan={11} className="py-0">
+                      <td colSpan={12} className="py-0">
                         <div className="flex items-center gap-3 py-2 px-3 bg-emerald-100 dark:bg-emerald-900/20 border-y-2 border-emerald-400 dark:border-emerald-600">
                           <span className="text-sm">🚀</span>
                           <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 uppercase tracking-widest">
@@ -330,7 +336,7 @@ export function AdminQuestionLog() {
                   {/* Session separator */}
                   {isNewSession && idx > 0 && (
                     <tr key={`sep-${row.id}`}>
-                      <td colSpan={11} className="py-0">
+                      <td colSpan={12} className="py-0">
                         <div className="flex items-center gap-2 py-1 px-2 bg-indigo-50 dark:bg-indigo-900/10 border-y border-indigo-200 dark:border-indigo-800/30">
                           <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">
                             {row.session?.subject?.icon || "📝"} Sesja{" "}
@@ -434,18 +440,38 @@ export function AdminQuestionLog() {
 
                     {/* Result */}
                     <td className="py-1 px-2 text-center">
-                      {isSkip
-                        ? "⏭"
-                        : row.isCorrect === true
-                          ? "✅"
-                          : row.isCorrect === false
-                            ? "❌"
-                            : "⏳"}
+                      {row.answer === null
+                        ? "👁"
+                        : isSkip
+                          ? "⏭"
+                          : row.answer.isCorrect === true
+                            ? "✅"
+                            : row.answer.isCorrect === false
+                              ? "❌"
+                              : "⏳"}
+                    </td>
+                    <td className="py-1 px-2 text-center">
+                      {row.totalViewCount != null ? (
+                        <span
+                          className={`text-[10px] font-bold tabular-nums ${
+                            row.totalViewCount >= 5
+                              ? "text-red-500"
+                              : row.totalViewCount >= 3
+                                ? "text-orange-500"
+                                : row.totalViewCount >= 2
+                                  ? "text-amber-500"
+                                  : "text-zinc-400"
+                          }`}
+                        >
+                          {row.totalViewCount}×
+                        </span>
+                      ) : (
+                        <span className="text-zinc-300 text-[9px]">—</span>
+                      )}
                     </td>
 
-                    {/* Time */}
                     <td className="py-1 px-2 text-zinc-400 tabular-nums text-right">
-                      {fmtMs(row.timeSpentMs)}
+                      {fmtMs(row.answer?.timeSpentMs)}
                     </td>
 
                     {/* Session (short) */}
@@ -486,11 +512,11 @@ export function AdminQuestionLog() {
                             copy(
                               {
                                 id: row.id,
-                                response: row.response,
-                                isCorrect: row.isCorrect,
-                                score: row.score,
-                                xpEarned: row.xpEarned,
-                                timeSpentMs: row.timeSpentMs,
+                                questionId: row.questionId,
+                                sessionId: row.sessionId,
+                                totalViewCount: row.totalViewCount,
+                                answer: row.answer,
+                                createdAt: row.createdAt,
                               },
                               `a${row.id}`,
                             )
@@ -511,7 +537,7 @@ export function AdminQuestionLog() {
                   {/* Expanded JSON detail */}
                   {isExp && (
                     <tr key={`exp-${row.id}`}>
-                      <td colSpan={11} className="py-0">
+                      <td colSpan={12} className="py-0">
                         <div className="grid grid-cols-2 gap-2 px-4 py-3 bg-zinc-50 dark:bg-surface-800 border-b border-zinc-200 dark:border-zinc-700">
                           <div>
                             <div className="flex items-center justify-between mb-1">
@@ -562,11 +588,8 @@ export function AdminQuestionLog() {
                                   id: row.id,
                                   questionId: row.questionId,
                                   sessionId: row.sessionId,
-                                  response: row.response,
-                                  isCorrect: row.isCorrect,
-                                  score: row.score,
-                                  xpEarned: row.xpEarned,
-                                  timeSpentMs: row.timeSpentMs,
+                                  totalViewCount: row.totalViewCount,
+                                  answer: row.answer,
                                   createdAt: row.createdAt,
                                 },
                                 null,

@@ -60,6 +60,7 @@ model User {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  questionViewEvents QuestionViewEvent[]
 
   @@index([email])
   @@index([stripeCustomerId])
@@ -175,6 +176,8 @@ model Question {
   subjectId   String
   topic       Topic        @relation(fields: [topicId], references: [id])
   topicId     String
+
+  viewEvents QuestionViewEvent[]
 
   type        QuestionType
   difficulty  Int          @default(1) // 1-5
@@ -614,4 +617,19 @@ enum BadgeTier {
   GOLD
   PLATINUM
   DIAMOND
+}
+
+model QuestionViewEvent {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId String
+  sessionId  String?
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([questionId])
+  @@index([createdAt])
 }
