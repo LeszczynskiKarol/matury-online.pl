@@ -212,22 +212,67 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
         case "TABLE_DATA": {
           const subs = content.subQuestions as {
             id: string;
+            text?: string;
             acceptedAnswers?: string[];
           }[];
           const userSubs = response as Record<string, string>;
           if (subs?.length) {
-            let correct = 0;
+            let totalEarned = 0;
+            const subAiResults: Record<string, any> = {};
+
             for (const sq of subs) {
               const uv = (userSubs[sq.id] || "").trim().toLowerCase();
+
+              // ── Try deterministic first ──
               if (
                 sq.acceptedAnswers?.some(
                   (a: string) => a.toLowerCase().trim() === uv,
                 )
-              )
-                correct++;
+              ) {
+                totalEarned++;
+              }
+              // ── AI fallback if user wrote something but no exact match ──
+              else if (uv.length > 0 && sq.acceptedAnswers?.length) {
+                try {
+                  const { requireAiCredits } =
+                    await import("../services/ai-credits.js");
+                  await requireAiCredits(app.prisma, userId);
+
+                  const aiResult = await gradeOpenQuestion({
+                    subjectSlug: question.subject.slug,
+                    question: sq.text || content.question || "",
+                    rubric: `Poprawne odpowiedzi to: ${sq.acceptedAnswers.join(", ")}. Oceń czy odpowiedź ucznia jest merytorycznie równoważna.`,
+                    maxPoints: 1,
+                    userAnswer: userSubs[sq.id],
+                    sampleAnswer: sq.acceptedAnswers[0],
+                    userId,
+                  });
+
+                  if (aiResult.isCorrect || aiResult.score >= 0.5) {
+                    totalEarned++;
+                  }
+                  subAiResults[sq.id] = {
+                    score: aiResult.score,
+                    feedback: aiResult.feedback,
+                  };
+                } catch {
+                  // No credits — 0 for this sub, no crash
+                  subAiResults[sq.id] = {
+                    score: 0,
+                    feedback:
+                      "Brak kredytów AI — nie oceniono. Poprawna: " +
+                      sq.acceptedAnswers[0],
+                  };
+                }
+              }
             }
-            score = correct / subs.length;
+
+            score = totalEarned / subs.length;
             isCorrect = score >= 1.0;
+
+            if (Object.keys(subAiResults).length > 0) {
+              aiGrading = { subQuestions: subAiResults };
+            }
           }
           break;
         }
@@ -363,6 +408,140 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           }
           break;
         }
+        case "DIAGRAM_LABEL": {
+          const labels = content.labels as {
+            id: string;
+            question: string;
+            acceptedAnswers: string[];
+          }[];
+          const userLabels = response as Record<string, string>;
+          if (labels?.length) {
+            let correct = 0;
+            for (const label of labels) {
+              const uv = (userLabels[label.id] || "").trim().toLowerCase();
+              if (
+                label.acceptedAnswers?.some(
+                  (a: string) => a.toLowerCase().trim() === uv,
+                )
+              ) {
+                correct++;
+              }
+            }
+            score = correct / labels.length;
+            isCorrect = score >= 1.0;
+          }
+          break;
+        }
+
+        case "CALCULATION": {
+          const expected = content.answer?.expectedValue;
+          const tolerance = content.answer?.tolerance ?? 0;
+          const userVal = parseFloat(
+            typeof response === "string" ? response : String(response),
+          );
+          if (expected != null && !isNaN(userVal)) {
+            isCorrect = Math.abs(userVal - expected) <= tolerance;
+            score = isCorrect ? 1.0 : 0.0;
+          } else {
+            isCorrect = false;
+            score = 0;
+          }
+          break;
+        }
+
+        case "CROSS_PUNNETT": {
+          const punnettQs = content.questions as {
+            id: string;
+            label: string;
+            acceptedAnswers: string[];
+          }[];
+          const userPunnett = response as Record<string, string>;
+          if (punnettQs?.length) {
+            let correct = 0;
+            for (const pq of punnettQs) {
+              const uv = (userPunnett[pq.id] || "").trim().toLowerCase();
+              if (
+                pq.acceptedAnswers?.some(
+                  (a: string) => a.toLowerCase().trim() === uv,
+                )
+              ) {
+                correct++;
+              }
+            }
+            score = correct / punnettQs.length;
+            isCorrect = score >= 1.0;
+          }
+          break;
+        }
+
+        case "EXPERIMENT_DESIGN": {
+          const fields = content.fields as {
+            id: string;
+            label: string;
+            sampleAnswer?: string;
+            rubric?: string;
+            points?: number;
+          }[];
+          const userFields = response as Record<string, string>;
+          if (fields?.length) {
+            let totalPts = 0;
+            let earnedPts = 0;
+            const expAiResults: Record<string, any> = {};
+
+            for (const field of fields) {
+              const pts = field.points || 1;
+              totalPts += pts;
+              const userVal = (userFields[field.id] || "").trim();
+
+              if (userVal.length > 0) {
+                try {
+                  const { requireAiCredits } =
+                    await import("../services/ai-credits.js");
+                  await requireAiCredits(app.prisma, userId);
+
+                  const aiResult = await gradeOpenQuestion({
+                    subjectSlug: question.subject.slug,
+                    question: field.label,
+                    rubric:
+                      field.rubric ||
+                      field.sampleAnswer ||
+                      "Oceń merytoryczną poprawność odpowiedzi.",
+                    maxPoints: pts,
+                    userAnswer: userVal,
+                    sampleAnswer: field.sampleAnswer,
+                    userId,
+                  });
+
+                  const fieldEarned = Math.round(aiResult.score * pts);
+                  earnedPts += fieldEarned;
+                  expAiResults[field.id] = {
+                    score: aiResult.score,
+                    pointsEarned: fieldEarned,
+                    feedback: aiResult.feedback,
+                    correctAnswer: aiResult.correctAnswer,
+                  };
+                } catch {
+                  expAiResults[field.id] = {
+                    score: 0,
+                    pointsEarned: 0,
+                    feedback:
+                      "Brak kredytów AI — nie oceniono. Porównaj ze wzorcową odpowiedzią.",
+                    correctAnswer: field.sampleAnswer || null,
+                  };
+                }
+              }
+            }
+
+            score = totalPts > 0 ? earnedPts / totalPts : 0;
+            isCorrect = earnedPts === totalPts;
+
+            if (Object.keys(expAiResults).length > 0) {
+              aiGrading = { fields: expAiResults };
+            }
+          }
+          break;
+        }
+
         case "OPEN": {
           // AI grading — check credits first
           const { requireAiCredits } =
