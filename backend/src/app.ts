@@ -26,6 +26,7 @@ import { dashboardRoutes } from "./routes/dashboard.js";
 import { adminClaudeRoutes } from "./routes/admin-claude.js";
 
 const app = Fastify({
+  disableRequestLogging: true,
   logger: {
     level: process.env.LOG_LEVEL || "info",
     transport:
