@@ -757,7 +757,7 @@ export function QuizPlayer({
 
   // Track question view — fires every time question is displayed
   useEffect(() => {
-    if (!currentQuestion || phase === "loading") return;
+    if (!currentQuestion || phase !== "question") return;
     fetch(
       `${import.meta.env.PUBLIC_API_URL || "/api"}/questions/${currentQuestion.id}/view`,
       {
@@ -781,7 +781,7 @@ export function QuizPlayer({
         }
       })
       .catch(() => {});
-  }, [currentQuestion?.id, phase]);
+  }, [currentQuestion?.id]);
 
   // ── Loading ─────────────────────────────────────────────────────────
   if (phase === "loading") {

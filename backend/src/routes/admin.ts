@@ -557,47 +557,68 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       });
 
       // Dociągnij viewCount per user+question dla wyświetlonych pytań
+      // Dociągnij viewCount per user+question dla wyświetlonych pytań
+      // Klucz mapy: `userId:questionId` → viewCount
       let viewCounts: Record<string, number> = {};
-      if (userId && events.length > 0) {
+      if (events.length > 0) {
+        // Zbierz unikalne pary userId+questionId
+        const pairs = [
+          ...new Set(events.map((e: any) => `${e.user.id}|${e.questionId}`)),
+        ];
+        const userIds = [...new Set(events.map((e: any) => e.user.id))];
         const qIds = [...new Set(events.map((e: any) => e.questionId))];
+
         const views = await app.prisma.questionView.findMany({
-          where: { userId, questionId: { in: qIds } },
-          select: { questionId: true, viewCount: true },
+          where: { userId: { in: userIds }, questionId: { in: qIds } },
+          select: { userId: true, questionId: true, viewCount: true },
         });
         for (const v of views) {
-          viewCounts[v.questionId] = v.viewCount;
+          viewCounts[`${v.userId}:${v.questionId}`] = v.viewCount;
         }
       }
 
       // Dociągnij info czy user odpowiedział na to pytanie
+      // Klucz: `userId:questionId`
       let answerMap: Record<
         string,
-        { isCorrect: boolean | null; response: any }
+        { isCorrect: boolean | null; response: any; timeSpentMs: number | null }
       > = {};
-      if (userId && events.length > 0) {
+      if (events.length > 0) {
+        const userIds = [...new Set(events.map((e: any) => e.user.id))];
         const qIds = [...new Set(events.map((e: any) => e.questionId))];
+
         const answers = await app.prisma.answer.findMany({
-          where: { userId, questionId: { in: qIds } },
-          select: { questionId: true, isCorrect: true, response: true },
+          where: { userId: { in: userIds }, questionId: { in: qIds } },
+          select: {
+            userId: true,
+            questionId: true,
+            isCorrect: true,
+            response: true,
+            timeSpentMs: true,
+          },
           orderBy: { createdAt: "desc" },
         });
-        // Ostatnia odpowiedź per question
         for (const a of answers) {
-          if (!answerMap[a.questionId]) {
-            answerMap[a.questionId] = {
+          const key = `${a.userId}:${a.questionId}`;
+          if (!answerMap[key]) {
+            answerMap[key] = {
               isCorrect: a.isCorrect,
               response: a.response,
+              timeSpentMs: a.timeSpentMs,
             };
           }
         }
       }
 
       return {
-        events: events.map((e: any) => ({
-          ...e,
-          totalViewCount: viewCounts[e.questionId] || null,
-          answer: answerMap[e.questionId] || null,
-        })),
+        events: events.map((e: any) => {
+          const key = `${e.user.id}:${e.questionId}`;
+          return {
+            ...e,
+            totalViewCount: viewCounts[key] || null,
+            answer: answerMap[key] || null,
+          };
+        }),
         hasMore: events.length === limit,
       };
     },
