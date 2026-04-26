@@ -84,6 +84,13 @@ enum UserRole {
   ADMIN
 }
 
+enum AnswerAction {
+  ANSWERED
+  SKIPPED
+  REVEALED
+}
+
+
 enum SubscriptionStatus {
   FREE
   ACTIVE       // recurring 49 PLN
@@ -253,6 +260,8 @@ model Answer {
   questionId  String
   session     StudySession? @relation(fields: [sessionId], references: [id])
   sessionId   String?
+  action        AnswerAction @default(ANSWERED)
+  aiCreditsUsed Int          @default(0)
 
   // What the user submitted
   // For CLOSED: "B"
@@ -281,6 +290,7 @@ model Answer {
   @@index([userId, questionId])
   @@index([userId, createdAt])
   @@index([sessionId])
+  @@index([sessionId, createdAt])
 }
 
 // Separate model for essay submissions — heavier, with revision tracking

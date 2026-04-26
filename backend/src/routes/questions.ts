@@ -381,10 +381,12 @@ export const questionRoutes: FastifyPluginAsync = async (app) => {
           questionId: id,
           ...(sessionId ? { sessionId } : {}),
           response: "__SKIPPED__",
+          action: "SKIPPED",
           isCorrect: null,
           score: 0,
           pointsEarned: 0,
           xpEarned: 0,
+          aiCreditsUsed: 0,
           timeSpentMs: 0,
         },
       });

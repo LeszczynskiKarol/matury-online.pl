@@ -1,0 +1,19 @@
+---
+// File: src/pages/dashboard/historia.astro
+import Dashboard from '../../layouts/Dashboard.astro';
+---
+
+<Dashboard title="Historia sesji">
+  <div id="session-history-root"></div>
+
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { SessionHistory } from '../../components/dashboard/SessionHistory';
+
+    const el = document.getElementById('session-history-root');
+    if (el) {
+      createRoot(el).render(createElement(SessionHistory));
+    }
+  </script>
+</Dashboard>

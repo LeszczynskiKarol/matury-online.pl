@@ -41,6 +41,7 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
     },
     async (req, reply) => {
       const userId = req.user.userId;
+      let aiCreditsUsedCount = 0;
       const { questionId, response, sessionId, timeSpentMs } = req.body as any;
 
       // ── Fetch question ───────────────────────────────────────────────────
@@ -124,6 +125,7 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
               const { requireAiCredits } =
                 await import("../services/ai-credits.js");
               await requireAiCredits(app.prisma, userId);
+              aiCreditsUsedCount++;
 
               const aiResult = await gradeOpenQuestion({
                 subjectSlug: question.subject.slug,
@@ -722,6 +724,7 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
               const { requireAiCredits } =
                 await import("../services/ai-credits.js");
               await requireAiCredits(app.prisma, userId);
+              aiCreditsUsedCount++;
 
               const aiResult = await gradeOpenQuestion({
                 subjectSlug: question.subject.slug,
@@ -898,6 +901,7 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           const { requireAiCredits } =
             await import("../services/ai-credits.js");
           await requireAiCredits(app.prisma, userId);
+          aiCreditsUsedCount++;
           const result = await gradeOpenQuestion({
             subjectSlug: question.subject.slug,
             question: content.question,
@@ -934,11 +938,13 @@ export const answerRoutes: FastifyPluginAsync = async (app) => {
           question: { connect: { id: questionId } },
           ...(sessionId ? { session: { connect: { id: sessionId } } } : {}),
           response,
+          action: "ANSWERED",
           isCorrect,
           score,
           pointsEarned: question.points,
           xpEarned: xp || 0,
           aiGrading: aiGrading ?? Prisma.JsonNull,
+          aiCreditsUsed: aiCreditsUsedCount,
           gradedAt: new Date(),
           timeSpentMs: timeSpentMs || null,
         },

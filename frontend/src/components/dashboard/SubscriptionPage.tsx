@@ -686,7 +686,7 @@ export function SubscriptionPage() {
               <li>✓ Nieograniczone pytania</li>
               <li>✓ Wybór tematów i lektur</li>
               <li>✓ AI ocena wypracowań</li>
-              <li>✓ Powtórki Spaced Repetition</li>
+              {/*<li>✓ Powtórki Spaced Repetition</li>*/}
               <li>✓ Pełne statystyki</li>
               <li>✓ Anuluj, kiedy chcesz</li>
             </ul>

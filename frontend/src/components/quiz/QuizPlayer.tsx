@@ -1108,7 +1108,7 @@ export function QuizPlayer({
 
       {/* Actions */}
       {!loadingMore && (
-        <div className="flex justify-between">
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
           {phase === "question" ? (
             <div className="flex items-center gap-3">
               {currentIndex > 0 && (
@@ -1164,10 +1164,10 @@ export function QuizPlayer({
           ) : (
             <div />
           )}
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:ml-auto w-full sm:w-auto">
             {phase === "question" && (
               <>
-                {response === null && (
+                {phase === "question" && (
                   <button
                     onClick={() => {
                       const content = currentQuestion.content;
@@ -1195,6 +1195,12 @@ export function QuizPlayer({
                         },
                       }));
                       setPhase("feedback");
+
+                      if (sessionId) {
+                        sessionsApi
+                          .reveal(sessionId, currentQuestion.id)
+                          .catch(console.error);
+                      }
                     }}
                     className="px-4 py-2.5 rounded-2xl text-sm font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-surface-800 hover:bg-zinc-200 dark:hover:bg-surface-700 transition-all"
                   >

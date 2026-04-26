@@ -4,6 +4,89 @@
 
 const API_BASE = import.meta.env.PUBLIC_API_URL || "/api";
 
+export interface SessionSummary {
+  id: string;
+  type: string;
+  status: string;
+  subject: {
+    id: string;
+    slug: string;
+    name: string;
+    icon: string;
+    color: string;
+  };
+  questionCount: number;
+  questionsAnswered: number;
+  correctAnswers: number;
+  accuracy: number;
+  totalXpEarned: number;
+  totalTimeMs: number;
+  startedAt: string;
+  completedAt: string | null;
+  actionBreakdown: Record<string, number>;
+  aiCreditsUsed: number;
+  totalAnswers: number;
+}
+
+export interface SessionTimelineItem {
+  type: "answer" | "viewed_only";
+  action: "ANSWERED" | "SKIPPED" | "REVEALED" | "VIEWED";
+  questionId: string;
+  question: {
+    id: string;
+    type: string;
+    difficulty: number;
+    points: number;
+    content: any;
+    explanation: string | null;
+    source: string | null;
+    topic: { id: string; name: string; slug: string };
+  };
+  response: any;
+  isCorrect: boolean | null;
+  score: number | null;
+  pointsEarned: number;
+  xpEarned: number;
+  aiGrading: any;
+  aiCreditsUsed: number;
+  timeSpentMs: number | null;
+  viewedAt: string;
+  answeredAt: string | null;
+}
+
+export interface SessionDetail {
+  session: {
+    id: string;
+    type: string;
+    status: string;
+    subject: {
+      id: string;
+      slug: string;
+      name: string;
+      icon: string;
+      color: string;
+    };
+    questionCount: number;
+    questionsAnswered: number;
+    correctAnswers: number;
+    accuracy: number;
+    totalXpEarned: number;
+    totalTimeMs: number;
+    startedAt: string;
+    completedAt: string | null;
+  };
+  timeline: SessionTimelineItem[];
+  stats: {
+    totalViewed: number;
+    answered: number;
+    skipped: number;
+    revealed: number;
+    viewedOnly: number;
+    totalAiCredits: number;
+    totalXp: number;
+  };
+}
+
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -108,6 +191,33 @@ export const sessions = {
     const qs = new URLSearchParams(params as any).toString();
     return request<any[]>(`/sessions/history?${qs}`);
   },
+
+  /** Pełna lista sesji z breakdown akcji */
+  myHistory: (params?: {
+    subjectId?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(params || {}).filter(([, v]) => v !== undefined),
+      ) as Record<string, string>,
+    ).toString();
+    return request<{
+      sessions: SessionSummary[];
+      total: number;
+    }>(`/sessions/my-history?${qs}`);
+  },
+
+  /** Pełny timeline jednej sesji */
+  detail: (id: string) => request<SessionDetail>(`/sessions/${id}/history`),
+
+  /** Zapisz "Pokaż odpowiedź" */
+  reveal: (sessionId: string, questionId: string) =>
+    request<{ ok: boolean }>(`/sessions/${sessionId}/reveal`, {
+      method: "POST",
+      body: JSON.stringify({ questionId }),
+    }),
 };
 
 // ── Answers ──────────────────────────────────────────────────────────────
