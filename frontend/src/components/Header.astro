@@ -41,18 +41,66 @@ const { navLinks = [] } = Astro.props;
     </a>
 
     <!-- Centre nav links (desktop) -->
-    {navLinks.length > 0 && (
-      <div class="hidden md:flex items-center gap-7">
-        {navLinks.map((link) => (
-          <a
-            href={link.href}
-            class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
-          >
-            {link.label}
-          </a>
-        ))}
+    <!-- Centre nav links (desktop) -->
+    <div class="hidden md:flex items-center gap-7">
+
+      <!-- Przedmioty dropdown -->
+      <div class="relative group">
+        <button type="button" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition inline-flex items-center gap-1">
+          Przedmioty
+          <svg class="w-3.5 h-3.5 group-hover:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="absolute top-full left-1/2 -translate-x-1/2 pt-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+          <div class="w-[420px] p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-surface-900 shadow-xl shadow-zinc-900/10 dark:shadow-black/30">
+            <div class="grid grid-cols-2 gap-1">
+              <a href="/przedmiot/polski" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors">
+                <span class="text-lg">📚</span><span class="text-sm font-medium">Polski</span>
+              </a>
+              <a href="/przedmiot/matematyka" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors">
+                <span class="text-lg">📐</span><span class="text-sm font-medium">Matematyka</span>
+              </a>
+              <a href="/przedmiot/angielski" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors">
+                <span class="text-lg">🇬🇧</span><span class="text-sm font-medium">Angielski</span>
+              </a>
+              <a href="/przedmiot/niemiecki" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors">
+                <span class="text-lg">🇩🇪</span><span class="text-sm font-medium">Niemiecki</span>
+              </a>
+              <a href="/przedmiot/biologia" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors">
+                <span class="text-lg">🧬</span><span class="text-sm font-medium">Biologia</span>
+              </a>
+              <a href="/przedmiot/chemia" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors">
+                <span class="text-lg">⚗️</span><span class="text-sm font-medium">Chemia</span>
+              </a>
+              <a href="/przedmiot/fizyka" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors">
+                <span class="text-lg">⚛️</span><span class="text-sm font-medium">Fizyka</span>
+              </a>
+              <a href="/przedmiot/historia" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors">
+                <span class="text-lg">🏛️</span><span class="text-sm font-medium">Historia</span>
+              </a>
+              <a href="/przedmiot/geografia" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors">
+                <span class="text-lg">🌍</span><span class="text-sm font-medium">Geografia</span>
+              </a>
+              <a href="/przedmiot/wos" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors">
+                <span class="text-lg">⚖️</span><span class="text-sm font-medium">WOS</span>
+              </a>
+              <a href="/przedmiot/informatyka" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-surface-800 transition-colors col-span-2">
+                <span class="text-lg">💻</span><span class="text-sm font-medium">Informatyka</span>
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
-    )}
+
+      <!-- Page-specific nav links -->
+      {navLinks.map((link) => (
+        
+          <a href={link.href}
+          class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+        >
+          {link.label}
+        </a>
+      ))}
+    </div>
 
     <!-- Right side: theme toggle + auth buttons -->
     <div class="flex items-center gap-3">
