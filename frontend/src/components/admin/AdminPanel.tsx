@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { admin } from "../../lib/api";
 import { ListeningLab } from "./ListeningLab";
+import { ExplanationGenerator } from "./ExplanationGenerator";
 import { ClaudeMonitor } from "./ClaudeMonitor";
 import { AdminExport } from "./AdminExport";
 import { AdminQuestionLog } from "./AdminQuestionLog";
@@ -15,16 +16,18 @@ type Tab =
   | "question-log"
   | "claude"
   | "reports"
-  | "export";
+  | "export"
+  | "explanations";
 
 export function AdminPanel() {
   const [tab, setTab] = useState<Tab>("dashboard");
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "dashboard", label: "", icon: "📊" },
+    { id: "dashboard", label: "Start", icon: "📊" },
     { id: "questions", label: "Pytania", icon: "❓" },
     { id: "users", label: "Userzy", icon: "👥" },
     { id: "subjects", label: "Przedmioty", icon: "📚" },
+    { id: "explanations", label: "Explanations", icon: "📝" },
     { id: "claude", label: "Claude API", icon: "🤖" },
     { id: "export", label: "Eksport", icon: "📥" },
     { id: "question-log", label: "Log pytań", icon: "📜" },
@@ -41,14 +44,19 @@ export function AdminPanel() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-700 pb-0">
+      <div className="grid grid-cols-5 gap-1.5 border-b border-zinc-200 dark:border-zinc-700 pb-2">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-xl border-b-2 transition-all ${tab === t.id ? "border-brand-500 text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/10" : "border-transparent text-zinc-500 hover:text-zinc-700"}`}
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl transition-all ${
+              tab === t.id
+                ? "bg-brand-500 text-white shadow-sm"
+                : "bg-zinc-100 dark:bg-surface-800 dark:text-zinc-100 hover:text-zinc-700 hover:bg-zinc-200 dark:hover:bg-surface-700"
+            }`}
           >
-            <span>{t.icon}</span> {t.label}
+            <span>{t.icon}</span>
+            {t.label && <span className="hidden sm:inline">{t.label}</span>}
           </button>
         ))}
       </div>
@@ -61,6 +69,7 @@ export function AdminPanel() {
       {tab === "question-log" && <AdminQuestionLog />}
       {tab === "export" && <AdminExport />}
       {tab === "reports" && <AdminReports />}
+      {tab === "explanations" && <ExplanationGenerator />}
       {tab === "listening" && <ListeningLab />}
     </div>
   );
