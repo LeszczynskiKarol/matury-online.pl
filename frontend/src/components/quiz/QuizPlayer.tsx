@@ -1896,7 +1896,9 @@ function QuestionRenderer({
                 (c: any) => `${c.name} (${c.maxPoints} pkt): ${c.description}`,
               )
               .join("; "),
+            context: content.context || content.quote ? undefined : undefined,
             ...content,
+            quote: content.quote || content.slogan || undefined,
           }}
           response={response}
           onChange={onResponseChange}
@@ -2359,6 +2361,89 @@ function OpenQuestion({
             </span>
           ))}
         </div>
+      )}
+
+      {/* Cytat / sentencja do interpretacji */}
+      {content.quote && (
+        <div className="p-5 rounded-2xl bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-800/30 mb-4 text-center">
+          <p className="text-sm italic font-medium text-violet-800 dark:text-violet-300 leading-relaxed">
+            „{content.quote}"
+          </p>
+        </div>
+      )}
+
+      {/* Hasło / slogan do interpretacji */}
+      {content.slogan && !content.quote && (
+        <div className="p-4 rounded-2xl bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-800/30 mb-4 text-center">
+          <p className="text-xs text-violet-500 dark:text-violet-400 mb-1">
+            Hasło:
+          </p>
+          <p className="text-lg font-display font-bold text-violet-700 dark:text-violet-300">
+            „{content.slogan}"
+          </p>
+        </div>
+      )}
+
+      {/* Zdanie do przekształcenia */}
+      {content.originalSentence && (
+        <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-800/30 mb-4">
+          <p className="text-xs text-sky-500 dark:text-sky-400 mb-1">Zdanie:</p>
+          <p className="text-sm font-medium text-sky-800 dark:text-sky-200">
+            „{content.originalSentence}"
+          </p>
+          {content.transformation && (
+            <p className="text-xs text-sky-600 dark:text-sky-400 mt-2 italic">
+              → {content.transformation}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Zdanie do oceny */}
+      {content.statement && !content.originalSentence && (
+        <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800 border border-zinc-200 dark:border-zinc-700 mb-4">
+          <p className="text-xs text-zinc-500 mb-1">Zdanie do oceny:</p>
+          <p className="text-sm font-medium">„{content.statement}"</p>
+        </div>
+      )}
+
+      {/* Frazeologizm */}
+      {content.phrase && (
+        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 mb-4 text-center">
+          <p className="text-xs text-amber-500 dark:text-amber-400 mb-1">
+            Frazeologizm:
+          </p>
+          <p className="text-lg font-display font-bold text-amber-700 dark:text-amber-300">
+            {content.phrase}
+          </p>
+        </div>
+      )}
+
+      {/* Sugerowane lektury */}
+      {content.suggestedWorks && content.suggestedWorks.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          <span className="text-[10px] text-zinc-400 self-center mr-1">
+            Sugerowane:
+          </span>
+          {content.suggestedWorks.map((w: string, i: number) => (
+            <span
+              key={i}
+              className="px-2.5 py-1 text-xs font-medium rounded-lg bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/30"
+            >
+              📚 {w}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Limit słów */}
+      {content.wordLimit && (
+        <p className="text-xs text-zinc-400 mb-2">
+          📝 Limit:{" "}
+          {typeof content.wordLimit === "object"
+            ? `${content.wordLimit.min}–${content.wordLimit.max} słów`
+            : `do ${content.wordLimit} słów`}
+        </p>
       )}
 
       <textarea
