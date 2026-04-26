@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { MathGraph } from "./MathGraph";
 import { AdminQuestionSearch } from "./AdminQuestionSearch";
+import { ReportButton } from "./ReportQuestion";
 import { AdminBrowseBar, type AdminSort } from "./AdminBrowseBar";
 import { processGamificationResponse } from "../GamificationToasts";
 import { auth } from "../../lib/api";
@@ -1063,6 +1064,14 @@ export function QuizPlayer({
           }
           return null;
         })()}
+        <ReportButton
+          questionId={currentQuestion.id}
+          questionPreview={
+            currentQuestion.content?.question ||
+            currentQuestion.content?.context ||
+            currentQuestion.content?.prompt
+          }
+        />
       </div>
 
       {/* Loading overlay */}

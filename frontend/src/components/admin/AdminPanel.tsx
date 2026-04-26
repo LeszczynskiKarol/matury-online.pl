@@ -4,6 +4,7 @@ import { ListeningLab } from "./ListeningLab";
 import { ClaudeMonitor } from "./ClaudeMonitor";
 import { AdminExport } from "./AdminExport";
 import { AdminQuestionLog } from "./AdminQuestionLog";
+import { AdminReports } from "./AdminReports";
 
 type Tab =
   | "dashboard"
@@ -13,6 +14,7 @@ type Tab =
   | "listening"
   | "question-log"
   | "claude"
+  | "reports"
   | "export";
 
 export function AdminPanel() {
@@ -26,6 +28,7 @@ export function AdminPanel() {
     { id: "claude", label: "Claude API", icon: "🤖" },
     { id: "export", label: "Eksport", icon: "📥" },
     { id: "question-log", label: "Log pytań", icon: "📜" },
+    { id: "reports", label: "Zgłoszenia", icon: "🚩" },
     { id: "listening", label: "Listening Lab", icon: "🎧" },
   ];
 
@@ -57,6 +60,7 @@ export function AdminPanel() {
       {tab === "claude" && <ClaudeMonitor />}
       {tab === "question-log" && <AdminQuestionLog />}
       {tab === "export" && <AdminExport />}
+      {tab === "reports" && <AdminReports />}
       {tab === "listening" && <ListeningLab />}
     </div>
   );

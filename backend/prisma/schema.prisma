@@ -29,6 +29,7 @@ model User {
   verificationCodeExpiresAt DateTime?
   googleId      String?  @unique
   role          UserRole @default(STUDENT)
+  reports     QuestionReport[]
 
   // Subscription
   stripeCustomerId     String?  @unique
@@ -184,7 +185,7 @@ model Question {
   subjectId   String
   topic       Topic        @relation(fields: [topicId], references: [id])
   topicId     String
-
+  reports     QuestionReport[]
   viewEvents QuestionViewEvent[]
 
   type        QuestionType
@@ -643,4 +644,39 @@ model QuestionViewEvent {
   @@index([userId, createdAt])
   @@index([questionId])
   @@index([createdAt])
+}
+
+model QuestionReport {
+  id          String       @id @default(cuid())
+  question    Question     @relation(fields: [questionId], references: [id])
+  questionId  String
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId      String?
+  category    ReportCategory
+  description String       @db.Text
+  status      ReportStatus @default(NEW)
+  adminNote   String?      @db.Text
+  resolvedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([questionId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum ReportCategory {
+  WRONG_ANSWER       // błędna odpowiedź
+  CONTENT_ERROR      // błąd w treści pytania
+  UNCLEAR            // niejasne sformułowanie
+  MISSING_CONTENT    // brakujące dane / obraz / kontekst
+  DISPLAY_BUG        // problem z wyświetlaniem
+  OTHER              // inne
+}
+
+enum ReportStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
 }

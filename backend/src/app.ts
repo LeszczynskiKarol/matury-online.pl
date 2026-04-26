@@ -17,6 +17,7 @@ import { questionRoutes } from "./routes/questions.js";
 import { sessionRoutes } from "./routes/sessions.js";
 import { answerRoutes } from "./routes/answers.js";
 import { listeningRoutes } from "./routes/listening.js";
+import { reportRoutes, adminReportRoutes } from "./routes/reports.js";
 import { essayRoutes } from "./routes/essays.js";
 import { reviewRoutes } from "./routes/review.js";
 import { gamificationRoutes } from "./routes/gamification.js";
@@ -101,6 +102,8 @@ await app.register(listeningRoutes, { prefix: "/api/listening" });
 await app.register(contactRoutes, { prefix: "/api/contact" });
 await app.register(publicRoutes, { prefix: "/api/public" });
 await app.register(sessionHistoryRoutes, { prefix: "/api/sessions" });
+await app.register(reportRoutes, { prefix: "/api/reports" });
+await app.register(adminReportRoutes, { prefix: "/api/admin" });
 
 // ── Health ───────────────────────────────────────────────────────────────────
 

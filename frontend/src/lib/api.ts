@@ -504,6 +504,38 @@ export const stripe = {
 export const admin = {
   stats: () => request<any>("/admin/stats"),
 
+  reports: (params?: {
+    status?: string;
+    category?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(params || {}).filter(
+          ([, v]) => v !== "" && v !== undefined,
+        ),
+      ) as Record<string, string>,
+    ).toString();
+    return request<{ reports: any[]; total: number; newCount: number }>(
+      `/admin/reports?${qs}`,
+    );
+  },
+
+  updateReport: (id: string, data: { status?: string; adminNote?: string }) =>
+    request<any>(`/admin/reports/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  bulkResolveReports: (ids: string[]) =>
+    request<{ ok: boolean; resolved: number }>("/admin/reports/bulk-resolve", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    }),
+
+  reportStats: () => request<any>("/admin/reports/stats"),
+
   // Questions
   questions: (params?: Record<string, any>) => {
     const qs = new URLSearchParams(
@@ -594,3 +626,19 @@ export const admin = {
 };
 
 export { ApiError };
+
+// ── Reports (zgłoszenia błędów) ──────────────────────────────────────────
+
+export const reports = {
+  create: (data: {
+    questionId: string;
+    category: string;
+    description: string;
+  }) =>
+    request<{ ok: boolean; reportId: string; message: string }>("/reports", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  my: () => request<{ reports: any[] }>("/reports/my"),
+};

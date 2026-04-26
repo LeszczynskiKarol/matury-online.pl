@@ -17,14 +17,6 @@ import { ChemText } from "../quiz/Chem";
 
 // ── Mapowania ─────────────────────────────────────────────────────────────
 
-const SESSION_TYPE_LABELS: Record<string, string> = {
-  PRACTICE: "Ćwiczenia",
-  TOPIC_DRILL: "Ćwicz temat",
-  REVIEW: "Powtórka",
-  MOCK_EXAM: "Próbna matura",
-  ADAPTIVE: "Adaptacyjna",
-};
-
 const ACTION_LABELS: Record<
   string,
   { label: string; icon: string; color: string }
@@ -322,9 +314,6 @@ function SessionCard({
             <span className="font-display font-semibold text-sm">
               {session.subject.name}
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-surface-800 text-zinc-500 font-medium">
-              {SESSION_TYPE_LABELS[session.type] || session.type}
-            </span>
           </div>
 
           {/* Action breakdown pills */}
@@ -535,9 +524,6 @@ function SessionDetailView({
           <h1 className="font-display font-bold text-xl flex items-center gap-2">
             <span>{session.subject.icon}</span>
             {session.subject.name}
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-surface-800 text-zinc-500 font-medium">
-              {SESSION_TYPE_LABELS[session.type] || session.type}
-            </span>
           </h1>
           <p className="text-xs text-zinc-500 mt-0.5">
             {date.toLocaleDateString("pl", {

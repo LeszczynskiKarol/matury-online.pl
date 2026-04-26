@@ -27,7 +27,11 @@ export const sessionHistoryRoutes: FastifyPluginAsync = async (app) => {
       const userId = req.user.userId;
       const { subjectId, limit, offset } = req.query as any;
 
-      const where: any = { userId };
+      const where: any = {
+        userId,
+        // Ukryj puste sesje (0 odpowiedzi, 0 wyświetleń)
+        answers: { some: {} },
+      };
       if (subjectId) where.subjectId = subjectId;
 
       const [sessions, total] = await Promise.all([
