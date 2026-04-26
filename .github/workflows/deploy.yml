@@ -1,9 +1,7 @@
 name: Deploy Matury Online
-
 on:
   push:
     branches: [main]
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
