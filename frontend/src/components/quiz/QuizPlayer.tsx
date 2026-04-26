@@ -2454,6 +2454,32 @@ function OpenQuestion({
         className="input resize-none"
         placeholder="Napisz odpowiedź..."
       />
+      {(() => {
+        const text = typeof response === "string" ? response : "";
+        const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+        const minWords = content.wordLimit
+          ? typeof content.wordLimit === "object"
+            ? content.wordLimit.min
+            : content.wordLimit
+          : null;
+        const maxWords =
+          content.wordLimit && typeof content.wordLimit === "object"
+            ? content.wordLimit.max
+            : null;
+        const underMin = minWords && wordCount < minWords;
+        const overMax = maxWords && wordCount > maxWords;
+        return (
+          <div className="flex items-center justify-end gap-2 mt-1.5">
+            <span
+              className={`text-xs tabular-nums font-medium ${overMax ? "text-red-500" : underMin ? "text-red-400" : "text-zinc-400"}`}
+            >
+              {wordCount}{" "}
+              {minWords ? `/ ${minWords}${maxWords ? `–${maxWords}` : ""}` : ""}{" "}
+              słów
+            </span>
+          </div>
+        );
+      })()}
       {isA && feedback?.aiGrading && (
         <div className="mt-4 p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800 animate-slide-up">
           <div className="flex items-center gap-2 mb-2">
