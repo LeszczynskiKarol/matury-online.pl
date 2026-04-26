@@ -269,6 +269,8 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           globalLevel: true,
           currentStreak: true,
           createdAt: true,
+          aiCreditsRemaining: true,
+          aiCreditsResetAt: true,
           lastActiveAt: true,
           _count: {
             select: { answers: true, essaySubmissions: true, sessions: true },
@@ -633,4 +635,22 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       };
     },
   );
+  app.patch("/users/:id/ai-credits", async (req) => {
+    const { id } = req.params as { id: string };
+    const { amount } = req.body as { amount: number };
+    const user = await app.prisma.user.update({
+      where: { id },
+      data: { aiCreditsRemaining: Math.max(0, amount) },
+    });
+    return { aiCreditsRemaining: user.aiCreditsRemaining };
+  });
+
+  app.post("/users/:id/ai-credits/reset", async (req) => {
+    const { id } = req.params as { id: string };
+    const user = await app.prisma.user.update({
+      where: { id },
+      data: { aiCreditsRemaining: 600, aiCreditsResetAt: new Date() },
+    });
+    return { aiCreditsRemaining: user.aiCreditsRemaining };
+  });
 };

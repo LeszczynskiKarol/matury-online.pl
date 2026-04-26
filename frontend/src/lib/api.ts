@@ -123,6 +123,25 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 // ── Auth ─────────────────────────────────────────────────────────────────
 
 export const auth = {
+  changePassword: (data: {
+    currentPassword: string;
+    newPassword: string;
+    newPasswordConfirm: string;
+  }) =>
+    request<{ success: boolean; message: string }>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  uploadAvatar: (image: string, mimeType: string) =>
+    request<{ avatarUrl: string }>("/auth/avatar", {
+      method: "POST",
+      body: JSON.stringify({ image, mimeType }),
+    }),
+
+  deleteAvatar: () =>
+    request<{ deleted: boolean }>("/auth/avatar", { method: "DELETE" }),
+
   register: (data: { email: string; password: string; name?: string }) =>
     request<{ user: any; token: string }>("/auth/register", {
       method: "POST",
@@ -503,6 +522,20 @@ export const stripe = {
 
 export const admin = {
   stats: () => request<any>("/admin/stats"),
+
+  setAiCredits: (id: string, amount: number) =>
+    request<{ aiCreditsRemaining: number }>(`/admin/users/${id}/ai-credits`, {
+      method: "PATCH",
+      body: JSON.stringify({ amount }),
+    }),
+
+  resetAiCredits: (id: string) =>
+    request<{ aiCreditsRemaining: number }>(
+      `/admin/users/${id}/ai-credits/reset`,
+      {
+        method: "POST",
+      },
+    ),
 
   reports: (params?: {
     status?: string;

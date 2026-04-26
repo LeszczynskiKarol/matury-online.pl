@@ -310,6 +310,11 @@ export function QuizPlayer({
     Record<string, { result: any; response: any }>
   >({});
 
+  // Scroll to top when QuizPlayer mounts (transition from SessionSetup)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+
   const handleAdminBrowse = useCallback(
     (sort: AdminSort, loadedQuestions: any[], total: number) => {
       setAdminSort(sort);
@@ -1989,32 +1994,7 @@ function ClosedQuestion({
           );
         })}
       </div>
-      {isA && !feedback?.revealed && (
-        <div className="mt-4 p-3 rounded-xl bg-sky-50 dark:bg-sky-900/10 border border-sky-200 dark:border-sky-800/30">
-          <p className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider mb-2">
-            Poprawna kolejność:
-          </p>
-          <div className="space-y-1.5">
-            {content.correctOrder.map((sid: string, i: number) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300"
-              >
-                <span className="w-5 h-5 rounded-full bg-brand-500 text-white text-[10px] flex items-center justify-center font-bold flex-shrink-0">
-                  {i + 1}
-                </span>
-                <span>
-                  <ChemText
-                    text={
-                      content.steps.find((s: any) => s.id === sid)?.text || sid
-                    }
-                  />
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
       {isA && <FeedbackBlock feedback={feedback} />}
     </div>
   );

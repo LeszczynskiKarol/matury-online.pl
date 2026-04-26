@@ -100,7 +100,7 @@ const currentPath = Astro.url.pathname;
 
       <!-- User + Logout + Cookies -->
       <div class="border-t border-zinc-200 dark:border-zinc-800 px-4 py-3 space-y-1">
-        <div id="sidebar-user"></div>
+        <button id="sidebar-user" type="button" class="w-full text-left rounded-xl px-2 py-2 hover:bg-zinc-100 dark:hover:bg-surface-800 transition-colors cursor-pointer" title="Zmień hasło"></button>
         <button id="logout-btn" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           Wyloguj się
@@ -203,7 +203,7 @@ const currentPath = Astro.url.pathname;
     </main>
   </div>
 
-  <!-- Gamification popups portal -->
+<!-- Gamification popups portal -->
   <div id="gamification-popups"><script>
   import { createElement } from 'react';
   import { createRoot } from 'react-dom/client';
@@ -212,52 +212,364 @@ const currentPath = Astro.url.pathname;
   if (el) createRoot(el).render(createElement(GamificationToasts));
 </script></div>
 
-  <script>
-    // Fetch user, show admin nav if ADMIN, handle logout
-    (async () => {
-      try {
-        const res = await fetch('/api/auth/me', { credentials: 'include' });
-        if (!res.ok) return;
-        const user = await res.json();
+  <!-- Profile Settings Modal -->
+  <div id="profile-modal" class="fixed inset-0 z-[100] hidden">
+    <div id="profile-modal-bg" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="relative w-full max-w-lg bg-white dark:bg-surface-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden">
 
-        // Show admin section if ADMIN
-        if (user.role === 'ADMIN') {
-          document.getElementById('admin-nav-section')?.classList.remove('hidden');
-        }
+        <button id="profile-modal-close" type="button" class="absolute top-4 right-4 z-10 p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-surface-800 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
 
-        // Populate sidebar user info
-        const userEl = document.getElementById('sidebar-user');
-        if (userEl) {
-          userEl.innerHTML = `
-            <div class="flex items-center gap-3">
-              ${user.avatarUrl
-                ? `<img src="${user.avatarUrl}" alt="" class="w-8 h-8 rounded-full" />`
-                : `<div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 text-sm font-bold">${(user.name || user.email)[0].toUpperCase()}</div>`
-              }
-              <div class="min-w-0">
-                <p class="text-sm font-medium truncate">${user.name || 'Użytkownik'}</p>
-                <p class="text-[11px] text-zinc-500 truncate">${user.email}</p>
+        <div class="p-6">
+          <!-- Avatar + User Info row -->
+          <div class="flex items-center gap-5 mb-6">
+            <!-- Avatar with upload -->
+            <div class="relative group flex-shrink-0">
+              <div id="avatar-preview" class="w-20 h-20 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 text-2xl font-display font-bold overflow-hidden ring-2 ring-zinc-200 dark:ring-zinc-700">
               </div>
-            </div>`;
-        }
-      } catch {}
+              <label class="absolute inset-0 rounded-full cursor-pointer flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
+                <svg class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <input id="avatar-input" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" />
+              </label>
+              <div id="avatar-spinner" class="hidden absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                <svg class="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              </div>
+            </div>
 
-      // Logout handler
-      document.getElementById('logout-btn')?.addEventListener('click', async () => {
+            <!-- Name + email -->
+            <div class="flex-1 min-w-0">
+              <p id="modal-user-name" class="font-display font-bold text-lg truncate"></p>
+              <p id="modal-user-email" class="text-sm text-zinc-500 truncate"></p>
+              <button id="avatar-delete-btn" type="button" class="hidden mt-1 text-[11px] text-red-400 hover:text-red-500 font-medium transition-colors">
+                Usuń zdjęcie
+              </button>
+            </div>
+          </div>
+
+          <div id="avatar-alert" class="hidden mb-4 px-4 py-3 rounded-2xl text-sm font-medium"></div>
+
+          <!-- Divider -->
+          <div class="border-t border-zinc-200 dark:border-zinc-800 mb-4"></div>
+
+          <!-- Password section — collapsible -->
+          <button id="pw-toggle" type="button" class="w-full flex items-center justify-between py-2 text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+            <span class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+              Zmień hasło
+            </span>
+            <svg id="pw-chevron" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+
+          <div id="pw-section" class="hidden mt-3 space-y-3">
+            <div id="pw-alert" class="hidden px-4 py-3 rounded-2xl text-sm font-medium"></div>
+            <div id="pw-current-wrap">
+              <label class="block text-xs font-medium text-zinc-500 mb-1">Obecne hasło</label>
+              <input id="pw-current" type="password" class="input !py-2.5 !text-sm" placeholder="••••••••" autocomplete="current-password" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-zinc-500 mb-1">Nowe hasło</label>
+              <input id="pw-new" type="password" class="input !py-2.5 !text-sm" placeholder="Min. 8 znaków, wielka, cyfra, specjalny" autocomplete="new-password" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-zinc-500 mb-1">Powtórz nowe hasło</label>
+              <input id="pw-confirm" type="password" class="input !py-2.5 !text-sm" placeholder="••••••••" autocomplete="new-password" />
+            </div>
+            <button id="pw-submit" type="button" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold bg-zinc-100 dark:bg-surface-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-surface-700 transition-colors">
+              <span id="pw-submit-text">Zapisz nowe hasło</span>
+              <svg id="pw-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // ── Elements ─────────────────────────────────────────────────────────
+      const modal = document.getElementById('profile-modal');
+      const modalBg = document.getElementById('profile-modal-bg');
+      const closeBtn = document.getElementById('profile-modal-close');
+      const avatarPreview = document.getElementById('avatar-preview');
+      const avatarInput = document.getElementById('avatar-input') as HTMLInputElement | null;
+      const avatarSpinner = document.getElementById('avatar-spinner');
+      const avatarDeleteBtn = document.getElementById('avatar-delete-btn');
+      const avatarAlert = document.getElementById('avatar-alert');
+      const modalName = document.getElementById('modal-user-name');
+      const modalEmail = document.getElementById('modal-user-email');
+
+      const pwToggle = document.getElementById('pw-toggle');
+      const pwChevron = document.getElementById('pw-chevron');
+      const pwSection = document.getElementById('pw-section');
+      const pwAlert = document.getElementById('pw-alert');
+      const pwCurrentWrap = document.getElementById('pw-current-wrap');
+      const pwCurrent = document.getElementById('pw-current') as HTMLInputElement | null;
+      const pwNew = document.getElementById('pw-new') as HTMLInputElement | null;
+      const pwConfirm = document.getElementById('pw-confirm') as HTMLInputElement | null;
+      const pwSubmit = document.getElementById('pw-submit') as HTMLButtonElement | null;
+      const pwSubmitText = document.getElementById('pw-submit-text');
+      const pwSpinner = document.getElementById('pw-spinner');
+
+      let cachedUser: any = null;
+      let isGoogleOnly = false;
+
+      // ── Helpers ──────────────────────────────────────────────────────────
+      function showAlertEl(el: HTMLElement | null, msg: string, type: 'error' | 'success') {
+        if (!el) return;
+        el.textContent = msg;
+        el.className = `mb-4 px-4 py-3 rounded-2xl text-sm font-medium ${
+          type === 'error'
+            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+            : 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400'
+        }`;
+      }
+
+      function renderAvatar(user: any) {
+        if (!avatarPreview) return;
+        if (user.avatarUrl) {
+          avatarPreview.innerHTML = `<img src="${user.avatarUrl}" alt="" class="w-full h-full object-cover" />`;
+          avatarDeleteBtn?.classList.remove('hidden');
+        } else {
+          avatarPreview.innerHTML = (user.name || user.email)[0].toUpperCase();
+          avatarDeleteBtn?.classList.add('hidden');
+        }
+      }
+
+      function updateSidebarAvatar(user: any) {
+        const userEl = document.getElementById('sidebar-user');
+        if (!userEl) return;
+        userEl.innerHTML = `
+          <div class="flex items-center gap-3">
+            ${user.avatarUrl
+              ? `<img src="${user.avatarUrl}" alt="" class="w-8 h-8 rounded-full" />`
+              : `<div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 text-sm font-bold">${(user.name || user.email)[0].toUpperCase()}</div>`
+            }
+            <div class="min-w-0">
+              <p class="text-sm font-medium truncate">${user.name || 'Użytkownik'}</p>
+              <p class="text-[11px] text-zinc-500 truncate">${user.email}</p>
+            </div>
+          </div>`;
+      }
+
+      // ── Modal open/close ────────────────────────────────────────────────
+      function openModal() {
+        modal?.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        avatarAlert?.classList.add('hidden');
+        pwAlert?.classList.add('hidden');
+
+        if (cachedUser) {
+          if (modalName) modalName.textContent = cachedUser.name || 'Użytkownik';
+          if (modalEmail) modalEmail.textContent = cachedUser.email;
+          renderAvatar(cachedUser);
+
+          if (!cachedUser.passwordHash && cachedUser.googleId) {
+            isGoogleOnly = true;
+            if (pwCurrentWrap) pwCurrentWrap.style.display = 'none';
+          } else {
+            isGoogleOnly = false;
+            if (pwCurrentWrap) pwCurrentWrap.style.display = '';
+          }
+        }
+
+        // Reset password fields
+        if (pwCurrent) pwCurrent.value = '';
+        if (pwNew) pwNew.value = '';
+        if (pwConfirm) pwConfirm.value = '';
+        // Collapse password section
+        pwSection?.classList.add('hidden');
+        pwChevron?.classList.remove('rotate-180');
+      }
+
+      function closeModal() {
+        modal?.classList.add('hidden');
+        document.body.style.overflow = '';
+      }
+
+      document.getElementById('sidebar-user')?.addEventListener('click', openModal);
+      closeBtn?.addEventListener('click', closeModal);
+      modalBg?.addEventListener('click', closeModal);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal?.classList.contains('hidden')) closeModal();
+      });
+
+      // ── Password toggle ─────────────────────────────────────────────────
+      pwToggle?.addEventListener('click', () => {
+        const isHidden = pwSection?.classList.contains('hidden');
+        if (isHidden) {
+          pwSection?.classList.remove('hidden');
+          pwChevron?.classList.add('rotate-180');
+        } else {
+          pwSection?.classList.add('hidden');
+          pwChevron?.classList.remove('rotate-180');
+        }
+      });
+
+      // ── Avatar upload ───────────────────────────────────────────────────
+      avatarInput?.addEventListener('change', async () => {
+        const file = avatarInput.files?.[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+          return showAlertEl(avatarAlert, 'Maks. 2 MB', 'error');
+        }
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+          return showAlertEl(avatarAlert, 'Dozwolone: JPEG, PNG, WebP', 'error');
+        }
+
+        avatarSpinner?.classList.remove('hidden');
+        avatarAlert?.classList.add('hidden');
+
         try {
-          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-        } catch {}
-        window.location.href = '/auth/login';
-      });
+          const dataUrl = await resizeImage(file, 400);
+          const base64 = dataUrl.split(',')[1];
 
-      // Cookies handler — uses the same global function as footer
-      document.getElementById('cookies-btn')?.addEventListener('click', () => {
-        if (typeof window.openConsentSettings === 'function') {
-          window.openConsentSettings();
+          const res = await fetch('/api/auth/avatar', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64, mimeType: file.type }),
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            showAlertEl(avatarAlert, data.error || 'Błąd uploadu', 'error');
+          } else {
+            cachedUser = { ...cachedUser, avatarUrl: data.avatarUrl };
+            renderAvatar(cachedUser);
+            updateSidebarAvatar(cachedUser);
+            showAlertEl(avatarAlert, 'Zdjęcie zaktualizowane!', 'success');
+            setTimeout(() => avatarAlert?.classList.add('hidden'), 2000);
+          }
+        } catch {
+          showAlertEl(avatarAlert, 'Błąd połączenia', 'error');
+        } finally {
+          avatarSpinner?.classList.add('hidden');
+          avatarInput.value = '';
         }
       });
-    })();
 
+      // ── Avatar delete ───────────────────────────────────────────────────
+      avatarDeleteBtn?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('Usunąć zdjęcie profilowe?')) return;
+
+        avatarSpinner?.classList.remove('hidden');
+        try {
+          const res = await fetch('/api/auth/avatar', { method: 'DELETE', credentials: 'include' });
+          if (res.ok) {
+            cachedUser = { ...cachedUser, avatarUrl: null };
+            renderAvatar(cachedUser);
+            updateSidebarAvatar(cachedUser);
+          }
+        } catch {} finally {
+          avatarSpinner?.classList.add('hidden');
+        }
+      });
+
+      // ── Browser-side resize ─────────────────────────────────────────────
+      function resizeImage(file: File, maxSize: number): Promise<string> {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            let w = img.width, h = img.height;
+            if (w > maxSize || h > maxSize) {
+              const ratio = Math.min(maxSize / w, maxSize / h);
+              w = Math.round(w * ratio);
+              h = Math.round(h * ratio);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL(file.type, 0.85));
+          };
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+        });
+      }
+
+      // ── Password submit ─────────────────────────────────────────────────
+      pwSubmit?.addEventListener('click', async () => {
+        const currentPassword = pwCurrent?.value || '';
+        const newPassword = pwNew?.value || '';
+        const newPasswordConfirm = pwConfirm?.value || '';
+
+        if (!newPassword || !newPasswordConfirm) {
+          return showAlertEl(pwAlert, 'Wypełnij wszystkie pola', 'error');
+        }
+        if (newPassword !== newPasswordConfirm) {
+          return showAlertEl(pwAlert, 'Nowe hasła nie są identyczne', 'error');
+        }
+        if (newPassword.length < 8) {
+          return showAlertEl(pwAlert, 'Min. 8 znaków', 'error');
+        }
+        if (!isGoogleOnly && !currentPassword) {
+          return showAlertEl(pwAlert, 'Podaj obecne hasło', 'error');
+        }
+
+        if (pwSubmit) pwSubmit.disabled = true;
+        pwSubmitText?.classList.add('hidden');
+        pwSpinner?.classList.remove('hidden');
+
+        try {
+          const res = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword, newPassword, newPasswordConfirm }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            showAlertEl(pwAlert, data.error || 'Błąd', 'error');
+          } else {
+            showAlertEl(pwAlert, data.message || 'Hasło zmienione!', 'success');
+            if (pwCurrent) pwCurrent.value = '';
+            if (pwNew) pwNew.value = '';
+            if (pwConfirm) pwConfirm.value = '';
+          }
+        } catch {
+          showAlertEl(pwAlert, 'Błąd połączenia', 'error');
+        } finally {
+          if (pwSubmit) pwSubmit.disabled = false;
+          pwSubmitText?.classList.remove('hidden');
+          pwSpinner?.classList.add('hidden');
+        }
+      });
+
+      // ── Init: fetch user, sidebar, logout, cookies ────────────────────
+      (async () => {
+        try {
+          const res = await fetch('/api/auth/me', { credentials: 'include' });
+          if (!res.ok) return;
+          cachedUser = await res.json();
+
+          if (cachedUser.role === 'ADMIN') {
+            document.getElementById('admin-nav-section')?.classList.remove('hidden');
+          }
+
+          updateSidebarAvatar(cachedUser);
+        } catch {}
+
+        // Logout
+        document.getElementById('logout-btn')?.addEventListener('click', async () => {
+          try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch {}
+          window.location.href = '/auth/login';
+        });
+
+        // Cookies
+        document.getElementById('cookies-btn')?.addEventListener('click', () => {
+          if (typeof (window as any).openConsentSettings === 'function') {
+            (window as any).openConsentSettings();
+          }
+        });
+      })();
+    })();
+  </script>
+
+  <script>
     // Mobile drawer
     const overlay = document.getElementById('mobile-overlay');
     const openBtn = document.getElementById('mobile-menu-btn');
@@ -282,4 +594,34 @@ const currentPath = Astro.url.pathname;
       window.location.href = '/auth/login';
     });
   </script>
+
+</div>
+
+  <script>
+ 
+    // Mobile drawer
+    const overlay = document.getElementById('mobile-overlay');
+    const openBtn = document.getElementById('mobile-menu-btn');
+    const closeBtn = document.getElementById('mobile-close-btn');
+    const overlayBg = document.getElementById('mobile-overlay-bg');
+
+    function openDrawer() {
+      overlay?.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeDrawer() {
+      overlay?.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    openBtn?.addEventListener('click', openDrawer);
+    closeBtn?.addEventListener('click', closeDrawer);
+    overlayBg?.addEventListener('click', closeDrawer);
+
+    document.getElementById('mobile-logout-btn')?.addEventListener('click', async () => {
+      try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch {}
+      window.location.href = '/auth/login';
+    });
+  </script>
+
 </Base>

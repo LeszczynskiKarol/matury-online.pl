@@ -659,6 +659,39 @@ function QuestionModal({
 // USERS MANAGER
 // ════════════════════════════════════════════════════════════════════════════
 
+// ════════════════════════════════════════════════════════════════════════════
+// USERS MANAGER
+// ════════════════════════════════════════════════════════════════════════════
+
+const MONTHLY_CREDITS = 600;
+
+function AiCreditsBar({
+  remaining,
+  total = MONTHLY_CREDITS,
+}: {
+  remaining: number;
+  total?: number;
+}) {
+  const pct = Math.max(0, Math.min(100, (remaining / total) * 100));
+  const color =
+    pct > 50 ? "bg-emerald-500" : pct > 20 ? "bg-amber-500" : "bg-red-500";
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="w-16 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+        <div
+          className={`h-full rounded-full ${color}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span
+        className={`text-xs font-mono tabular-nums ${remaining <= 0 ? "text-red-500" : "text-zinc-500"}`}
+      >
+        {remaining}
+      </span>
+    </div>
+  );
+}
+
 function AdminUsers() {
   const [users, setUsers] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -668,7 +701,6 @@ function AdminUsers() {
     offset: 0,
     limit: 30,
   });
-  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const load = useCallback(() => {
     admin.users(filters).then((d) => {
@@ -698,6 +730,26 @@ function AdminUsers() {
     await admin.updateUser(id, {
       role: currentRole === "ADMIN" ? "STUDENT" : "ADMIN",
     });
+    load();
+  };
+
+  // ── AI Credits management ──────────────────────────────────────────────
+
+  const handleSetCredits = async (id: string, currentCredits: number) => {
+    const val = prompt(
+      `Ustaw kredyty AI (obecne: ${currentCredits}):`,
+      String(currentCredits),
+    );
+    if (val === null || val === "") return;
+    const amount = parseInt(val);
+    if (isNaN(amount) || amount < 0) return alert("Podaj liczbę >= 0");
+    await admin.setAiCredits(id, amount);
+    load();
+  };
+
+  const handleResetCredits = async (id: string) => {
+    if (!confirm(`Zresetować kredyty AI do ${MONTHLY_CREDITS}?`)) return;
+    await admin.resetAiCredits(id);
     load();
   };
 
@@ -763,6 +815,10 @@ function AdminUsers() {
               <th className="py-2 px-3 text-xs font-medium text-zinc-500">
                 Aktywność
               </th>
+              {/* NEW */}
+              <th className="py-2 px-3 text-xs font-medium text-zinc-500">
+                <span title="Kredyty AI (maks. 600/mies.)">🤖 Kredyty</span>
+              </th>
               <th className="py-2 px-3 text-xs font-medium text-zinc-500">
                 Data
               </th>
@@ -804,6 +860,36 @@ function AdminUsers() {
                 <td className="py-2 px-3 text-xs">
                   {u._count.answers}odp · {u._count.sessions}ses
                 </td>
+
+                {/* AI Credits column */}
+                <td className="py-2 px-3">
+                  {u.subscriptionStatus !== "FREE" ? (
+                    <div className="flex flex-col gap-1">
+                      <AiCreditsBar remaining={u.aiCreditsRemaining ?? 0} />
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() =>
+                            handleSetCredits(u.id, u.aiCreditsRemaining ?? 0)
+                          }
+                          className="px-1.5 py-0.5 text-[10px] rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-600 dark:text-zinc-300"
+                          title="Ustaw kredyty"
+                        >
+                          Ustaw
+                        </button>
+                        <button
+                          onClick={() => handleResetCredits(u.id)}
+                          className="px-1.5 py-0.5 text-[10px] rounded bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 text-indigo-600"
+                          title={`Reset do ${MONTHLY_CREDITS}`}
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-zinc-400">—</span>
+                  )}
+                </td>
+
                 <td className="py-2 px-3 text-xs text-zinc-500">
                   {u.createdAt
                     ? new Date(u.createdAt).toLocaleDateString("pl")

@@ -585,6 +585,200 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  // ── Change password (logged-in user) ───────────────────────────────────
+  app.post(
+    "/change-password",
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        body: {
+          type: "object",
+          required: ["currentPassword", "newPassword", "newPasswordConfirm"],
+          properties: {
+            currentPassword: { type: "string" },
+            newPassword: { type: "string", minLength: 8 },
+            newPasswordConfirm: { type: "string" },
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const { currentPassword, newPassword, newPasswordConfirm } =
+        req.body as any;
+
+      if (newPassword !== newPasswordConfirm) {
+        return reply.code(400).send({ error: "Nowe hasła nie są identyczne" });
+      }
+
+      const strength = validatePasswordStrength(newPassword);
+      if (!strength.valid) {
+        return reply
+          .code(400)
+          .send({ error: `Hasło zbyt słabe: ${strength.errors.join(", ")}` });
+      }
+
+      const user = await app.prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: { passwordHash: true, googleId: true },
+      });
+
+      if (!user) {
+        return reply.code(404).send({ error: "Nie znaleziono użytkownika" });
+      }
+
+      // Google-only users — no current password to verify, just set new one
+      if (!user.passwordHash) {
+        if (user.googleId) {
+          const hash = await bcrypt.hash(newPassword, 12);
+          await app.prisma.user.update({
+            where: { id: req.user.userId },
+            data: { passwordHash: hash },
+          });
+          return { success: true, message: "Hasło zostało ustawione" };
+        }
+        return reply.code(400).send({ error: "Brak hasła do zmiany" });
+      }
+
+      const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!valid) {
+        return reply
+          .code(400)
+          .send({ error: "Obecne hasło jest nieprawidłowe" });
+      }
+
+      const hash = await bcrypt.hash(newPassword, 12);
+      await app.prisma.user.update({
+        where: { id: req.user.userId },
+        data: { passwordHash: hash },
+      });
+
+      return { success: true, message: "Hasło zostało zmienione" };
+    },
+  );
+
+  // ── Upload avatar ──────────────────────────────────────────────────────
+  app.post(
+    "/avatar",
+    {
+      preHandler: [app.authenticate],
+      schema: {
+        body: {
+          type: "object",
+          required: ["image", "mimeType"],
+          properties: {
+            image: { type: "string" }, // base64 encoded
+            mimeType: { type: "string" }, // "image/jpeg" | "image/png" | "image/webp"
+          },
+        },
+      },
+    },
+    async (req, reply) => {
+      const { image, mimeType } = req.body as {
+        image: string;
+        mimeType: string;
+      };
+
+      const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+      if (!ALLOWED_TYPES.includes(mimeType)) {
+        return reply
+          .code(400)
+          .send({ error: "Dozwolone formaty: JPEG, PNG, WebP" });
+      }
+
+      const buffer = Buffer.from(image, "base64");
+      const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+      if (buffer.length > MAX_SIZE) {
+        return reply
+          .code(400)
+          .send({ error: "Maksymalny rozmiar zdjęcia to 2 MB" });
+      }
+
+      const ext =
+        mimeType === "image/png"
+          ? "png"
+          : mimeType === "image/webp"
+            ? "webp"
+            : "jpg";
+      const key = `avatars/${req.user.userId}.${ext}`;
+
+      const { S3Client, PutObjectCommand, DeleteObjectCommand } =
+        await import("@aws-sdk/client-s3");
+      const s3 = new S3Client({
+        region: process.env.S3_AVATAR_REGION || "eu-north-1",
+      });
+      const bucket = process.env.S3_BUCKET_AVATARS || "matury-online-avatars";
+
+      // Delete old avatar if different extension
+      const user = await app.prisma.user.findUnique({
+        where: { id: req.user.userId },
+        select: { avatarUrl: true },
+      });
+      if (user?.avatarUrl?.includes(`avatars/${req.user.userId}.`)) {
+        const oldKey = user.avatarUrl.split(".com/")[1];
+        if (oldKey && oldKey !== key) {
+          try {
+            await s3.send(
+              new DeleteObjectCommand({ Bucket: bucket, Key: oldKey }),
+            );
+          } catch {}
+        }
+      }
+
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: mimeType,
+          CacheControl: "public, max-age=31536000, immutable",
+        }),
+      );
+
+      const avatarUrl = `https://${bucket}.s3.${process.env.S3_AVATAR_REGION || "eu-north-1"}.amazonaws.com/${key}?v=${Date.now()}`;
+
+      await app.prisma.user.update({
+        where: { id: req.user.userId },
+        data: { avatarUrl },
+      });
+
+      return { avatarUrl };
+    },
+  );
+
+  // ── Delete avatar ──────────────────────────────────────────────────────
+  app.delete("/avatar", { preHandler: [app.authenticate] }, async (req) => {
+    const user = await app.prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { avatarUrl: true },
+    });
+
+    if (user?.avatarUrl?.includes("matury-online-avatars")) {
+      const { S3Client, DeleteObjectCommand } =
+        await import("@aws-sdk/client-s3");
+      const s3 = new S3Client({
+        region: process.env.S3_AVATAR_REGION || "eu-north-1",
+      });
+      const key = user.avatarUrl.split(".com/")[1]?.split("?")[0];
+      if (key) {
+        try {
+          await s3.send(
+            new DeleteObjectCommand({
+              Bucket: process.env.S3_BUCKET_AVATARS || "matury-online-avatars",
+              Key: key,
+            }),
+          );
+        } catch {}
+      }
+    }
+
+    await app.prisma.user.update({
+      where: { id: req.user.userId },
+      data: { avatarUrl: null },
+    });
+
+    return { deleted: true };
+  });
+
   app.get("/me", { preHandler: [app.authenticate] }, async (req) => {
     return app.prisma.user.findUniqueOrThrow({
       where: { id: req.user.userId },

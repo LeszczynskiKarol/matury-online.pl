@@ -56,6 +56,10 @@ export function ListeningSetup() {
       .catch(console.error);
   }, []);
 
+  useEffect(() => {
+    if (playing) window.scrollTo({ top: 0, behavior: "instant" });
+  }, [playing]);
+
   if (playing && selected) {
     return (
       <QuizPlayer
