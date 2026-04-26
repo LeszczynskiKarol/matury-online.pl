@@ -172,19 +172,50 @@ export function ExplanationGenerator() {
     setBatchRunning(true);
     setBatchResult(null);
     try {
-      const result = await apiPost("/admin/explanations/batch-filter", {
-        subjectId: filters.subjectId || undefined,
-        topicId: filters.topicId || undefined,
-        type: filters.type || undefined,
-        limit: batchSize,
-        model,
-      });
-      setBatchResult(result);
-      loadQuestions();
-      loadStats();
+      const { jobId, total, status } = await apiPost(
+        "/admin/explanations/batch-filter",
+        {
+          subjectId: filters.subjectId || undefined,
+          topicId: filters.topicId || undefined,
+          type: filters.type || undefined,
+          limit: batchSize,
+          model,
+        },
+      );
+
+      // No questions to process
+      if (!jobId) {
+        setBatchResult({
+          total: 0,
+          processed: 0,
+          succeeded: 0,
+          failed: 0,
+          totalCostUsd: 0,
+          results: [],
+        });
+        setBatchRunning(false);
+        return;
+      }
+
+      // Poll for progress every 2s
+      const poll = setInterval(async () => {
+        try {
+          const progress = await apiGet(`/admin/explanations/batch/${jobId}`);
+          setBatchResult(progress);
+
+          if (progress.status === "done" || progress.status === "error") {
+            clearInterval(poll);
+            setBatchRunning(false);
+            loadQuestions();
+            loadStats();
+          }
+        } catch {
+          clearInterval(poll);
+          setBatchRunning(false);
+        }
+      }, 2000);
     } catch (e: any) {
       alert(`Batch error: ${e.message}`);
-    } finally {
       setBatchRunning(false);
     }
   };
@@ -348,9 +379,31 @@ export function ExplanationGenerator() {
       {/* ── Batch result ────────────────────────────────────────────── */}
       {batchResult && (
         <div className="glass-card p-4">
-          <h3 className="font-display font-semibold text-sm mb-2">
-            Batch wynik
-          </h3>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="font-display font-semibold text-sm">
+              {batchResult.status === "running"
+                ? "⏳ Batch w toku…"
+                : batchResult.status === "error"
+                  ? "❌ Batch error"
+                  : "✅ Batch zakończony"}
+            </h3>
+            {batchResult.status === "running" && (
+              <span className="text-[10px] text-zinc-400 font-mono">
+                {batchResult.processed}/{batchResult.total}
+              </span>
+            )}
+          </div>
+          {/* Progress bar */}
+          {batchResult.total > 0 && (
+            <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden mb-3">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${batchResult.status === "error" ? "bg-red-500" : "bg-brand-500"}`}
+                style={{
+                  width: `${(batchResult.processed / batchResult.total) * 100}%`,
+                }}
+              />
+            </div>
+          )}
           <div className="flex flex-wrap gap-3 text-xs">
             <span className="font-mono">
               ✅ {batchResult.succeeded}/{batchResult.total}
@@ -361,11 +414,11 @@ export function ExplanationGenerator() {
               </span>
             )}
             <span className="font-mono text-brand-600">
-              💰 ${batchResult.totalCostUsd.toFixed(4)}
+              💰 ${(batchResult.totalCostUsd || 0).toFixed(4)}
             </span>
             <span className="font-mono text-zinc-500">
-              📥 {batchResult.totalInputTokens} → 📤{" "}
-              {batchResult.totalOutputTokens} tok
+              📥 {batchResult.totalInputTokens || 0} → 📤{" "}
+              {batchResult.totalOutputTokens || 0} tok
             </span>
           </div>
           {batchResult.results?.some((r: any) => !r.success) && (
