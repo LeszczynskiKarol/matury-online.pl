@@ -1,0 +1,411 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Footer from '../../../components/Footer.astro';
+import Header from '../../../components/Header.astro';
+
+const topics = [
+  { name: 'Czasy gramatyczne', icon: '⏰', questions: 39, desc: 'Präsens, Präteritum, Perfekt, Plusquamperfekt, Futur I/II — odmiana, użycie, Partizip II.' },
+  { name: 'Tryb przypuszczający i warunkowy', icon: '💭', questions: 36, desc: 'Konjunktiv II, würde-Form, zdania warunkowe (wenn), życzenia, nierzeczywistość.' },
+  { name: 'Strona bierna i mowa zależna', icon: '🔄', questions: 36, desc: 'Passiv (werden + Partizip II), Vorgangspassiv, Zustandspassiv, indirekte Rede, Konjunktiv I.' },
+  { name: 'Czasowniki modalne', icon: '🔑', questions: 35, desc: 'können, müssen, dürfen, sollen, wollen, mögen — odmiana, znaczenie, użycie w różnych czasach.' },
+  { name: 'Zdania złożone', icon: '🔗', questions: 40, desc: 'Nebensätze, dass-Sätze, Relativsätze, Kausalsätze, Finalsätze, Konzessivsätze, szyk zdania.' },
+  { name: 'Rodzajniki i deklinacja', icon: '📋', questions: 37, desc: 'der/die/das, Nominativ, Akkusativ, Dativ, Genitiv — deklinacja rzeczowników, przymiotników, zaimków.' },
+  { name: 'Słowotwórstwo', icon: '🧩', questions: 35, desc: 'Złożenia (Komposita), prefiksy, sufiksy, nominalizacja, tworzenie przymiotników i przysłówków.' },
+  { name: 'Rekcja czasowników', icon: '🎯', questions: 40, desc: 'Czasowniki z przyimkami (warten auf, sich freuen über), rekcja przypadkowa, stałe połączenia.' },
+  { name: 'Zwroty i kolokacje', icon: '💬', questions: 39, desc: 'Stałe wyrażenia, idiomy, kolokacje, zwroty potoczne i formalne, frazesy egzaminacyjne.' },
+  { name: 'Parafrazy i transformacje', icon: '✏️', questions: 35, desc: 'Przekształcenia zdań, synonimy strukturalne, zamiana strony biernej, nominalizacja, zmiana czasu.' },
+  { name: 'Funkcje językowe', icon: '🗣️', questions: 38, desc: 'Wyrażanie opinii, zgody, sprzeciwu, prośby, rady, propozycje — rejestry formalne i nieformalne.' },
+  { name: 'Rozumienie tekstów', icon: '📖', questions: 45, desc: 'Artykuły, wywiady, listy, ogłoszenia, recenzje — pytania o szczegóły, intencje autora, dobieranie nagłówków.' },
+  { name: 'Słownictwo tematyczne', icon: '📚', questions: 45, desc: 'Mensch, Familie, Schule, Arbeit, Reisen, Gesundheit, Umwelt, Medien, Kultur, Gesellschaft.' },
+  { name: 'Rozumienie ze słuchu', icon: '🎧', questions: 2, ai: true, desc: 'Nagrania generowane na żywo przez AI — dialogi, wywiady, monologi. Akcenty: standardowy niemiecki (Hochdeutsch).' },
+];
+
+const totalQuestions = topics.reduce((s, t) => s + t.questions, 0);
+
+const listeningPatterns = [
+  { name: 'Krótki dialog', level: 'PP', duration: '30–60s', desc: 'Dwa głosy, codzienna sytuacja, 1 pytanie MCQ', icon: '💬' },
+  { name: 'Monolog + richtig/falsch', level: 'PP', duration: '1–2 min', desc: 'Przewodnik, prezentacja, audycja — 3-4 stwierdzenia R/F', icon: '🎙️' },
+  { name: 'Interview + MCQ', level: 'PP/PR', duration: '2–3 min', desc: 'Rozmowa z ekspertem — 3-4 pytania wielokrotnego wyboru', icon: '🎤' },
+  { name: 'Lückentext (Gap Fill)', level: 'PR', duration: '2–3 min', desc: 'Wykład, raport, wiadomości — 4-5 pytań: wpisz usłyszany szczegół', icon: '⎵' },
+  { name: 'Erweitertes Hörverstehen', level: 'PR', duration: '3–4 min', desc: 'Panel dyskusyjny, audycja radiowa — 5-6 pytań różnych typów', icon: '🧩' },
+];
+
+const questionTypes = [
+  { icon: '🎧', name: 'Hörverstehen AI', desc: 'Nagrania generowane na żywo, max 2 odtworzenia jak na maturze', badge: 'AI LIVE' },
+  { icon: '◉', name: 'Zamknięte A–D', desc: 'Gramatyka, słownictwo, rozumienie tekstu' },
+  { icon: '⚖', name: 'Richtig / Falsch', desc: 'Stwierdzenia do nagrania lub tekstu' },
+  { icon: '⎵', name: 'Lückentext', desc: 'Gramatyka, słownictwo, transformacje' },
+  { icon: '⇄', name: 'Zuordnung', desc: 'Nagłówki do akapitów, zdania do luk' },
+  { icon: '☑', name: 'Wielokrotne', desc: 'Wskaż wszystkie poprawne odpowiedzi' },
+  { icon: '✎', name: 'Otwarte', desc: 'Krótkie odpowiedzi na pytania do tekstu', badge: 'AI' },
+  { icon: '✍️', name: 'Schreiben', desc: 'E-Mail, Aufsatz, Erörterung — ocena AI wg CKE', badge: 'AI' },
+];
+
+const faq = [
+  { q: 'Jak działa słuchanie generowane przez AI z niemieckiego?', a: 'Za każdym razem AI (Claude Sonnet) generuje świeży transkrypt po niemiecku — dialog, wywiad, monolog lub audycję. Google Text-to-Speech syntezuje głos w standardowym niemieckim (Hochdeutsch) z różnymi lektorami. Max 2 odtworzenia jak na maturze CKE. Każda sesja unikalna.' },
+  { q: 'Czym różni się matura z niemieckiego PP od PR?', a: 'PP (A2/B1): prostsze słownictwo, wyraźna wymowa, wolniejsze tempo, tematy codzienne. PR (B1+/B2): złożone słownictwo, naturalny akcent, szybsze tempo, tematy społeczne i akademickie. Na platformie wybierasz poziom — algorytm adaptacyjny dostosowuje trudność.' },
+  { q: 'Czy AI ocenia wypracowania z niemieckiego?', a: 'Tak. AI ocenia 4 kryteria CKE: treść (Inhalt, 0-4 pkt), forma (Form, 0-2 pkt), zakres językowy (Wortschatz und Strukturen, 0-2 pkt), poprawność (Korrektheit, 0-2 pkt) — łącznie do 10 punktów. Feedback w 30 sekund z konkretnymi wskazówkami.' },
+  { q: 'Ile pytań z niemieckiego jest na platformie?', a: `Aktualnie ${totalQuestions}+ pytań w 14 działach: gramatyka (czasy, tryby, strona bierna, czasowniki modalne, zdania złożone, deklinacja), słowotwórstwo, rekcja, zwroty, parafrazy, funkcje językowe, rozumienie tekstów, słownictwo tematyczne i słuchanie AI. Baza rozbudowywana regularnie.` },
+  { q: 'Jakie tematy gramatyczne są najważniejsze na maturze z niemieckiego?', a: 'Najczęściej na maturze: czasy (Perfekt, Präteritum), Konjunktiv II, strona bierna, zdania złożone z odpowiednim szykiem (dass, weil, obwohl, damit), deklinacja przymiotników i rekcja czasowników z przyimkami. Platforma ma osobne zestawy dla każdego z tych zagadnień.' },
+  { q: 'Jak przygotować się do matury z niemieckiego w 3 miesiące?', a: '(1) Codziennie 1 nagranie Hörverstehen (10 min) — AI generuje świeże za każdym razem. (2) 15 min gramatyki z adaptacyjnym algorytmem — deklinacja, czasy, zdania złożone. (3) Co tydzień jedno wypracowanie (E-Mail lub Erörterung) — AI oceni w 30 sekund. (4) Spaced Repetition na rekcję czasowników i kolokacje — 5 min dziennie.' },
+];
+
+const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) };
+
+const otherSubjects = [
+  { slug: 'polski', name: 'Polski', icon: '📚' }, { slug: 'matematyka', name: 'Matematyka', icon: '📐' },
+  { slug: 'angielski', name: 'Angielski', icon: '🇬🇧' }, { slug: 'biologia', name: 'Biologia', icon: '🧬' },
+  { slug: 'chemia', name: 'Chemia', icon: '⚗️' }, { slug: 'fizyka', name: 'Fizyka', icon: '⚛️' },
+  { slug: 'historia', name: 'Historia', icon: '🏛️' }, { slug: 'wos', name: 'WOS', icon: '⚖️' },
+];
+---
+<Base title="Matura z Niemieckiego 2026 — Hörverstehen AI, Gramatyka, Wypracowania | Matury Online">
+<Header navLinks={[
+  { href: '#listening', label: 'Hörverstehen AI' },
+  { href: '#tematy', label: 'Tematy' },
+  { href: '#typy-zadan', label: 'Typy zadań' },
+  { href: '#cennik', label: 'Cennik' },
+  { href: '#faq', label: 'FAQ' },
+]} />
+
+<!-- HERO -->
+<section class="relative pt-32 pb-16 md:pt-40 md:pb-20 overflow-hidden">
+  <div class="absolute inset-0 -z-10">
+    <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-yellow-500/10 dark:bg-yellow-500/5 rounded-full blur-[120px]"></div>
+    <div class="absolute bottom-0 left-0 w-[500px] h-[500px] bg-amber-500/10 dark:bg-amber-500/5 rounded-full blur-[100px]"></div>
+  </div>
+  <div class="max-w-6xl mx-auto px-6 text-center">
+    <div class="animate-fade-in"><a href="/" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-sm font-medium mb-6 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition">← Wszystkie przedmioty</a></div>
+    <div class="animate-fade-in">
+      <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 text-sm font-semibold mb-8">
+        <span class="text-2xl">🇩🇪</span> Język niemiecki · PP + PR · <span data-qcount-min="niemiecki">{totalQuestions}+</span> pytań · <span class="font-bold">Hörverstehen AI</span>
+      </div>
+    </div>
+    <h1 class="font-display font-extrabold text-5xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tight mb-6 animate-slide-up">
+      Matura z niemieckiego<br/><span class="bg-gradient-to-r from-yellow-500 to-amber-500 bg-clip-text text-transparent">z nieograniczonym Hörverstehen</span>
+    </h1>
+    <p class="max-w-2xl mx-auto text-lg md:text-xl text-zinc-600 dark:text-zinc-400 mb-10 animate-slide-up" style="animation-delay: 100ms">
+      <strong class="text-zinc-900 dark:text-zinc-100">Flagowa funkcja niedostępna nigdzie indziej</strong> — AI generuje świeże nagrania na żywo w Hochdeutsch. Plus gramatyka, deklinacja, rekcja czasowników i wypracowania oceniane przez AI według <strong class="text-zinc-900 dark:text-zinc-100">kryteriów CKE</strong>.
+    </p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style="animation-delay: 200ms">
+      <a href="/auth/register" class="btn-primary text-base py-4 px-8">Zacznij ćwiczyć niemiecki — 49 zł/mies.<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></a>
+    </div>
+    <div class="flex flex-wrap justify-center gap-8 md:gap-16 mt-16 animate-fade-in" style="animation-delay: 400ms">
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100" data-qcount-min="niemiecki">{totalQuestions}+</div><div class="text-sm text-zinc-500 mt-1">pytań</div></div>
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">∞</div><div class="text-sm text-zinc-500 mt-1">nagrań AI</div></div>
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">14</div><div class="text-sm text-zinc-500 mt-1">działów</div></div>
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">PP+PR</div><div class="text-sm text-zinc-500 mt-1">oba poziomy</div></div>
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">30s</div><div class="text-sm text-zinc-500 mt-1">ocena AI</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- COUNTDOWN -->
+<section class="py-12 bg-gradient-to-r from-yellow-500 to-amber-500">
+  <div class="max-w-5xl mx-auto px-6 text-center">
+    <p class="text-white/80 text-sm font-semibold uppercase tracking-widest mb-3">⏰ Matura z niemieckiego — środa/czwartek, 6–7 maja 2026</p>
+    <h2 class="font-display font-bold text-2xl md:text-3xl text-white mb-6">Do matury z niemieckiego zostało:</h2>
+    <div class="grid grid-cols-4 gap-3 md:gap-6 max-w-2xl mx-auto">
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6"><div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-days>--</div><div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">dni</div></div>
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6"><div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-hours>--</div><div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">godzin</div></div>
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6"><div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-minutes>--</div><div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">minut</div></div>
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl p-4 md:p-6"><div class="font-display font-extrabold text-3xl md:text-5xl text-white tabular-nums" data-countdown-seconds>--</div><div class="text-white/70 text-[10px] md:text-xs uppercase tracking-wide mt-1">sekund</div></div>
+    </div>
+    <p class="text-white/80 text-sm mt-6">Hörverstehen to najtrudniejsza część matury — i jedyna, której <strong class="text-white">nie powtórzysz</strong>. Ćwicz codziennie.</p>
+    <a href="/auth/register" class="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-2xl bg-white text-yellow-600 font-display font-semibold text-sm hover:bg-white/90 transition-all">Zacznij słuchać →</a>
+  </div>
+</section>
+<script is:inline>
+(function(){var t=new Date('2026-05-06T09:00:00').getTime();function k(){var d=Math.max(0,t-Date.now()),D=Math.floor(d/864e5),H=Math.floor(d%864e5/36e5),M=Math.floor(d%36e5/6e4),S=Math.floor(d%6e4/1e3),e;e=document.querySelector('[data-countdown-days]');if(e)e.textContent=D;e=document.querySelector('[data-countdown-hours]');if(e)e.textContent=H;e=document.querySelector('[data-countdown-minutes]');if(e)e.textContent=M;e=document.querySelector('[data-countdown-seconds]');if(e)e.textContent=S}k();setInterval(k,1e3)})();
+</script>
+
+<!-- HÖRVERSTEHEN AI -->
+<section id="listening" class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-semibold mb-4">🎧 UNIKALNE NA RYNKU · AI LIVE</div>
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Nieograniczone Hörverstehen — AI tworzy nagrania specjalnie dla Ciebie</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">
+        Żadna inna platforma w Polsce tego nie ma. AI generuje świeży transkrypt po niemiecku, a Google TTS syntezuje głos w Hochdeutsch. Każda sesja inna.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8 items-start">
+      <div>
+        <h3 class="font-display font-bold text-xl mb-6">Jak to działa?</h3>
+        <div class="space-y-4 mb-8">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-2xl bg-yellow-500 text-white flex items-center justify-center font-display font-bold shadow-lg shadow-yellow-500/25">1</div>
+            <div><div class="font-display font-semibold text-sm">AI generuje Transkript</div><div class="text-xs text-zinc-500">Claude Sonnet tworzy unikalny dialog, wywiad lub monolog po niemiecku na wybrany temat i poziom (A2–B2).</div></div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-2xl bg-yellow-500 text-white flex items-center justify-center font-display font-bold shadow-lg shadow-yellow-500/25">2</div>
+            <div><div class="font-display font-semibold text-sm">Google TTS syntezuje Stimme</div><div class="text-xs text-zinc-500">Neural2 — najwyższa jakość. Różni lektorzy M/F w standardowym Hochdeutsch.</div></div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-2xl bg-yellow-500 text-white flex items-center justify-center font-display font-bold shadow-lg shadow-yellow-500/25">3</div>
+            <div><div class="font-display font-semibold text-sm">Hörst du und antwortest</div><div class="text-xs text-zinc-500">Max 2 odtworzenia jak na prawdziwej maturze CKE. Pytania: MCQ, richtig/falsch, Lückentext.</div></div>
+          </div>
+        </div>
+
+        <h3 class="font-display font-bold text-lg mb-4">5 formatów nagrań CKE</h3>
+        <div class="space-y-2">
+          {listeningPatterns.map(p => (
+            <div class="flex items-start gap-3 p-3 rounded-xl bg-white dark:bg-surface-800">
+              <span class="text-xl mt-0.5">{p.icon}</span>
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-sm">{p.name}</span>
+                  <span class={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${p.level === 'PR' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600' : p.level === 'PP/PR' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600'}`}>{p.level}</span>
+                  <span class="text-[10px] text-zinc-400">{p.duration}</span>
+                </div>
+                <p class="text-xs text-zinc-500">{p.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Player mockup -->
+      <div class="glass-card p-6 bg-gradient-to-br from-white to-zinc-50 dark:from-surface-800 dark:to-surface-900 sticky top-28">
+        <div class="text-xs text-zinc-500 mb-3 font-medium">Du hörst ein Interview mit einer Umweltexpertin. Aufgabe 14.</div>
+        <div class="p-5 rounded-2xl bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 mb-5">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center shadow-lg">
+              <svg class="w-6 h-6 ml-0.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+            <div class="flex-1">
+              <div class="h-10 flex items-center gap-[2px] mb-1">
+                {Array.from({length:40}).map((_, i) => {
+                  const h = 20 + Math.sin(i*0.7)*15 + Math.cos(i*1.3)*10;
+                  const filled = i < 15;
+                  return <div class={`flex-1 rounded-full ${filled ? 'bg-yellow-500' : 'bg-zinc-200 dark:bg-zinc-700'}`} style={`height:${Math.max(4,h)}%`}></div>;
+                })}
+              </div>
+              <div class="flex justify-between text-[10px] text-zinc-500 font-mono">
+                <span>0:32 / 2:14</span>
+                <span>⚪⚫ 1 Wiedergabe</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div class="p-3 rounded-xl bg-zinc-100 dark:bg-surface-700 text-xs">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="w-5 h-5 rounded-full bg-yellow-500 text-white text-[9px] flex items-center justify-center font-bold">1</span>
+              <span class="font-semibold">Laut der Expertin ist die Hauptursache für...</span>
+              <span class="ml-auto text-zinc-400">1 pkt</span>
+            </div>
+            <div class="grid grid-cols-4 gap-1 mt-2">
+              {['A','B','C','D'].map(l => (
+                <div class={`px-2 py-1 rounded text-center text-[10px] ${l==='C' ? 'bg-yellow-500 text-white' : 'bg-white dark:bg-surface-800'}`}>{l}</div>
+              ))}
+            </div>
+          </div>
+          <div class="p-3 rounded-xl bg-zinc-100 dark:bg-surface-700 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-yellow-500 text-white text-[9px] flex items-center justify-center font-bold">2</span>
+              <span>Richtig oder Falsch: Die Sprecherin glaubt, dass...</span>
+            </div>
+            <div class="flex gap-2 mt-2">
+              <div class="px-3 py-1 rounded bg-green-500 text-white text-[10px] font-bold">R</div>
+              <div class="px-3 py-1 rounded bg-white dark:bg-surface-800 text-[10px]">F</div>
+            </div>
+          </div>
+          <div class="p-3 rounded-xl bg-zinc-100 dark:bg-surface-700 text-xs opacity-60">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-yellow-500 text-white text-[9px] flex items-center justify-center font-bold">3</span>
+              <span>Ergänze: Die Expertin empfiehlt ________</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 flex items-center gap-2 text-[10px] text-zinc-500">
+          <span class="px-2 py-0.5 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 font-bold">🤖 AI LIVE</span>
+          <span>Aufnahme einzigartig — jede Sitzung anders</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEMATY -->
+<section id="tematy" class="py-20">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Pełny zakres matury z niemieckiego — 14 działów</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">Gramatyka, słownictwo, rozumienie tekstów, Hörverstehen, pisanie — wszystko w jednej platformie.</p>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {topics.map(t => (
+        <div class="glass-card p-6 hover:border-yellow-500/20 transition-all">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="text-2xl">{t.icon}</span>
+            <h3 class="font-display font-bold text-sm">{t.name}</h3>
+            {t.ai && <span class="text-[9px] font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded-full">AI</span>}
+          </div>
+          <p class="text-xs text-zinc-500 leading-relaxed mb-2">{t.desc}</p>
+          <span class="text-xs font-semibold text-yellow-600 dark:text-yellow-400">{t.questions} pytań</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- TYPY ZADAŃ -->
+<section id="typy-zadan" class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Typy zadań maturalnych z niemieckiego</h2>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {questionTypes.map(t => (
+        <div class="glass-card p-5 relative group hover:border-yellow-500/30 transition-all">
+          {t.badge && <span class="absolute top-3 right-3 px-2 py-0.5 rounded-full text-[9px] font-bold bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400">{t.badge}</span>}
+          <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">{t.icon}</div>
+          <h3 class="font-display font-bold text-sm mb-1">{t.name}</h3>
+          <p class="text-xs text-zinc-500 leading-relaxed">{t.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- AI WRITING DEMO -->
+<section class="py-20">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-semibold mb-4">🤖 OCENA AI</div>
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Wypracowanie z niemieckiego — AI ocenia w 30 sekund</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">4 kryteria CKE: Inhalt, Form, Wortschatz und Strukturen, Korrektheit. Do 10 punktów.</p>
+    </div>
+    <div class="max-w-4xl mx-auto glass-card p-8">
+      <div class="mb-6 pb-6 border-b border-zinc-200 dark:border-zinc-700">
+        <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Schreibaufgabe · Niemiecki PP · E-Mail</div>
+        <p class="font-display text-lg font-semibold">Schreibe eine E-Mail an deinen deutschen Freund über deinen letzten Schulausflug. Beschreibe: wohin ihr gefahren seid, was ihr gemacht habt, und ob du den Ausflug empfehlen würdest.</p>
+      </div>
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Ocena AI — 4 kryteria CKE</div>
+          <div class="flex items-baseline gap-1"><span class="font-display font-extrabold text-3xl text-yellow-500">8</span><span class="text-zinc-500 text-sm">/ 10 pkt</span></div>
+        </div>
+        <div class="space-y-3">
+          {[
+            { name: 'Inhalt (Treść)', score: 4, max: 4, pct: 100, fb: 'Alle 3 Elemente der Aufgabe berücksichtigt und entwickelt.' },
+            { name: 'Form (Forma)', score: 2, max: 2, pct: 100, fb: 'Prawidłowy format E-Mail — Anrede, Gruß, Unterschrift.' },
+            { name: 'Wortschatz und Strukturen', score: 1, max: 2, pct: 50, fb: 'Wortschatz ausreichend, aber wenig abwechslungsreich. Verwende mehr komplexe Strukturen (Nebensätze, Konjunktiv II).' },
+            { name: 'Korrektheit (Poprawność)', score: 1, max: 2, pct: 50, fb: '3 Fehler: Deklination (dem → den), Verbstellung im Nebensatz, Genus (das Stadt → die Stadt).' },
+          ].map(c => (
+            <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-surface-800">
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-display font-semibold text-sm">{c.name}</span>
+                <span class="text-sm"><strong class="text-yellow-600">{c.score}</strong><span class="text-zinc-400">/{c.max}</span></span>
+              </div>
+              <div class="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden"><div class="h-full bg-yellow-500 rounded-full" style={`width:${c.pct}%`}></div></div>
+              <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-2">{c.fb}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-14"><h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Narzędzia do nauki niemieckiego</h2></div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[
+        { icon: '🎧', title: 'Nieograniczone Hörverstehen AI', desc: 'Każde nagranie unikalne — AI generuje Transkript, Google TTS syntezuje Stimme w Hochdeutsch. 5 formatów, max 2 odtworzenia.' },
+        { icon: '✍️', title: 'Schreiben oceniane przez AI', desc: 'E-Mail, Aufsatz, Erörterung — AI ocenia 4 kryteria CKE w 30 sekund z konkretnymi wskazówkami.' },
+        { icon: '📋', title: 'Deklinacja i rekcja', desc: 'Nominativ, Akkusativ, Dativ, Genitiv — ćwicz deklinację i rekcję czasowników z natychmiastowym feedbackiem.' },
+        { icon: '🎯', title: 'Adaptacyjna trudność', desc: 'A2 do B2 — system Elo automatycznie dopasowuje poziom po każdej odpowiedzi.' },
+        { icon: '🧠', title: 'Spaced Repetition', desc: 'Rekcja czasowników, kolokacje, rodzajniki, nieregularne czasowniki — algorytm SM-2 pilnuje powtórek.' },
+        { icon: '🏆', title: 'Gamifikacja', desc: 'Punkty XP, poziomy, streaki, osiągnięcia. Nauka niemieckiego jako nawyk, nie kara.' },
+      ].map(f => (
+        <div class="glass-card p-8"><div class="text-4xl mb-4">{f.icon}</div><h3 class="font-display font-bold text-lg mb-2">{f.title}</h3><p class="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">{f.desc}</p></div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="cennik" class="py-20">
+  <div class="max-w-4xl mx-auto px-6">
+    <div class="text-center mb-14">
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Jedna cena — niemiecki + 10 innych przedmiotów</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg">Subskrypcja daje pełny dostęp do wszystkich 11 przedmiotów. Hörverstehen AI wliczone.</p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="glass-card p-8 ring-2 ring-yellow-500 relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-500 text-white text-xs font-bold px-4 py-1 rounded-full">POLECANY</div>
+        <h3 class="font-display font-bold text-lg mb-1">Subskrypcja miesięczna</h3>
+        <p class="text-sm text-zinc-500 mb-6">Wszystkie przedmioty + Hörverstehen AI</p>
+        <div class="flex items-baseline gap-1 mb-6"><span class="font-display font-extrabold text-5xl">49</span><span class="text-zinc-500">zł/mies.</span></div>
+        <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+          <li class="flex items-start gap-2"><span class="text-yellow-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">Niemiecki + 10 innych</strong></li>
+          <li class="flex items-start gap-2"><span class="text-yellow-500 mt-0.5">✓</span> Nieograniczone nagrania AI</li>
+          <li class="flex items-start gap-2"><span class="text-yellow-500 mt-0.5">✓</span> AI ocena wypracowań wg CKE</li>
+          <li class="flex items-start gap-2"><span class="text-yellow-500 mt-0.5">✓</span> <span data-qcount-min="niemiecki">{totalQuestions}+</span> pytań z niemieckiego</li>
+          <li class="flex items-start gap-2"><span class="text-yellow-500 mt-0.5">✓</span> 600 kredytów AI / miesiąc</li>
+          <li class="flex items-start gap-2"><span class="text-yellow-500 mt-0.5">✓</span> Anulujesz kiedy chcesz</li>
+        </ul>
+        <a href="/auth/register?plan=subscription" class="btn-primary w-full">Rozpocznij subskrypcję</a>
+      </div>
+      <div class="glass-card p-8">
+        <h3 class="font-display font-bold text-lg mb-1">Dostęp jednorazowy</h3>
+        <p class="text-sm text-zinc-500 mb-6">30 dni pełnego dostępu</p>
+        <div class="flex items-baseline gap-1 mb-6"><span class="font-display font-extrabold text-5xl">59</span><span class="text-zinc-500">zł / 30 dni</span></div>
+        <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+          <li class="flex items-start gap-2"><span class="text-yellow-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">Identyczny dostęp</strong></li>
+          <li class="flex items-start gap-2"><span class="text-yellow-500 mt-0.5">✓</span> Bez automatycznego odnowienia</li>
+          <li class="flex items-start gap-2"><span class="text-yellow-500 mt-0.5">✓</span> BLIK, karta, Revolut Pay</li>
+        </ul>
+        <a href="/auth/register?plan=one_time" class="btn-outline w-full">Kup dostęp 59 zł</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="py-20 bg-zinc-50 dark:bg-surface-900">
+  <div class="max-w-3xl mx-auto px-6">
+    <h2 class="font-display font-bold text-3xl md:text-4xl text-center mb-4">FAQ — Matura z niemieckiego 2026</h2>
+    <p class="text-center text-zinc-600 dark:text-zinc-400 mb-14">Najczęstsze pytania o Hörverstehen AI i przygotowanie do matury</p>
+    <div class="space-y-3">
+      {faq.map(item => (
+        <details class="glass-card group">
+          <summary class="flex items-center justify-between p-6 cursor-pointer font-display font-semibold select-none gap-4"><span>{item.q}</span><svg class="w-5 h-5 text-zinc-400 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></summary>
+          <div class="px-6 pb-6 text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">{item.a}</div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- INNE PRZEDMIOTY -->
+<section class="py-20">
+  <div class="max-w-6xl mx-auto px-6">
+    <div class="text-center mb-10"><h2 class="font-display font-bold text-2xl md:text-3xl mb-3">Zdajesz też inne przedmioty?</h2><p class="text-zinc-600 dark:text-zinc-400">Jedna subskrypcja — wszystkie odblokowane</p></div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {otherSubjects.map(s => (
+        <a href={`/przedmiot/${s.slug}`} class="glass-card p-4 text-center group hover:border-yellow-500/30 transition-all block"><div class="text-3xl mb-2 group-hover:scale-110 transition-transform">{s.icon}</div><div class="font-display font-semibold text-sm">{s.name}</div></a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="py-20 relative overflow-hidden">
+  <div class="absolute inset-0 -z-10"><div class="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-amber-500/5 to-transparent"></div></div>
+  <div class="max-w-3xl mx-auto px-6 text-center">
+    <div class="text-5xl mb-6">🎧</div>
+    <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Hörverstehen to klucz do matury z niemieckiego</h2>
+    <p class="text-zinc-600 dark:text-zinc-400 text-lg mb-8 max-w-2xl mx-auto">Na prawdziwej maturze nagranie odtworzysz tylko 2 razy. Jedyny sposób na opanowanie Hörverstehen to codzienne ćwiczenie. AI daje Ci nieskończoną pulę nagrań w Hochdeutsch.</p>
+    <a href="/auth/register" class="btn-primary text-base py-4 px-8">Rozpocznij naukę niemieckiego — 49 zł/mies.<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></a>
+  </div>
+</section>
+
+<script type="application/ld+json" set:html={JSON.stringify(faqSchema)}></script>
+<Footer />
+</Base>

@@ -1,0 +1,105 @@
+---
+/**
+ * Shared Header / Nav for public pages (homepage, subject pages).
+ *
+ * Props
+ * ─────
+ * navLinks  – array of { href, label } for the centre navigation
+ *             (each page passes its own anchor links)
+ *
+ * Usage
+ * ─────
+ * <Header navLinks={[
+ *   { href: '#przedmioty', label: 'Przedmioty' },
+ *   { href: '#cennik',     label: 'Cennik' },
+ * ]} />
+ */
+
+import { ThemeToggle } from './ui/ThemeToggle';
+
+interface NavLink {
+  href: string;
+  label: string;
+}
+
+interface Props {
+  navLinks?: NavLink[];
+}
+
+const { navLinks = [] } = Astro.props;
+---
+
+<nav class="fixed top-0 w-full z-50 border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-surface-950/80 backdrop-blur-xl">
+  <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+
+    <!-- Logo -->
+    <a href="/" class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
+        <span class="text-white font-display font-bold text-lg">M</span>
+      </div>
+      <span class="font-display font-bold text-xl hidden sm:block">Matury Online</span>
+    </a>
+
+    <!-- Centre nav links (desktop) -->
+    {navLinks.length > 0 && (
+      <div class="hidden md:flex items-center gap-7">
+        {navLinks.map((link) => (
+          <a
+            href={link.href}
+            class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+    )}
+
+    <!-- Right side: theme toggle + auth buttons -->
+    <div class="flex items-center gap-3">
+      <ThemeToggle client:load />
+
+      <!-- ── Logged-out buttons (default, hidden once auth check resolves) ── -->
+      <div id="header-guest" class="flex items-center gap-2 sm:gap-3">
+        
+       <a href="/auth/login"
+          class="btn-ghost text-xs sm:text-sm py-1.5 sm:py-2 px-3 sm:px-4"
+        >
+          Zaloguj
+        </a>
+        <a href="/auth/register" class="btn-primary text-xs sm:text-sm py-1.5 sm:py-2 px-3 sm:px-5">
+          Załóż konto
+        </a>
+      </div>
+
+      <!-- ── Logged-in button (hidden by default) ── -->
+      <div id="header-user" class="hidden">
+        <a
+          href="/dashboard"
+          class="btn-primary text-sm py-2 px-5 inline-flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          Wróć do panelu
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Auth check — swap buttons based on session -->
+<script is:inline>
+  (function () {
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(function (r) {
+        if (r.ok) {
+          var guest = document.getElementById('header-guest');
+          var user  = document.getElementById('header-user');
+          if (guest) guest.classList.add('hidden');
+          if (user)  user.classList.remove('hidden');
+        }
+      })
+      .catch(function () { /* noop — stay in guest mode */ });
+  })();
+</script>

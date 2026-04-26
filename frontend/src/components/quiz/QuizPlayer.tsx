@@ -1057,7 +1057,7 @@ export function QuizPlayer({
                         : 1;
             return (
               <span className="text-[9px] px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-semibold ml-1">
-                🤖 AI fallback do ~{n} kr.
+                🤖 Ocena AI ~{n} kr.
               </span>
             );
           }

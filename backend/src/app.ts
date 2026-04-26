@@ -11,6 +11,7 @@ import { stripePlugin } from "./plugins/stripe.js";
 import { authPlugin } from "./plugins/auth.js";
 import { authRoutes } from "./routes/auth.js";
 import { subjectRoutes } from "./routes/subjects.js";
+import { publicRoutes } from "./routes/public.js";
 import { questionRoutes } from "./routes/questions.js";
 import { sessionRoutes } from "./routes/sessions.js";
 import { answerRoutes } from "./routes/answers.js";
@@ -97,6 +98,7 @@ await app.register(adminListeningRoutes, { prefix: "/api/admin" });
 await app.register(adminClaudeRoutes, { prefix: "/api/admin" });
 await app.register(listeningRoutes, { prefix: "/api/listening" });
 await app.register(contactRoutes, { prefix: "/api/contact" });
+await app.register(publicRoutes, { prefix: "/api/public" });
 
 // ── Health ───────────────────────────────────────────────────────────────────
 

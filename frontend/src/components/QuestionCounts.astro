@@ -1,0 +1,40 @@
+---
+/**
+ * // frontend/src/components/QuestionCounts.astro
+ * 
+ * Auto-updates question counts from the database.
+ * 
+ * Usage: Add data attributes to any element:
+ *   data-qcount="polski"     → replaces text with count for polski
+ *   data-qcount="total"      → replaces text with total across all subjects
+ *   data-qcount-min="polski" → replaces with rounded "500+" format
+ * 
+ * Include this component once per page (e.g. before </Base>).
+ */
+---
+
+<script is:inline>
+(function() {
+  fetch('/api/public/question-counts')
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data) return;
+
+      // Exact counts: data-qcount="polski" → "523"
+      document.querySelectorAll('[data-qcount]').forEach(function(el) {
+        var key = el.getAttribute('data-qcount');
+        var val = key === 'total' ? data.total : (data.bySubject[key] || 0);
+        el.textContent = val.toLocaleString('pl-PL');
+      });
+
+      // Rounded "500+" format: data-qcount-min="polski" → "500+"
+      document.querySelectorAll('[data-qcount-min]').forEach(function(el) {
+        var key = el.getAttribute('data-qcount-min');
+        var val = key === 'total' ? data.total : (data.bySubject[key] || 0);
+        var rounded = Math.floor(val / 100) * 100;
+        el.textContent = rounded + '+';
+      });
+    })
+    .catch(function() { /* keep fallback values */ });
+})();
+</script>

@@ -1,6 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
-import { ThemeToggle } from '../../../components/ui/ThemeToggle';
+import Header from '../../../components/Header.astro';
+import Footer from '../../../components/Footer.astro';
 
 const topics = [
   { name: 'Kinematyka', icon: '🏃', questions: 34, subtopics: ['Ruch jednostajny', 'Ruch jednostajnie przyspieszony', 'Ruch po okręgu', 'Rzut poziomy', 'Rzut ukośny', 'Wykresy ruchu'] },
@@ -60,19 +61,13 @@ const otherSubjects = [
 ---
 <Base title="Matura z Fizyki 2026 — Mechanika, Elektryczność, Optyka, Zadania AI | Matury Online">
 <!-- NAV -->
-<nav class="fixed top-0 w-full z-50 border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-surface-950/80 backdrop-blur-xl">
-  <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-    <a href="/" class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center shadow-lg shadow-brand-500/20"><span class="text-white font-display font-bold text-lg">M</span></div><span class="font-display font-bold text-xl hidden sm:block">Matury Online</span></a>
-    <div class="hidden md:flex items-center gap-7">
-      <a href="#dzialy" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Działy</a>
-      <a href="#typy-zadan" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Typy zadań</a>
-      <a href="#wzory" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Wzory</a>
-      <a href="#cennik" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Cennik</a>
-      <a href="#faq" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">FAQ</a>
-    </div>
-    <div class="flex items-center gap-3"><ThemeToggle client:load /><a href="/auth/login" class="btn-ghost text-sm py-2 px-4 hidden sm:inline-flex">Zaloguj się</a><a href="/auth/register" class="btn-primary text-sm py-2 px-5">Rozpocznij naukę</a></div>
-  </div>
-</nav>
+<Header navLinks={[
+  { href: '#tematy', label: 'Tematy' },
+  { href: '#typy-zadan', label: 'Typy zadań' },
+  { href: '#cennik', label: 'Cennik' },
+  { href: '#faq', label: 'FAQ' },
+]} />
+  
 
 <!-- HERO -->
 <section class="relative pt-32 pb-16 md:pt-40 md:pb-20 overflow-hidden">
@@ -84,7 +79,7 @@ const otherSubjects = [
     <div class="animate-fade-in"><a href="/" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-sm font-medium mb-6 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition">← Wszystkie przedmioty</a></div>
     <div class="animate-fade-in">
       <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm font-semibold mb-8">
-        <span class="text-2xl">⚛️</span> Fizyka · PR · {totalQuestions}+ zadań
+        <span class="text-2xl">⚛️</span> Fizyka · PR · <span data-qcount-min="fizyka">{totalQuestions}+</span> zadań
       </div>
     </div>
     <h1 class="font-display font-extrabold text-5xl md:text-7xl lg:text-8xl leading-[0.9] tracking-tight mb-6 animate-slide-up">
@@ -98,7 +93,7 @@ const otherSubjects = [
     </div>
     <div class="flex flex-wrap justify-center gap-8 md:gap-16 mt-16 animate-fade-in" style="animation-delay: 400ms">
       <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">11</div><div class="text-sm text-zinc-500 mt-1">działów</div></div>
-      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">{totalQuestions}+</div><div class="text-sm text-zinc-500 mt-1">zadań</div></div>
+      <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100" data-qcount-min="fizyka">{totalQuestions}+</div><div class="text-sm text-zinc-500 mt-1">zadań</div></div>
       <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">8</div><div class="text-sm text-zinc-500 mt-1">typów zadań</div></div>
       <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">PR</div><div class="text-sm text-zinc-500 mt-1">rozszerzony</div></div>
       <div class="text-center"><div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">AI</div><div class="text-sm text-zinc-500 mt-1">ocena obliczeniowych</div></div>
@@ -318,8 +313,8 @@ const otherSubjects = [
 <section id="cennik" class="py-20">
   <div class="max-w-4xl mx-auto px-6">
     <div class="text-center mb-14">
-      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Jedna cena — fizyka + 9 innych przedmiotów</h2>
-      <p class="text-zinc-600 dark:text-zinc-400 text-lg">Subskrypcja daje pełny dostęp do wszystkich 10 przedmiotów maturalnych.</p>
+      <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Jedna cena — fizyka + 10 innych przedmiotów</h2>
+      <p class="text-zinc-600 dark:text-zinc-400 text-lg">Subskrypcja daje pełny dostęp do wszystkich 11 przedmiotów maturalnych.</p>
     </div>
     <div class="grid md:grid-cols-2 gap-6">
       <div class="glass-card p-8 ring-2 ring-blue-500 relative">
@@ -328,9 +323,9 @@ const otherSubjects = [
         <p class="text-sm text-zinc-500 mb-6">Wszystkie przedmioty, bez limitów</p>
         <div class="flex items-baseline gap-1 mb-6"><span class="font-display font-extrabold text-5xl">49</span><span class="text-zinc-500">zł/mies.</span></div>
         <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
-          <li class="flex items-start gap-2"><span class="text-blue-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">Fizyka + 9 innych</strong></li>
+          <li class="flex items-start gap-2"><span class="text-blue-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">Fizyka + 10 innych</strong></li>
           <li class="flex items-start gap-2"><span class="text-blue-500 mt-0.5">✓</span> AI ocena obliczeniowych krok po kroku</li>
-          <li class="flex items-start gap-2"><span class="text-blue-500 mt-0.5">✓</span> {totalQuestions}+ zadań z fizyki</li>
+          <li class="flex items-start gap-2"><span class="text-blue-500 mt-0.5">✓</span> <span data-qcount-min="fizyka">{totalQuestions}+</span> zadań z fizyki</li>
           <li class="flex items-start gap-2"><span class="text-blue-500 mt-0.5">✓</span> Spaced Repetition + adaptacja</li>
           <li class="flex items-start gap-2"><span class="text-blue-500 mt-0.5">✓</span> 600 kredytów AI / miesiąc</li>
           <li class="flex items-start gap-2"><span class="text-blue-500 mt-0.5">✓</span> Anulujesz kiedy chcesz</li>
@@ -392,77 +387,7 @@ const otherSubjects = [
 </section>
 
 <!-- FOOTER -->
-<footer class="border-t border-zinc-200 dark:border-zinc-800 py-12 bg-white dark:bg-surface-950">
-  <div class="max-w-6xl mx-auto px-6">
-    <div class="grid md:grid-cols-6 gap-8 mb-8">
-      <div class="md:col-span-2">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center">
-            <span class="text-white font-display font-bold text-sm">M</span>
-          </div>
-          <span class="font-display font-bold">Matury Online</span>
-        </div>
-        <p class="text-sm text-zinc-500 mb-4 max-w-sm">
-          Inteligentna platforma do nauki przed maturą 2026. Wszystkie popularne przedmioty, 5000+ pytań, AI ocena wypracowań, nieograniczone słuchanie angielskiego generowane na żywo.
-        </p>
-        <p class="text-xs text-zinc-400">
-          matury-online.pl · polska platforma EdTech
-        </p>
-      </div>
-                  <div>
-        <h4 class="font-display font-semibold text-sm mb-4">Przedmioty</h4>
-        <ul class="space-y-2 text-sm text-zinc-500">
-          <li><a href="/przedmiot/polski" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polski</a></li>
-          <li><a href="/przedmiot/matematyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Matematyka</a></li>
-          <li><a href="/przedmiot/angielski" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Angielski</a></li>
-          <li><a href="/przedmiot/biologia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Biologia</a></li>
-          <li><a href="/przedmiot/chemia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Chemia</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4 class="font-display font-semibold text-sm mb-4">&nbsp;</h4>
-        <ul class="space-y-2 text-sm text-zinc-500">
-          <li><a href="/przedmiot/fizyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Fizyka</a></li>
-          <li><a href="/przedmiot/historia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Historia</a></li>
-          <li><a href="/przedmiot/geografia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Geografia</a></li>
-          <li><a href="/przedmiot/wos" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">WOS</a></li>
-          <li><a href="/przedmiot/informatyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Informatyka</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4 class="font-display font-semibold text-sm mb-4">&nbsp;</h4>
-        <ul class="space-y-2 text-sm text-zinc-500">
-          <li><a href="/przedmiot/fizyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Fizyka</a></li>
-          <li><a href="/przedmiot/historia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Historia</a></li>
-          <li><a href="/przedmiot/geografia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Geografia</a></li>
-          <li><a href="/przedmiot/wos" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">WOS</a></li>
-          <li><a href="/przedmiot/informatyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Informatyka</a></li>
-        </ul>
-      </div>
-      
-      <div>
-        <h4 class="font-display font-semibold text-sm mb-4">Prawne</h4>
-        <ul class="space-y-2 text-sm text-zinc-500">
-          <li><a href="/terms-of-service" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Regulamin</a></li>
-          <li><a href="/privacy-policy" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polityka prywatności</a></li>
-          <li>          
-          <button
-            type="button"
-            onclick="window.openConsentSettings && window.openConsentSettings()"
-            class="hover:text-zinc-900 dark:hover:text-zinc-100 transition"
-          >
-            Cookies
-          </button>
-          </li>
-          <li><a href="/kontakt" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Kontakt</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="border-t border-zinc-200 dark:border-zinc-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p class="text-sm text-zinc-500">© 2026 matury-online.pl · Realizacja: <a href="https://karol-leszczynski.pl" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">karol-leszczynski.pl</a></p>
-      <p class="text-xs text-zinc-400">Matura 2026 · Platforma EdTech · Polski produkt</p>
-    </div>
-  </div>
-</footer>
+
 <script type="application/ld+json" set:html={JSON.stringify(faqSchema)}></script>
+<Footer />
 </Base>

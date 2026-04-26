@@ -1,12 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
-import { ThemeToggle } from '../components/ui/ThemeToggle';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+
 
 // ── PRZEDMIOTY (10 popularnych maturalnych) ────────────────────────────────
 const subjects = [
   { slug: 'polski',      name: 'Język polski',    short: 'Polski',      icon: '📚', color: '#6366f1', questions: 500, topics: 'Epoki · Lektury · Rozprawka · Interpretacja', level: 'PP + PR' },
   { slug: 'matematyka',  name: 'Matematyka',      short: 'Matematyka',  icon: '📐', color: '#f59e0b', questions: 500, topics: 'Funkcje · Geometria · Trygonometria · Stereometria', level: 'PP + PR' },
   { slug: 'angielski',   name: 'Język angielski', short: 'Angielski',   icon: '🇬🇧', color: '#ef4444', questions: 500, topics: 'Słuchanie AI · Gramatyka · Słownictwo · Pisanie', level: 'PP + PR' },
+  { slug: 'niemiecki',   name: 'Język niemiecki', short: 'Angielski',   icon: '🇩🇪', color: '#dea01b', questions: 500, topics: 'Słuchanie AI · Gramatyka · Słownictwo · Pisanie', level: 'PP + PR' },
   { slug: 'biologia',    name: 'Biologia',        short: 'Biologia',    icon: '🧬', color: '#22c55e', questions: 500, topics: 'Genetyka · Ekologia · Fizjologia · Ewolucja', level: 'PP + PR' },
   { slug: 'chemia',      name: 'Chemia',          short: 'Chemia',      icon: '⚗️', color: '#a855f7', questions: 500, topics: 'Organiczna · Stechiometria · Reakcje · Obliczenia', level: 'PP + PR' },
   { slug: 'fizyka',      name: 'Fizyka',          short: 'Fizyka',      icon: '⚛️', color: '#3b82f6', questions: 500, topics: 'Mechanika · Elektryczność · Termodynamika · Optyka', level: 'PP + PR' },
@@ -52,7 +55,7 @@ const features = [
 // ── FAQ ROZBUDOWANE (pod SEO long-tail) ────────────────────────────────────
 const faq = [
   { q: 'Ile kosztuje platforma matury-online.pl w 2026 roku?',
-    a: 'Subskrypcja kosztuje 49 zł miesięcznie i daje pełny dostęp do wszystkich przedmiotów, typów zadań i funkcji AI. Alternatywnie jednorazowa płatność 59 zł daje 30 dni dostępu bez subskrypcji. Oba warianty odblokowują dokładnie to samo — 10 przedmiotów maturalnych, 5000+ pytań, AI ocena wypracowań, słuchanie angielskiego generowane na żywo, Spaced Repetition i pełne statystyki.' },
+    a: 'Subskrypcja kosztuje 49 zł miesięcznie i daje pełny dostęp do wszystkich przedmiotów, typów zadań i funkcji AI. Alternatywnie jednorazowa płatność 59 zł daje 30 dni dostępu bez subskrypcji. Oba warianty odblokowują dokładnie to samo — 11 przedmiotów maturalnych, tysiące pytań, AI ocena wypracowań, słuchanie angielskiego i niemieckiego generowane na żywo, Spaced Repetition i pełne statystyki.' },
   { q: 'Jakie przedmioty maturalne są dostępne na platformie?',
     a: 'Obsługujemy wszystkie popularne przedmioty maturalne: język polski, matematykę, język angielski, biologię, chemię, fizykę, historię, geografię, WOS (wiedzę o społeczeństwie) i informatykę. Każdy przedmiot ma poziom podstawowy (PP) i rozszerzony (PR), minimum 500 pytań autorskich, zgodnych z podstawą programową CKE.' },
   { q: 'Czy AI naprawdę potrafi ocenić wypracowanie maturalne?',
@@ -93,7 +96,7 @@ const productSchema = {
   '@context': 'https://schema.org',
   '@type': 'Product',
   name: 'Matura Online — Platforma przygotowania do matury 2026',
-  description: 'Kompletna platforma do nauki przed maturą z AI. 10 przedmiotów, 5000+ pytań, 19 typów zadań, ocena wypracowań przez AI, generowane na żywo słuchanie angielskiego.',
+  description: 'Kompletna platforma do nauki przed maturą z AI. 11 przedmiotów, tysiące pytań, 19 typów zadań, ocena wypracowań przez AI, generowane na żywo słuchanie angielskiego i niemieckiego.',
   brand: { '@type': 'Brand', name: 'Matury Online' },
   offers: {
     '@type': 'AggregateOffer',
@@ -110,27 +113,15 @@ const productSchema = {
 <!-- ══════════════════════════════════════════════════════════════════════ -->
 <!-- NAV                                                                      -->
 <!-- ══════════════════════════════════════════════════════════════════════ -->
-<nav class="fixed top-0 w-full z-50 border-b border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-surface-950/80 backdrop-blur-xl">
-  <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-    <a href="/" class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
-        <span class="text-white font-display font-bold text-lg">M</span>
-      </div>
-      <span class="font-display font-bold text-xl hidden sm:block">Matury Online</span>
-    </a>
-    <div class="hidden md:flex items-center gap-7">
-      <a href="#przedmioty" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Przedmioty</a>
-      <a href="#zadania" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Typy zadań</a>
-      <a href="#funkcje" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Funkcje</a>
-      <a href="#cennik" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">Cennik</a>
-      <a href="#faq" class="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition">FAQ</a>
-    </div>
-    <div class="flex items-center gap-3">
-      <ThemeToggle client:load />
-      <a href="/auth/login" class="btn-ghost text-sm py-2 px-4 hidden sm:inline-flex">Zaloguj się</a>
-      <a href="/auth/register" class="btn-primary text-sm py-2 px-5">Rozpocznij naukę</a>
-    </div>
-  </div>
+<Header navLinks={[
+  { href: '#przedmioty', label: 'Przedmioty' },
+  { href: '#zadania', label: 'Typy zadań' },
+  { href: '#funkcje', label: 'Funkcje' },
+  { href: '#cennik', label: 'Cennik' },
+  { href: '#faq', label: 'FAQ' },
+]} />
+
+
 </nav>
 
 <!-- ══════════════════════════════════════════════════════════════════════ -->
@@ -147,7 +138,7 @@ const productSchema = {
     <div class="animate-fade-in">
       <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-100 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 text-sm font-semibold mb-8">
         <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
-        Platforma #1 do matury 2026 · 10 przedmiotów · 19 typów zadań
+        Platforma #1 do matury 2026 · 11 przedmiotów · 19 typów zadań
       </div>
     </div>
 
@@ -157,7 +148,7 @@ const productSchema = {
     </h1>
 
     <p class="max-w-2xl mx-auto text-lg md:text-xl text-zinc-600 dark:text-zinc-400 mb-10 animate-slide-up" style="animation-delay: 100ms">
-      Kompletna platforma do nauki przed maturą. <strong class="text-zinc-900 dark:text-zinc-100">10 przedmiotów</strong>, <strong class="text-zinc-900 dark:text-zinc-100">5000+ pytań</strong>, wypracowania oceniane przez AI według <strong class="text-zinc-900 dark:text-zinc-100">kryteriów CKE</strong>, nieograniczone słuchanie angielskiego generowane na żywo. Jedna cena — wszystko odblokowane.
+      Kompletna platforma do nauki przed maturą. <strong class="text-zinc-900 dark:text-zinc-100">11 przedmiotów</strong>, <strong class="text-zinc-900 dark:text-zinc-100"><span data-qcount-min="total">8000+</span> pytań</strong>, wypracowania oceniane przez AI według <strong class="text-zinc-900 dark:text-zinc-100">kryteriów CKE</strong>, nieograniczone słuchanie angielskiego generowane na żywo. Jedna cena — wszystko odblokowane.
     </p>
 
     <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up" style="animation-delay: 200ms">
@@ -170,11 +161,11 @@ const productSchema = {
     <!-- Stats -->
     <div class="flex flex-wrap justify-center gap-8 md:gap-16 mt-16 animate-fade-in" style="animation-delay: 400ms">
       <div class="text-center">
-        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">10</div>
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">11</div>
         <div class="text-sm text-zinc-500 mt-1">przedmiotów</div>
       </div>
       <div class="text-center">
-        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100">5000+</div>
+        <div class="font-display font-extrabold text-3xl md:text-4xl text-zinc-900 dark:text-zinc-100" data-qcount-min="total">8000+</div>
         <div class="text-sm text-zinc-500 mt-1">pytań</div>
       </div>
       <div class="text-center">
@@ -263,7 +254,7 @@ const productSchema = {
     <div class="text-center mb-14">
       <h2 class="font-display font-bold text-3xl md:text-4xl mb-4">Wszystkie popularne przedmioty maturalne</h2>
       <p class="text-zinc-600 dark:text-zinc-400 text-lg max-w-2xl mx-auto">
-        10 przedmiotów z pełnymi zestawami pytań dla poziomu podstawowego i rozszerzonego. Za jedną cenę — wszystkie odblokowane, bez ograniczeń dziennych.
+        11 przedmiotów z pełnymi zestawami pytań dla poziomu podstawowego i rozszerzonego. Za jedną cenę — wszystkie odblokowane, bez ograniczeń dziennych.
       </p>
     </div>
 
@@ -273,7 +264,7 @@ const productSchema = {
           
           <div class="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">{s.icon}</div>
           <div class="font-display font-semibold text-sm mb-1">{s.short}</div>
-          <div class="text-xs text-zinc-500 mb-1">{s.questions}+ pytań</div>
+          <div class="text-xs text-zinc-500 mb-1"><span data-qcount-min={s.slug}>{s.questions}+</span> pytań</div>
           <div class="text-[10px] text-brand-600 dark:text-brand-400 font-medium">{s.level}</div>
           <div class="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" style={`background: linear-gradient(135deg, ${s.color}08, ${s.color}15)`}></div>
         </a>
@@ -444,7 +435,7 @@ const productSchema = {
           🎧 FUNKCJA UNIKALNA NA RYNKU
         </div>
         <h2 class="font-display font-bold text-3xl md:text-4xl mb-6">
-          Nieograniczona liczba nagrań do matury z angielskiego — AI tworzy je specjalnie dla Ciebie
+          Nieograniczona liczba nagrań do matury z angielskiego i niemieckiego — AI tworzy je specjalnie dla Ciebie
         </h2>
         <p class="text-zinc-600 dark:text-zinc-400 text-lg mb-6 leading-relaxed">
           Żadna inna platforma w Polsce tego nie ma. Za każdym razem, gdy prosisz o zadanie ze słuchania, AI generuje świeży transkrypt, a Google Text-to-Speech syntezuje głos w autentycznym akcencie. Każda sesja inna, każde nagranie unikalne.
@@ -796,10 +787,10 @@ const productSchema = {
           <span class="text-zinc-500">zł/mies.</span>
         </div>
         <ul class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400 mb-8">
-          <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">10 przedmiotów</strong> maturalnych</li>
-          <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">Nieograniczone pytania</strong> (5000+ w bazie)</li>
+          <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">11 przedmiotów</strong> maturalnych</li>
+          <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">✓</span> <strong class="text-zinc-900 dark:text-zinc-100">Nieograniczone pytania</strong> (<span data-qcount-min="total">8000+</span> w bazie)</li>
           <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">✓</span> AI ocena wypracowań według CKE</li>
-          <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">✓</span> Nieograniczone słuchanie angielskiego (AI)</li>
+          <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">✓</span> Nieograniczone słuchanie angielskiego i niemieckiego</li>
           <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">✓</span> Spaced Repetition + adaptacyjna trudność</li>
           <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">✓</span> 600 kredytów AI co miesiąc</li>
           <li class="flex items-start gap-2"><span class="text-brand-500 mt-0.5">✓</span> Pełne statystyki i dashboard</li>
@@ -962,81 +953,11 @@ const productSchema = {
 <!-- ══════════════════════════════════════════════════════════════════════ -->
 <!-- FOOTER                                                                   -->
 <!-- ══════════════════════════════════════════════════════════════════════ -->
-<footer class="border-t border-zinc-200 dark:border-zinc-800 py-12 bg-white dark:bg-surface-950">
-  <div class="max-w-6xl mx-auto px-6">
-    <div class="grid md:grid-cols-6 gap-8 mb-8">
-      <div class="md:col-span-2">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center">
-            <span class="text-white font-display font-bold text-sm">M</span>
-          </div>
-          <span class="font-display font-bold">Matury Online</span>
-        </div>
-        <p class="text-sm text-zinc-500 mb-4 max-w-sm">
-          Inteligentna platforma do nauki przed maturą 2026. Wszystkie popularne przedmioty, 5000+ pytań, AI ocena wypracowań, nieograniczone słuchanie angielskiego generowane na żywo.
-        </p>
-        <p class="text-xs text-zinc-400">
-          matury-online.pl · polska platforma EdTech
-        </p>
-      </div>
-                  <div>
-        <h4 class="font-display font-semibold text-sm mb-4">Przedmioty</h4>
-        <ul class="space-y-2 text-sm text-zinc-500">
-          <li><a href="/przedmiot/polski" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polski</a></li>
-          <li><a href="/przedmiot/matematyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Matematyka</a></li>
-          <li><a href="/przedmiot/angielski" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Angielski</a></li>
-          <li><a href="/przedmiot/biologia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Biologia</a></li>
-          <li><a href="/przedmiot/chemia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Chemia</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4 class="font-display font-semibold text-sm mb-4">&nbsp;</h4>
-        <ul class="space-y-2 text-sm text-zinc-500">
-          <li><a href="/przedmiot/fizyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Fizyka</a></li>
-          <li><a href="/przedmiot/historia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Historia</a></li>
-          <li><a href="/przedmiot/geografia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Geografia</a></li>
-          <li><a href="/przedmiot/wos" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">WOS</a></li>
-          <li><a href="/przedmiot/informatyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Informatyka</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4 class="font-display font-semibold text-sm mb-4">&nbsp;</h4>
-        <ul class="space-y-2 text-sm text-zinc-500">
-          <li><a href="/przedmiot/fizyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Fizyka</a></li>
-          <li><a href="/przedmiot/historia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Historia</a></li>
-          <li><a href="/przedmiot/geografia" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Geografia</a></li>
-          <li><a href="/przedmiot/wos" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">WOS</a></li>
-          <li><a href="/przedmiot/informatyka" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Informatyka</a></li>
-        </ul>
-      </div>
-      
-      <div>
-        <h4 class="font-display font-semibold text-sm mb-4">Prawne</h4>
-        <ul class="space-y-2 text-sm text-zinc-500">
-          <li><a href="/terms-of-service" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Regulamin</a></li>
-          <li><a href="/privacy-policy" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Polityka prywatności</a></li>
-          <li>          
-          <button
-            type="button"
-            onclick="window.openConsentSettings && window.openConsentSettings()"
-            class="hover:text-zinc-900 dark:hover:text-zinc-100 transition"
-          >
-            Cookies
-          </button>
-          </li>
-          <li><a href="/kontakt" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">Kontakt</a></li>
-        </ul>
-      </div>
-    </div>
-    <div class="border-t border-zinc-200 dark:border-zinc-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p class="text-sm text-zinc-500">© 2026 matury-online.pl · Realizacja: <a href="https://karol-leszczynski.pl" class="hover:text-zinc-900 dark:hover:text-zinc-100 transition">karol-leszczynski.pl</a></p>
-      <p class="text-xs text-zinc-400">Matura 2026 · Platforma EdTech · Polski produkt</p>
-    </div>
-  </div>
-</footer>
+
 
 <!-- JSON-LD dla FAQ i Product (rich snippets w Google) -->
 <script type="application/ld+json" set:html={JSON.stringify(faqSchema)}></script>
 <script type="application/ld+json" set:html={JSON.stringify(productSchema)}></script>
+<Footer />
 
 </Base>
