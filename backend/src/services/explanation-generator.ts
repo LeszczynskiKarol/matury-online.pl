@@ -190,13 +190,20 @@ function buildPrompt(question: {
     ? `Dział: ${question.topic.parent.name} → ${question.topic.name}`
     : `Dział: ${question.topic.name}`;
 
-  // Shared metadata — context, work, epoch, word (present in many question types)
+  // Shared metadata — context, work, epoch, word, words, etc.
   const meta = [
     c.context ? `Kontekst/tekst źródłowy: ${c.context}` : "",
     c.passage ? `Tekst źródłowy: ${c.passage}` : "",
     c.word ? `Dotyczy wyrazu/frazy: "${c.word}"` : "",
+    c.words?.length ? `Wyrazy do użycia: ${c.words.join(", ")}` : "",
     c.epochLabel ? `Epoka: ${c.epochLabel}` : "",
     c.work ? `Lektura: ${c.work}` : "",
+    c.instruction ? `Instrukcja: ${c.instruction}` : "",
+    c.template && !["CLOZE"].includes(question.type)
+      ? `Szablon: ${c.template}`
+      : "",
+    c.requirements?.length ? `Wymagania: ${c.requirements.join("; ")}` : "",
+    c.thesis ? `Teza: ${c.thesis}` : "",
   ]
     .filter(Boolean)
     .join("\n");
