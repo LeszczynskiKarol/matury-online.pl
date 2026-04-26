@@ -7,8 +7,9 @@
 //   ```python\n...``` → fenced code block
 // ============================================================================
 
-import pkg from "react-katex";
-const { InlineMath, BlockMath } = pkg;
+import * as ReactKaTeXModule from "react-katex";
+const ReactKaTeX = (ReactKaTeXModule as any).default || ReactKaTeXModule;
+const { InlineMath, BlockMath } = ReactKaTeX;
 
 /**
  * Prosty komponent renderujący pojedyncze wyrażenie KaTeX.

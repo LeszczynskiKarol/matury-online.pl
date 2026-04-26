@@ -44,32 +44,6 @@ export function DashboardHome() {
         )
       : 0;
 
-  // ── DEBUG — usuń po naprawieniu ─────────────
-  console.log("=== DASHBOARD DEBUG ===");
-  console.log(
-    "recentSessions:",
-    JSON.stringify(
-      recentSessions.map((s: any) => ({
-        slug: s.subject.slug,
-        completedAt: s.completedAt,
-      })),
-      null,
-      2,
-    ),
-  );
-  console.log(
-    "subjectProgress slugs:",
-    subjectProgress.map((sp: any) => sp.subject.slug),
-  );
-  console.log(
-    "subjectProgress lastSessionAt:",
-    subjectProgress.map((sp: any) => ({
-      slug: sp.subject.slug,
-      lastSessionAt: sp.lastSessionAt,
-    })),
-  );
-  // ── /DEBUG ──────────────────────────────────
-
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
@@ -82,22 +56,27 @@ export function DashboardHome() {
             Kontynuuj naukę i buduj swoją serię.
           </p>
         </div>
-        <a href="/dashboard/sesja" className="btn-primary">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-            />
-          </svg>
-          Nowa sesja
-        </a>
+        <div className="flex gap-2">
+          <a href="/dashboard/sluchanie" className="btn-ghost text-sm">
+            🎧 Słuchanie
+          </a>
+          <a href="/dashboard/sesja" className="btn-primary">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
+            </svg>
+            Nowa sesja
+          </a>
+        </div>
       </div>
 
       {/* Quick stats */}

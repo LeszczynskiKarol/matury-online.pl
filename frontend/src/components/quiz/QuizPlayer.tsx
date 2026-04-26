@@ -972,7 +972,7 @@ export function QuizPlayer({
       />
 
       {/* Topic & meta */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-2 sm:gap-3 mb-4 flex-wrap">
         <span className="text-xs font-medium text-zinc-500 bg-zinc-100 dark:bg-surface-800 px-3 py-1 rounded-full">
           {currentQuestion.topic.name}
         </span>
